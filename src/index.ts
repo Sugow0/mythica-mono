@@ -1,0 +1,90 @@
+import cors from "@elysiajs/cors";
+import { swagger } from "@elysiajs/swagger";
+import { Elysia } from "elysia";
+import { campaignsController } from "./campaigns/campaigns.controller";
+import { charactersController } from "./characters/characters.controller";
+import { charactersInternalController } from "./characters/characters-internal.controller";
+import { gameSystemsController } from "./game-systems/game-systems.controller";
+import { identityController } from "./identity/identity.controller";
+
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3200;
+const wsPort = process.env.WS_PORT ? parseInt(process.env.WS_PORT, 10) : 3250;
+
+const app = new Elysia()
+	.use(
+		cors({
+			origin: [
+				"http://localhost:3000",
+				"http://localhost:5173",
+				"https://api.staging.mythica.tengram.fr",
+				"https://api.mythica.tengram.fr",
+				"https://staging.mythica.tengram.fr",
+				"https://mythica.tengram.fr",
+			],
+			methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+			allowedHeaders: ["Content-Type", "Authorization"],
+			exposeHeaders: ["Content-Type", "Authorization"],
+			credentials: true,
+		}),
+	)
+	.use(
+		swagger({
+			path: "/swagger",
+			documentation: {
+				info: {
+					title: "Mythica API",
+					version: "1.0.0",
+					description: "Documentation de l’API Mythica VTT",
+				},
+				tags: [
+					{ name: "App", description: "Endpoints généraux" },
+					{
+						name: "Identity",
+						description:
+							"Authentification, inscription, OAuth, gestion du profil",
+					},
+					{
+						name: "Campaigns",
+						description:
+							"Gestion des campagnes, sessions, membres et invitations",
+					},
+					{
+						name: "GameSystems",
+						description: "Gestion des systèmes de jeu et de leurs versions",
+					},
+					{
+						name: "Characters",
+						description: "Gestion des fiches de personnage",
+					},
+					{
+						name: "Internal",
+						description: "Endpoints réservés aux services internes (MJ IA)",
+					},
+				],
+			},
+		}),
+	)
+	.use(identityController)
+	.use(campaignsController)
+	.use(gameSystemsController)
+	.use(charactersController)
+	.use(charactersInternalController)
+	.listen(port);
+const ws = new Elysia()
+	.ws("/ws", {
+		message: (ws, message) => {
+			console.log("message", message);
+			ws.send(message);
+		},
+	})
+	.listen(wsPort);
+
+console.log(
+	`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
+);
+console.log(
+	`📚 Swagger UI: http://${app.server?.hostname}:${app.server?.port}/swagger`,
+);
+console.log(
+	`🦊 Elysia WS is running at ${ws.server?.hostname}:${ws.server?.port}`,
+);

@@ -1,0 +1,11 @@
+# <type>(<scope>): <description>
+#
+# Types: feat | fix | docs | style | refactor | test | chore | ci | perf | build
+# Scope: auth | api | ui | db | deps | config | ci | ...
+# Description: impératif présent, minuscules, sans point final, max 72 chars
+#
+# Corps (optionnel) — expliquer le POURQUOI, pas le quoi :
+#
+#
+# Footer (optionnel) :
+# Closes #XX | BREAKING CHANGE: <description>
