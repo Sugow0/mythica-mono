@@ -1,17 +1,31 @@
-name: mythica-front CI
+name: mythica-api CI
 
 on:
   push:
     branches: [main, staging]
+    paths:
+      - 'apps/mythica-api/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'biome.json'
   pull_request:
     branches: [main, staging]
+    paths:
+      - 'apps/mythica-api/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'biome.json'
+
+defaults:
+  run:
+    working-directory: apps/mythica-api
 
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -19,21 +33,16 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Format check
-        run: bun run format:ci
+        working-directory: .
 
       - name: Lint
         run: bun run lint:ci
-
-      - name: Type check
-        run: bun run check
 
   test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -41,9 +50,7 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Install Playwright browsers
-        run: bunx playwright install chromium --with-deps
+        working-directory: .
 
       - name: Run tests
         run: bun run test
@@ -53,24 +60,24 @@ jobs:
     needs: [lint, test]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
         with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build
-        run: bun run build
+          context: .
+          file: apps/mythica-api/Dockerfile
+          push: false
+          tags: mythica-api:ci
 
   deploy:
     needs: [build]
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     env:
-      APP_ID: ${{ github.ref_name == 'main' && secrets.DOKPLOY_APP_ID_PRODUCTION || secrets.DOKPLOY_APP_ID_STAGING }}
+      APP_ID: ${{ github.ref_name == 'main' && secrets.DOKPLOY_APP_ID_API_PRODUCTION || secrets.DOKPLOY_APP_ID_API_STAGING }}
     steps:
       - name: Trigger Dokploy deployment
         run: |
@@ -79,3 +86,4 @@ jobs:
             -H "x-api-key: ${{ secrets.DOKPLOY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{\"applicationId\": \"$APP_ID\"}"
+        working-directory: .

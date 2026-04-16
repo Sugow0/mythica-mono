@@ -1,0 +1,72 @@
+name: mythica-gateway CI
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'apps/mythica-gateway/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'biome.json'
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - 'apps/mythica-gateway/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'biome.json'
+
+defaults:
+  run:
+    working-directory: apps/mythica-gateway
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        working-directory: .
+
+      - name: Lint
+        run: bun run lint:ci
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/mythica-gateway/Dockerfile
+          push: false
+          tags: mythica-gateway:ci
+
+  deploy:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    env:
+      APP_ID: ${{ github.ref_name == 'main' && secrets.DOKPLOY_APP_ID_GATEWAY_PRODUCTION || secrets.DOKPLOY_APP_ID_GATEWAY_STAGING }}
+    steps:
+      - name: Trigger Dokploy deployment
+        run: |
+          curl -s -X POST "${{ secrets.DOKPLOY_URL }}/api/application.deploy" \
+            -H "accept: application/json" \
+            -H "x-api-key: ${{ secrets.DOKPLOY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"applicationId\": \"$APP_ID\"}"
+        working-directory: .

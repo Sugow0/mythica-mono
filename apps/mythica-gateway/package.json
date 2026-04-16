@@ -1,5 +1,5 @@
 {
-	"name": "mythica-gateway",
+	"name": "@mythica/gateway",
 	"version": "1.0.50",
 	"scripts": {
 		"dev": "bun --preload ./src/env.ts --watch src/index.ts",
@@ -13,7 +13,6 @@
 		"elysia": "latest"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.0",
 		"bun-types": "latest"
 	},
 	"module": "src/index.js"

@@ -1,5 +1,5 @@
 {
-	"name": "mythica-api",
+	"name": "@mythica/api",
 	"version": "1.0.50",
 	"scripts": {
 		"dev": "bun --preload ./src/env.ts --watch src/index.ts",
@@ -32,7 +32,6 @@
 		"resend": "^6.9.2"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.4.0",
 		"@types/qrcode": "^1.5.6",
 		"bun-types": "latest"
 	},

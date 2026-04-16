@@ -1,11 +1,14 @@
 {
-  "name": "mythica-gameplay",
+  "name": "@mythica/gameplay",
   "version": "1.0.50",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun --preload ./src/env.ts --watch src/index.ts",
+    "start": "bun --preload ./src/env.ts src/index.ts",
+    "lint": "biome check --write",
+    "lint:ci": "biome ci"
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "latest",
     "elysia": "latest"
   },
   "devDependencies": {
