@@ -1,0 +1,20 @@
+{
+	"name": "mythica-gateway",
+	"version": "1.0.50",
+	"scripts": {
+		"dev": "bun --preload ./src/env.ts --watch src/index.ts",
+		"start": "bun --preload ./src/env.ts src/index.ts",
+		"lint": "biome check --write",
+		"lint:ci": "biome ci"
+	},
+	"dependencies": {
+		"@dotenvx/dotenvx": "latest",
+		"@elysiajs/cors": "^1.4.1",
+		"elysia": "latest"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.0",
+		"bun-types": "latest"
+	},
+	"module": "src/index.js"
+}
