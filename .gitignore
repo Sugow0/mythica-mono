@@ -1,5 +1,5 @@
 node_modules/
-bun.lock
+apps/*/bun.lock
 .svelte-kit/
 build/
 dist/
