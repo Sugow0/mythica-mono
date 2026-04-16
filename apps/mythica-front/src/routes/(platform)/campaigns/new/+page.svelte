@@ -1,0 +1,348 @@
+<script lang="ts">
+	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
+	import GlobeIcon from "@lucide/svelte/icons/globe";
+	import LockIcon from "@lucide/svelte/icons/lock";
+	import SwordsIcon from "@lucide/svelte/icons/swords";
+	import { onMount } from "svelte";
+	import { goto } from "$app/navigation";
+	import { Button } from "$lib/components/ui/button";
+	import * as Card from "$lib/components/ui/card";
+	import {
+		Field,
+		FieldDescription,
+		FieldError,
+		FieldGroup,
+		FieldLabel,
+	} from "$lib/components/ui/field/index.js";
+	import { Input } from "$lib/components/ui/input";
+	import * as Select from "$lib/components/ui/select";
+	import { Textarea } from "$lib/components/ui/textarea";
+	import { ApiError, campaignService, gameSystemService } from "$lib/index.js";
+	const id = $props.id();
+
+	type GameSystem = NonNullable<
+		Awaited<ReturnType<typeof gameSystemService.getGameSystems>>
+	>["gameSystems"][number];
+
+	// Form state
+	let name = $state("");
+	let description = $state("");
+	let visibility = $state<"PUBLIC" | "PRIVATE">("PRIVATE");
+	let gameSystemId = $state("");
+
+	// UI state
+	let isLoading = $state(false);
+	let error = $state<string | null>(null);
+	let nameError = $state<string | null>(null);
+	let gameSystemError = $state<string | null>(null);
+	let gameSystems = $state<GameSystem[]>([]);
+	let isLoadingGameSystems = $state(true);
+
+	// Derived
+	const nameLength = $derived(name.length);
+	const descriptionLength = $derived(description.length);
+	const selectedGameSystemName = $derived(
+		gameSystems.find((gs) => gs.id === gameSystemId)?.name ?? ""
+	);
+	const isValid = $derived(
+		name.trim().length >= 3 &&
+			name.trim().length <= 100 &&
+			gameSystemId.length > 0
+	);
+
+	onMount(async () => {
+		try {
+			const response = await gameSystemService.getGameSystems({ limit: 100 });
+			gameSystems = response?.gameSystems ?? [];
+		} catch {
+			error = "Impossible de charger les systemes de jeu.";
+		} finally {
+			isLoadingGameSystems = false;
+		}
+	});
+
+	async function handleSubmit(event: SubmitEvent) {
+		event.preventDefault();
+		error = null;
+		nameError = null;
+		gameSystemError = null;
+
+		// Validate
+		if (name.trim().length < 3) {
+			nameError = "Le nom doit contenir au moins 3 caracteres.";
+			return;
+		}
+		if (name.trim().length > 100) {
+			nameError = "Le nom ne peut pas depasser 100 caracteres.";
+			return;
+		}
+		if (!gameSystemId) {
+			gameSystemError = "Veuillez selectionner un systeme de jeu.";
+			return;
+		}
+
+		isLoading = true;
+
+		try {
+			const response = await campaignService.createCampaign({
+				name: name.trim(),
+				description: description.trim() || undefined,
+				visibility,
+				gameSystemId,
+			});
+
+			const campaignId = response?.campaignId;
+
+			if (campaignId) {
+				await goto(`/campaigns/${campaignId}`);
+			} else {
+				await goto("/campaigns");
+			}
+		} catch (err) {
+			if (err instanceof ApiError) {
+				error = err.message;
+			} else if (err instanceof Error) {
+				error = err.message;
+			} else {
+				error = "Une erreur inattendue est survenue.";
+			}
+		} finally {
+			isLoading = false;
+		}
+	}
+</script>
+
+<!-- Content -->
+<div class="mx-auto max-w-2xl px-6 py-8">
+	<!-- Back link -->
+	<Button
+		variant="ghost"
+		href="/campaigns"
+		class="mb-6 -ml-2 text-slate-600 hover:text-teal-600 dark:text-muted-foreground"
+	>
+		<ArrowLeftIcon class="h-4 w-4" />
+		Retour aux campagnes
+	</Button>
+
+	<!-- Header -->
+	<div class="mb-8">
+		<div
+			class="mb-3 inline-flex items-center gap-2 rounded-full bg-teal-100 px-4 py-1.5 text-sm font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300"
+		>
+			<SwordsIcon class="h-4 w-4" />
+			Nouvelle campagne
+		</div>
+		<h1
+			class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
+		>
+			Creer une campagne
+		</h1>
+		<p class="mt-2 text-slate-600 dark:text-muted-foreground">
+			Configurez votre nouvelle aventure et invitez vos joueurs.
+		</p>
+	</div>
+
+	<!-- Form -->
+	<Card.Root class="overflow-hidden">
+		<form onsubmit={handleSubmit} aria-busy={isLoading}>
+			<Card.Content class="pt-6">
+				<FieldGroup class="gap-5">
+					{#if error}
+						<div
+							class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-400"
+						>
+							{error}
+						</div>
+					{/if}
+
+					<!-- Name -->
+					<Field>
+						<FieldLabel for="name-{id}">Nom de la campagne</FieldLabel>
+						<Input
+							id="name-{id}"
+							type="text"
+							placeholder="La Quete de l'Epee Sacree..."
+							bind:value={name}
+							required
+							disabled={isLoading}
+							minlength={3}
+							maxlength={100}
+							aria-invalid={!!nameError}
+						/>
+						<div class="flex items-center justify-between">
+							{#if nameError}
+								<FieldError>{nameError}</FieldError>
+							{:else}
+								<FieldDescription>Entre 3 et 100 caracteres.</FieldDescription>
+							{/if}
+							<span class="text-xs text-slate-400 dark:text-muted-foreground"
+								>{nameLength}/100</span
+							>
+						</div>
+					</Field>
+
+					<!-- Description -->
+					<Field>
+						<FieldLabel for="description-{id}">Description</FieldLabel>
+						<Textarea
+							id="description-{id}"
+							placeholder="Decrivez votre campagne, son univers, son ambiance..."
+							bind:value={description}
+							disabled={isLoading}
+							maxlength={2000}
+							rows={5}
+							class="resize-none"
+						/>
+						<div class="flex items-center justify-between">
+							<FieldDescription
+								>Optionnel. Maximum 2000 caracteres.</FieldDescription
+							>
+							<span class="text-xs text-slate-400 dark:text-muted-foreground"
+								>{descriptionLength}/2000</span
+							>
+						</div>
+					</Field>
+
+					<!-- Game System -->
+					<Field>
+						<FieldLabel for="game-system-{id}">Systeme de jeu</FieldLabel>
+						<Select.Root type="single" bind:value={gameSystemId}>
+							<Select.Trigger
+								id="game-system-{id}"
+								class="w-full"
+								disabled={isLoading || isLoadingGameSystems}
+								aria-invalid={!!gameSystemError}
+							>
+								{#if isLoadingGameSystems}
+									Chargement des systemes de jeu...
+								{:else if selectedGameSystemName}
+									{selectedGameSystemName}
+								{:else}
+									Selectionnez un systeme de jeu
+								{/if}
+							</Select.Trigger>
+							<Select.Content>
+								{#each gameSystems as gameSystem (gameSystem.id)}
+									<Select.Item value={gameSystem.id} label={gameSystem.name}>
+										{gameSystem.name}
+									</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
+						{#if gameSystemError}
+							<FieldError>{gameSystemError}</FieldError>
+						{:else}
+							<FieldDescription>
+								Le systeme de regles utilise pour cette campagne.
+							</FieldDescription>
+						{/if}
+					</Field>
+
+					<!-- Visibility -->
+					<Field>
+						<FieldLabel>Visibilite</FieldLabel>
+						<div class="grid grid-cols-2 gap-3">
+							<button
+								type="button"
+								onclick={() => (visibility = "PRIVATE")}
+								disabled={isLoading}
+								class="flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all {visibility ===
+								'PRIVATE'
+									? 'border-teal-500 bg-teal-50/50 shadow-sm dark:border-teal-600 dark:bg-teal-950/30'
+									: 'border-stone-200 bg-white hover:border-stone-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
+							>
+								<div
+									class="flex h-12 w-12 items-center justify-center rounded-xl {visibility ===
+									'PRIVATE'
+										? 'bg-teal-100 dark:bg-teal-900/50'
+										: 'bg-stone-100 dark:bg-muted'}"
+								>
+									<LockIcon
+										class="h-5 w-5 {visibility === 'PRIVATE'
+											? 'text-teal-600 dark:text-teal-400'
+											: 'text-slate-500 dark:text-muted-foreground'}"
+									/>
+								</div>
+								<div class="text-center">
+									<div
+										class="text-sm font-semibold text-slate-900 dark:text-white"
+									>
+										Privee
+									</div>
+									<div
+										class="mt-0.5 text-xs text-slate-500 dark:text-muted-foreground"
+									>
+										Sur invitation uniquement
+									</div>
+								</div>
+							</button>
+
+							<button
+								type="button"
+								onclick={() => (visibility = "PUBLIC")}
+								disabled={isLoading}
+								class="flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all {visibility ===
+								'PUBLIC'
+									? 'border-teal-500 bg-teal-50/50 shadow-sm dark:border-teal-600 dark:bg-teal-950/30'
+									: 'border-stone-200 bg-white hover:border-stone-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
+							>
+								<div
+									class="flex h-12 w-12 items-center justify-center rounded-xl {visibility ===
+									'PUBLIC'
+										? 'bg-teal-100 dark:bg-teal-900/50'
+										: 'bg-stone-100 dark:bg-muted'}"
+								>
+									<GlobeIcon
+										class="h-5 w-5 {visibility === 'PUBLIC'
+											? 'text-teal-600 dark:text-teal-400'
+											: 'text-slate-500 dark:text-muted-foreground'}"
+									/>
+								</div>
+								<div class="text-center">
+									<div
+										class="text-sm font-semibold text-slate-900 dark:text-white"
+									>
+										Publique
+									</div>
+									<div
+										class="mt-0.5 text-xs text-slate-500 dark:text-muted-foreground"
+									>
+										Visible par tous
+									</div>
+								</div>
+							</button>
+						</div>
+						<FieldDescription>
+							{#if visibility === "PUBLIC"}
+								La campagne sera visible dans la liste publique et les joueurs
+								pourront la rejoindre librement.
+							{:else}
+								Seuls les joueurs invites pourront voir et rejoindre la
+								campagne.
+							{/if}
+						</FieldDescription>
+					</Field>
+				</FieldGroup>
+			</Card.Content>
+
+			<Card.Footer
+				class="flex items-center justify-between border-t bg-stone-50/50 dark:bg-muted/20"
+			>
+				<Button variant="outline" href="/campaigns" disabled={isLoading}>
+					Annuler
+				</Button>
+				<Button
+					type="submit"
+					disabled={isLoading || !isValid}
+					class="bg-teal-600 text-white shadow-md shadow-teal-600/20 hover:bg-teal-700"
+				>
+					{#if isLoading}
+						Creation en cours...
+					{:else}
+						Creer la campagne
+					{/if}
+				</Button>
+			</Card.Footer>
+		</form>
+	</Card.Root>
+</div>
