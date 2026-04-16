@@ -8,8 +8,8 @@
     "dev:api": "bun run --cwd apps/mythica-api dev",
     "dev:gateway": "bun run --cwd apps/mythica-gateway dev",
     "dev:gameplay": "bun run --cwd apps/mythica-gameplay dev",
-    "lint": "biome check --write ./apps/mythica-api ./apps/mythica-gateway ./apps/mythica-gameplay",
-    "lint:ci": "biome ci ./apps/mythica-api ./apps/mythica-gateway ./apps/mythica-gameplay"
+    "lint": "bun run --filter '*' lint",
+    "lint:ci": "bun run --filter '*' lint:ci"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.0"
