@@ -1,0 +1,7 @@
+{
+	"github.copilot.chat.commitMessageGeneration.instructions": [
+		{
+			"text": "Tu génères des messages de commit en respectant strictement Conventional Commits. Format : <type>(<scope>): <description>. Types autorisés : feat, fix, docs, style, refactor, test, chore, ci, perf, build. Règles : tout en minuscules, impératif présent en français (ajouter, corriger, supprimer), pas de point final, maximum 72 caractères. Exemple : feat(auth): ajouter la connexion oauth google"
+		}
+	]
+}
