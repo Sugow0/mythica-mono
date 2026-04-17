@@ -1,5 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import { env } from "./env";
+import { logger } from "./logger";
 
 type WsData = { targetUrl: string };
 
@@ -43,7 +44,8 @@ export const wsProxy = Bun.serve<WsData>({
 				upstreamSockets.delete(ws);
 			};
 
-			upstream.onerror = () => {
+			upstream.onerror = (err) => {
+				logger.error({ err }, "Upstream WebSocket connection error");
 				ws.close(1011, "Upstream connection error");
 				upstreamSockets.delete(ws);
 			};
@@ -64,4 +66,4 @@ export const wsProxy = Bun.serve<WsData>({
 	},
 });
 
-console.log(`WS Proxy running at ws://${wsProxy.hostname}:${wsProxy.port}`);
+logger.info(`WS Proxy running at ws://${wsProxy.hostname}:${wsProxy.port}`);
