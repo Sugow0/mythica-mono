@@ -1,6 +1,8 @@
+import { logger as elysiaLogger } from "@bogeychan/elysia-logger";
 import cors from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { env } from "./env";
+import { logger } from "./logger";
 import "./ws-proxy";
 
 const proxy = async (request: Request, targetBase: string, prefix: string) => {
@@ -32,6 +34,11 @@ const proxy = async (request: Request, targetBase: string, prefix: string) => {
 
 const app = new Elysia()
 	.use(
+		elysiaLogger({
+			instance: logger,
+		}),
+	)
+	.use(
 		cors({
 			origin: [
 				"http://localhost:3000",
@@ -56,6 +63,6 @@ const app = new Elysia()
 	.get("/", () => ({ status: "ok", gateway: "mythica-gateway" }))
 	.listen(env.PORT);
 
-console.log(
+logger.info(
 	`Gateway running at http://${app.server?.hostname}:${app.server?.port}`,
 );
