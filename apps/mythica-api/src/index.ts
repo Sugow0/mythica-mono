@@ -1,6 +1,8 @@
+import { logger as elysiaLogger } from "@bogeychan/elysia-logger";
 import cors from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
+import { logger } from "./logger";
 import { campaignsController } from "./campaigns/campaigns.controller";
 import { charactersController } from "./characters/characters.controller";
 import { charactersInternalController } from "./characters/characters-internal.controller";
@@ -11,6 +13,7 @@ const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3200;
 const wsPort = process.env.WS_PORT ? parseInt(process.env.WS_PORT, 10) : 3250;
 
 const app = new Elysia()
+	.use(elysiaLogger({ instance: logger }))
 	.use(
 		cors({
 			origin: [
@@ -79,12 +82,12 @@ const ws = new Elysia()
 	})
 	.listen(wsPort);
 
-console.log(
-	`🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
+logger.info(
+	`API running at http://${app.server?.hostname}:${app.server?.port}`,
 );
-console.log(
-	`📚 Swagger UI: http://${app.server?.hostname}:${app.server?.port}/swagger`,
+logger.info(
+	`Swagger UI: http://${app.server?.hostname}:${app.server?.port}/swagger`,
 );
-console.log(
-	`🦊 Elysia WS is running at ${ws.server?.hostname}:${ws.server?.port}`,
+logger.info(
+	`WS running at http://${ws.server?.hostname}:${ws.server?.port}`,
 );
