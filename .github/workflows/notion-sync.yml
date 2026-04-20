@@ -21,7 +21,7 @@ jobs:
       - name: Extraire le ticket ID et mettre à jour Notion
         run: |
           BRANCH="${{ github.event.ref }}"
-          TICKET=$(echo "$BRANCH" | grep -oP '(?<=(feature|fix|chore|refactor|docs)/)[A-Z]+-\d+' || true)
+          TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
           if [ -z "$TICKET" ]; then
             echo "ℹ️  Branche sans ticket ID → aucune action"
             exit 0
@@ -46,7 +46,7 @@ jobs:
       - name: Extraire le ticket ID et mettre à jour Notion
         run: |
           BRANCH="${{ github.event.pull_request.head.ref }}"
-          TICKET=$(echo "$BRANCH" | grep -oP '(?<=(feature|fix|chore|refactor|docs)/)[A-Z]+-\d+' || true)
+          TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
           if [ -z "$TICKET" ]; then
             echo "ℹ️  Branche sans ticket ID → aucune action"
             exit 0
@@ -71,7 +71,7 @@ jobs:
       - name: Extraire le ticket ID et mettre à jour Notion
         run: |
           BRANCH="${{ github.event.pull_request.head.ref }}"
-          TICKET=$(echo "$BRANCH" | grep -oP '(?<=(feature|fix|chore|refactor|docs)/)[A-Z]+-\d+' || true)
+          TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
           if [ -z "$TICKET" ]; then
             echo "ℹ️  Branche sans ticket ID → aucune action"
             exit 0
