@@ -4,17 +4,17 @@ on:
   push:
     branches: [main, staging]
     paths:
-      - 'apps/mythica-gateway/**'
-      - 'package.json'
-      - 'bun.lock'
-      - 'biome.json'
+      - "apps/mythica-gateway/**"
+      - "package.json"
+      - "bun.lock"
+      - "biome.json"
   pull_request:
     branches: [main, staging]
     paths:
-      - 'apps/mythica-gateway/**'
-      - 'package.json'
-      - 'bun.lock'
-      - 'biome.json'
+      - "apps/mythica-gateway/**"
+      - "package.json"
+      - "bun.lock"
+      - "biome.json"
 
 defaults:
   run:

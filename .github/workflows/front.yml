@@ -4,15 +4,15 @@ on:
   push:
     branches: [main, staging]
     paths:
-      - 'apps/mythica-front/**'
-      - 'package.json'
-      - 'bun.lock'
+      - "apps/mythica-front/**"
+      - "package.json"
+      - "bun.lock"
   pull_request:
     branches: [main, staging]
     paths:
-      - 'apps/mythica-front/**'
-      - 'package.json'
-      - 'bun.lock'
+      - "apps/mythica-front/**"
+      - "package.json"
+      - "bun.lock"
 
 defaults:
   run:
