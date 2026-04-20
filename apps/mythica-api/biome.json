@@ -2,6 +2,6 @@
 	"root": false,
 	"extends": ["../../biome.json"],
 	"files": {
-		"includes": ["!generated/**", "!prisma/migrations/**"]
+		"includes": ["!generated", "!prisma/migrations"]
 	}
 }
