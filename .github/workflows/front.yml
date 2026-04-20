@@ -5,12 +5,14 @@ on:
     branches: [main, staging]
     paths:
       - "apps/mythica-front/**"
+      - ".github/workflows/front.yml"
       - "package.json"
       - "bun.lock"
   pull_request:
     branches: [main, staging]
     paths:
       - "apps/mythica-front/**"
+      - ".github/workflows/front.yml"
       - "package.json"
       - "bun.lock"
 
