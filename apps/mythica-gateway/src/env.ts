@@ -10,4 +10,5 @@ export const env = {
 	GAMEPLAY_URL: process.env.GAMEPLAY_URL ?? "http://localhost:2300",
 	GAMEPLAY_SOCKET_URL:
 		process.env.GAMEPLAY_SOCKET_URL ?? "http://localhost:2350",
+	REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379",
 };
