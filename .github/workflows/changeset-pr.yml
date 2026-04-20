@@ -1,0 +1,43 @@
+name: Changeset — Créer depuis ticket Notion
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [staging]
+
+jobs:
+  create-changeset:
+    name: Générer le changeset
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Créer le changeset
+        run: |
+          bun .github/scripts/create-changeset.ts \
+            "${{ github.event.pull_request.head.ref }}" \
+            "staging"
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_FEATURES_DATABASE_ID: ${{ secrets.NOTION_FEATURES_DATABASE_ID }}
+          NOTION_TICKETS_DATABASE_ID: ${{ secrets.NOTION_TICKETS_DATABASE_ID }}
+
+      - name: Committer le changeset si créé
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .changeset/
+          git diff --staged --quiet || (git commit -m "chore(changeset): ajouter changeset ${{ github.event.pull_request.head.ref }}" && git push)
