@@ -60,13 +60,13 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     env:
-      APP_ID: ${{ github.ref_name == 'main' && secrets.DOKPLOY_APP_ID_GATEWAY_PRODUCTION || secrets.DOKPLOY_APP_ID_GATEWAY_STAGING }}
+      APP_ID: ${{ github.ref_name == 'main' && secrets.DOCKPLOY_APP_ID_GATEWAY_PRODUCTION || secrets.DOCKPLOY_APP_ID_GATEWAY_STAGING }}
     steps:
-      - name: Trigger Dokploy deployment
+      - name: Trigger DOCKPLOY deployment
         run: |
-          curl -s -X POST "${{ secrets.DOKPLOY_URL }}/api/application.deploy" \
+          curl -s -X POST "${{ secrets.DOCKPLOY_URL }}/api/application.deploy" \
             -H "accept: application/json" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_TOKEN }}" \
+            -H "x-api-key: ${{ secrets.DOCKPLOY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{\"applicationId\": \"$APP_ID\"}"
         working-directory: .

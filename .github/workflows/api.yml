@@ -103,13 +103,13 @@ jobs:
           git add prisma/migrations
           git diff --staged --quiet || (git commit -m "chore(db): ajouter migration prisma auto-générée" && git push)
 
-      - name: Déployer sur Dokploy (staging)
+      - name: Déployer sur DOCKPLOY (staging)
         run: |
-          curl -s -X POST "${{ secrets.DOKPLOY_URL }}/api/application.deploy" \
+          curl -s -X POST "${{ secrets.DOCKPLOY_URL }}/api/application.deploy" \
             -H "accept: application/json" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_TOKEN }}" \
+            -H "x-api-key: ${{ secrets.DOCKPLOY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"applicationId\": \"${{ secrets.DOKPLOY_APP_ID_API_STAGING }}\"}"
+            -d "{\"applicationId\": \"${{ secrets.DOCKPLOY_APP_ID_API_STAGING }}\"}"
         working-directory: .
 
   deploy-main:
@@ -132,11 +132,11 @@ jobs:
         env:
           DOTENV_PRIVATE_KEY_PRODUCTIONDEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_API_PRODUCTION }}
 
-      - name: Déployer sur Dokploy (production)
+      - name: Déployer sur DOCKPLOY (production)
         run: |
-          curl -s -X POST "${{ secrets.DOKPLOY_URL }}/api/application.deploy" \
+          curl -s -X POST "${{ secrets.DOCKPLOY_URL }}/api/application.deploy" \
             -H "accept: application/json" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_TOKEN }}" \
+            -H "x-api-key: ${{ secrets.DOCKPLOY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"applicationId\": \"${{ secrets.DOKPLOY_APP_ID_API_PRODUCTION }}\"}"
+            -d "{\"applicationId\": \"${{ secrets.DOCKPLOY_APP_ID_API_PRODUCTION }}\"}"
         working-directory: .
