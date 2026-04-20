@@ -62,6 +62,12 @@ jobs:
     env:
       APP_ID: ${{ github.ref_name == 'main' && secrets.DOCKPLOY_APP_ID_GAMEPLAY_PRODUCTION || secrets.DOCKPLOY_APP_ID_GAMEPLAY_STAGING }}
     steps:
+      - name: Debug secrets
+        run: |
+          echo "DOCKPLOY_URL défini: ${{ secrets.DOCKPLOY_URL != '' }}"
+          echo "DOCKPLOY_TOKEN défini: ${{ secrets.DOCKPLOY_TOKEN != '' }}"
+          echo "APP_ID défini: ${{ secrets.DOCKPLOY_APP_ID_GAMEPLAY_STAGING != '' }}"
+
       - name: Trigger DOCKPLOY deployment
         run: |
           curl -s -X POST "${{ secrets.DOCKPLOY_URL }}/api/application.deploy" \
