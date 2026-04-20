@@ -80,7 +80,7 @@ async function updateStatus(pageId: string): Promise<void> {
 		body: JSON.stringify({
 			properties: {
 				[statusProperty]: {
-\t\t\t\t\tselect: { name: status },
+					select: { name: status },
 				},
 			},
 		}),
