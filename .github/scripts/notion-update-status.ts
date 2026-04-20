@@ -80,7 +80,7 @@ async function updateStatus(pageId: string): Promise<void> {
 		body: JSON.stringify({
 			properties: {
 				[statusProperty]: {
-					status: { name: status },
+					select: { name: status },
 				},
 			},
 		}),
