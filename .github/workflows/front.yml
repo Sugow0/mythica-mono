@@ -4,15 +4,15 @@ on:
   push:
     branches: [main, staging]
     paths:
-      - 'apps/mythica-front/**'
-      - 'package.json'
-      - 'bun.lock'
+      - "apps/mythica-front/**"
+      - "package.json"
+      - "bun.lock"
   pull_request:
     branches: [main, staging]
     paths:
-      - 'apps/mythica-front/**'
-      - 'package.json'
-      - 'bun.lock'
+      - "apps/mythica-front/**"
+      - "package.json"
+      - "bun.lock"
 
 defaults:
   run:
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -67,7 +67,7 @@ jobs:
     needs: [lint, test]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -89,7 +89,7 @@ jobs:
     steps:
       - name: Trigger Dokploy deployment
         run: |
-          curl -s -X POST "${{ secrets.DOKPLOY_URL }}/api/application.deploy" \
+          curl -s -X POST "${{ secrets.DOCKPLOY_URL }}/api/application.deploy" \
             -H "accept: application/json" \
             -H "x-api-key: ${{ secrets.DOKPLOY_TOKEN }}" \
             -H "Content-Type: application/json" \
