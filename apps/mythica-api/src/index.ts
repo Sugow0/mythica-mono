@@ -2,12 +2,12 @@ import { logger as elysiaLogger } from "@bogeychan/elysia-logger";
 import cors from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
-import { logger } from "./logger";
 import { campaignsController } from "./campaigns/campaigns.controller";
 import { charactersController } from "./characters/characters.controller";
 import { charactersInternalController } from "./characters/characters-internal.controller";
 import { gameSystemsController } from "./game-systems/game-systems.controller";
 import { identityController } from "./identity/identity.controller";
+import { logger } from "./logger";
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3200;
 const wsPort = process.env.WS_PORT ? parseInt(process.env.WS_PORT, 10) : 3250;
@@ -88,6 +88,4 @@ logger.info(
 logger.info(
 	`Swagger UI: http://${app.server?.hostname}:${app.server?.port}/swagger`,
 );
-logger.info(
-	`WS running at http://${ws.server?.hostname}:${ws.server?.port}`,
-);
+logger.info(`WS running at http://${ws.server?.hostname}:${ws.server?.port}`);

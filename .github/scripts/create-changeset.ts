@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * Crée un fichier changeset à partir du nom de branche et du ticket Notion associé.
  * Idempotent : ne recrée pas si un changeset pour ce ticket existe déjà.
@@ -13,15 +14,15 @@
  *   NOTION_STATUS_PROPERTY (défaut: "Status")
  */
 
-import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { existsSync, readdirSync, writeFileSync } from "node:fs";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-const token = process.env.NOTION_TOKEN;
-const featuresDatabaseId = process.env.NOTION_FEATURES_DATABASE_ID;
-const ticketsDatabaseId = process.env.NOTION_TICKETS_DATABASE_ID;
+const token = process.env.NOTION_TOKEN ?? "";
+const featuresDatabaseId = process.env.NOTION_FEATURES_DATABASE_ID ?? "";
+const ticketsDatabaseId = process.env.NOTION_TICKETS_DATABASE_ID ?? "";
 
 if (!token || !featuresDatabaseId || !ticketsDatabaseId) {
 	console.error(
@@ -75,10 +76,9 @@ const PACKAGE_MAP: Record<string, string> = {
 
 function detectModifiedPackages(): string[] {
 	try {
-		const diff = execSync(
-			`git diff --name-only origin/${baseBranch}...HEAD`,
-			{ encoding: "utf8" },
-		);
+		const diff = execSync(`git diff --name-only origin/${baseBranch}...HEAD`, {
+			encoding: "utf8",
+		});
 		const files = diff.trim().split("\n").filter(Boolean);
 		const touched = new Set<string>();
 
@@ -90,9 +90,7 @@ function detectModifiedPackages(): string[] {
 			}
 		}
 
-		return touched.size > 0
-			? Array.from(touched)
-			: Object.values(PACKAGE_MAP);
+		return touched.size > 0 ? Array.from(touched) : Object.values(PACKAGE_MAP);
 	} catch {
 		console.warn("⚠️  Impossible de détecter les packages → on bumpe tous");
 		return Object.values(PACKAGE_MAP);
@@ -149,8 +147,8 @@ async function fetchTicket(): Promise<{
 } | null> {
 	// Cherche d'abord dans la DB Tickets, fallback sur Features
 	const page =
-		(await queryDatabase(ticketsDatabaseId!)) ??
-		(await queryDatabase(featuresDatabaseId!));
+		(await queryDatabase(ticketsDatabaseId)) ??
+		(await queryDatabase(featuresDatabaseId));
 
 	if (!page) {
 		console.warn(`⚠️  Ticket ${ticketId} introuvable dans Notion`);
@@ -158,8 +156,7 @@ async function fetchTicket(): Promise<{
 	}
 
 	const title =
-		page.properties.Name?.title.map((t) => t.plain_text).join("") ??
-		ticketId;
+		page.properties.Name?.title.map((t) => t.plain_text).join("") ?? ticketId;
 
 	// Fetch les blocs de contenu pour la description
 	const blocksRes = await fetch(
@@ -199,9 +196,7 @@ const description = ticket?.description ?? "";
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 const filename = `${changesetDir}/${timestamp}-${ticketId}.md`;
 
-const frontmatter = packages
-	.map((pkg) => `"${pkg}": ${bumpType}`)
-	.join("\n");
+const frontmatter = packages.map((pkg) => `"${pkg}": ${bumpType}`).join("\n");
 
 const body = [
 	"---",

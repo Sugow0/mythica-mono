@@ -22,9 +22,7 @@ function parseSessionCookie(cookieHeader: string): string | null {
 async function resolveSession(
 	request: Request,
 ): Promise<ResolvedSession | null> {
-	const sessionId = parseSessionCookie(
-		request.headers.get("cookie") ?? "",
-	);
+	const sessionId = parseSessionCookie(request.headers.get("cookie") ?? "");
 	if (!sessionId) return null;
 
 	const raw = await redis.get(`${SESSION_PREFIX}${sessionId}`);
