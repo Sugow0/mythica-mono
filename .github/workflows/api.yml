@@ -94,7 +94,7 @@ jobs:
       - name: Créer et appliquer la migration depuis le diff schéma↔DB
         run: bunx dotenvx run -f ./config/staging.env -- bunx prisma migrate dev --name auto
         env:
-          DOTENV_PRIVATE_KEY_STAGINGDEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_STAGING }}
+          DOTENV_PRIVATE_KEY_STAGINGDEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_API_STAGING }}
 
       - name: Committer les fichiers de migration générés
         run: |
@@ -130,7 +130,7 @@ jobs:
       - name: Appliquer les migrations en attente
         run: bunx dotenvx run -f ./config/production.env -- bunx prisma migrate deploy
         env:
-          DOTENV_PRIVATE_KEY_PRODUCTIONDEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+          DOTENV_PRIVATE_KEY_PRODUCTIONDEVELOPMENT: ${{ secrets.DOTENV_PRIVATE_KEY_API_PRODUCTION }}
 
       - name: Déployer sur Dokploy (production)
         run: |
