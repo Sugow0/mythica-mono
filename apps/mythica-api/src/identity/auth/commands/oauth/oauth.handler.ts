@@ -32,9 +32,11 @@ export async function oauthCallbackHandler(
 	});
 
 	let userId: string;
+	let userRole: string;
 
 	if (existingAccount) {
-		userId = existingAccount.userId;
+		userId = existingAccount.user.id;
+		userRole = existingAccount.user.role;
 	} else {
 		// Chercher un user existant avec le même email (liaison de compte)
 		const existingUser = await prisma.users.findUnique({
@@ -43,6 +45,7 @@ export async function oauthCallbackHandler(
 
 		if (existingUser) {
 			userId = existingUser.id;
+			userRole = existingUser.role;
 			await prisma.oAuthAccounts.create({
 				data: {
 					id: generateIdFromEntropySize(10),
@@ -67,6 +70,7 @@ export async function oauthCallbackHandler(
 			}
 
 			userId = generateIdFromEntropySize(10);
+			userRole = "USER";
 			await prisma.$transaction([
 				prisma.users.create({
 					data: {
@@ -90,7 +94,7 @@ export async function oauthCallbackHandler(
 		}
 	}
 
-	const session = await lucia.createSession(userId, {});
+	const session = await lucia.createSession(userId, { role: userRole });
 	const sessionCookie = lucia.createSessionCookie(session.id);
 
 	return {

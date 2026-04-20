@@ -12,6 +12,7 @@
     "lint:ci": "bun run --filter '*' lint:ci"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.0"
+    "@biomejs/biome": "2.4.0",
+    "@changesets/cli": "^2.31.0"
   }
 }

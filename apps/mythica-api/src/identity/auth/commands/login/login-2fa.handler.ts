@@ -29,7 +29,7 @@ export async function login2FaHandler(
 
 	const user = await prisma.users.findUnique({
 		where: { id: userId },
-		select: { twoFactorSecret: true },
+		select: { twoFactorSecret: true, role: true },
 	});
 	if (!user?.twoFactorSecret) {
 		await deleteLogin2fa(tempToken);
@@ -46,7 +46,7 @@ export async function login2FaHandler(
 	}
 
 	await deleteLogin2fa(tempToken);
-	const session = await lucia.createSession(userId, {});
+	const session = await lucia.createSession(userId, { role: user.role });
 	const sessionCookie = lucia.createSessionCookie(session.id);
 
 	return {

@@ -29,6 +29,9 @@ export const lucia = new Lucia(luciaRedisAdapter, {
 declare module "lucia" {
 	interface Register {
 		Lucia: typeof lucia;
+		DatabaseSessionAttributes: {
+			role: string;
+		};
 		DatabaseUserAttributes: {
 			email: string;
 			password: string | null;

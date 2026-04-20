@@ -61,7 +61,7 @@ export async function loginHandler(
 		};
 	}
 
-	const session = await lucia.createSession(user.id, {});
+	const session = await lucia.createSession(user.id, { role: user.role });
 	const sessionCookie = lucia.createSessionCookie(session.id);
 
 	return {

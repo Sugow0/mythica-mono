@@ -1,0 +1,101 @@
+name: Notion Sync
+
+on:
+  create: {}
+  pull_request:
+    types: [opened, closed]
+    branches: [staging, main]
+
+jobs:
+  on-branch-created:
+    name: Branche créée → En cours
+    runs-on: ubuntu-latest
+    if: github.event_name == 'create' && github.event.ref_type == 'branch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Extraire le ticket ID et mettre à jour Notion
+        run: |
+          BRANCH="${{ github.event.ref }}"
+          TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+          if [ -z "$TICKET" ]; then
+            echo "ℹ️  Branche sans ticket ID → aucune action"
+            exit 0
+          fi
+          bun .github/scripts/notion-update-status.ts "$TICKET" "En cours"
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_FEATURES_DATABASE_ID: ${{ secrets.NOTION_FEATURES_DATABASE_ID }}
+          NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}
+
+  on-pr-opened:
+    name: PR ouverte → Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'opened' && github.event.pull_request.base.ref == 'staging'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Extraire le ticket ID et mettre à jour Notion
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+          if [ -z "$TICKET" ]; then
+            echo "ℹ️  Branche sans ticket ID → aucune action"
+            exit 0
+          fi
+          bun .github/scripts/notion-update-status.ts "$TICKET" "Review"
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_FEATURES_DATABASE_ID: ${{ secrets.NOTION_FEATURES_DATABASE_ID }}
+          NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}
+
+  on-merged-to-staging:
+    name: Mergé sur staging → Staging
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'staging'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Extraire le ticket ID et mettre à jour Notion
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
+          if [ -z "$TICKET" ]; then
+            echo "ℹ️  Branche sans ticket ID → aucune action"
+            exit 0
+          fi
+          bun .github/scripts/notion-update-status.ts "$TICKET" "Staging"
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_FEATURES_DATABASE_ID: ${{ secrets.NOTION_FEATURES_DATABASE_ID }}
+          NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}
+
+  on-merged-to-main:
+    name: Mergé sur main → Production (tous les Staging)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Passer tous les tickets Staging → Production
+        run: bun .github/scripts/notion-move-staging-to-prod.ts
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_FEATURES_DATABASE_ID: ${{ secrets.NOTION_FEATURES_DATABASE_ID }}
+          NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}

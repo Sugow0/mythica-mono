@@ -12,6 +12,7 @@
 		"@dotenvx/dotenvx": "latest",
 		"@elysiajs/cors": "^1.4.1",
 		"elysia": "latest",
+		"ioredis": "^5.4.1",
 		"pino": "^10.3.1"
 	},
 	"devDependencies": {

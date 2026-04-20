@@ -1,3 +1,5 @@
+name: "mythica-dev"
+
 services:
   postgres:
     image: postgres:latest
