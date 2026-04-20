@@ -7,12 +7,13 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "ignore": [
-      "apps/mythica-front/**",
-      "apps/mythica-mobile/**",
-      "**/node_modules/**",
-      "**/generated/**",
-      "**/.svelte-kit/**"
+    "includes": [
+      "**",
+      "!apps/mythica-front/**",
+      "!apps/mythica-mobile/**",
+      "!**/node_modules/**",
+      "!**/generated/**",
+      "!**/.svelte-kit/**"
     ]
   },
   "formatter": {
