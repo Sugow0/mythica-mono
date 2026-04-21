@@ -1,4 +1,5 @@
 FROM oven/bun:1 AS deps
+WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/mythica-api/package.json ./apps/mythica-api/
 COPY apps/mythica-front/package.json ./apps/mythica-front/
