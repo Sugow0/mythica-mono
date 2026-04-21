@@ -105,12 +105,6 @@ jobs:
           git add prisma/migrations
           git diff --staged --quiet || (git commit -m "chore(db): ajouter migration prisma auto-générée" && git push)
 
-      - name: Debug secrets
-        run: |
-          echo "DOCKPLOY_URL défini: ${{ secrets.DOCKPLOY_URL != '' }}"
-          echo "DOCKPLOY_TOKEN défini: ${{ secrets.DOCKPLOY_TOKEN != '' }}"
-          echo "APP_ID défini: ${{ secrets.DOCKPLOY_APP_ID_API_STAGING != '' }}"
-
       - name: Déployer sur DOCKPLOY (staging)
         run: |
           curl -s -X POST "${{ secrets.DOCKPLOY_URL }}/api/application.deploy" \
