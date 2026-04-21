@@ -18,6 +18,6 @@ COPY --from=deps /app/apps/mythica-api/generated ./generated
 COPY apps/mythica-api/prisma ./prisma
 COPY apps/mythica-api/src ./src
 COPY apps/mythica-api/config ./config
-COPY apps/mythica-api/package.json apps/mythica-api/tsconfig.json ./
+COPY apps/mythica-api/package.json ./
 EXPOSE 3200 3250
 CMD ["bun", "--preload", "./src/env.ts", "src/index.ts"]
