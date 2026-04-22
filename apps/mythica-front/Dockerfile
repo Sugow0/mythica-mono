@@ -24,7 +24,8 @@ RUN bun install --frozen-lockfile --production
 FROM node:22-alpine AS runner
 WORKDIR /app
 COPY --from=builder /app/apps/mythica-front/build ./build
-COPY --from=prod-deps /app/apps/mythica-front/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=prod-deps /app/apps/mythica-front/node_modules ./apps/mythica-front/node_modules
 COPY apps/mythica-front/package.json ./
 EXPOSE 3000
 CMD ["node", "build/index.js"]
