@@ -95,5 +95,5 @@ jobs:
             -H "accept: application/json" \
             -H "x-api-key: ${{ secrets.DOCKPLOY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d "{\"applicationId\": \"$APP_ID\"}"
+            -d "{\"applicationId\": \"${{ secrets.DOCKPLOY_APP_ID_FRONT_STAGING }}\"}"
         working-directory: .
