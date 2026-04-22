@@ -13,8 +13,9 @@ RUN bun run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
+RUN corepack enable pnpm
 COPY apps/mythica-front/package.json ./
-RUN npm install --omit=dev --ignore-scripts
+RUN pnpm install --prod --ignore-scripts --shamefully-hoist
 COPY --from=builder /app/apps/mythica-front/build ./build
 EXPOSE 3000
 CMD ["node", "build/index.js"]
