@@ -3050,6 +3050,8 @@
 
     "@manypkg/get-packages/fs-extra": ["fs-extra@8.1.0", "", { "dependencies": { "graceful-fs": "^4.2.0", "jsonfile": "^4.0.0", "universalify": "^0.1.0" } }, "sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g=="],
 
+    "@mythica/front/@dotenvx/dotenvx": ["@dotenvx/dotenvx@1.61.4", "", { "dependencies": { "commander": "^11.1.0", "dotenv": "^17.2.1", "eciesjs": "^0.4.10", "execa": "^5.1.1", "fdir": "^6.2.0", "ignore": "^5.3.0", "object-treeify": "1.1.33", "picomatch": "^4.0.4", "which": "^4.0.0", "yocto-spinner": "^1.1.0" }, "bin": { "dotenvx": "src/cli/dotenvx.js" } }, "sha512-g6QvAdXmSKMxmF1oFeCcDwklB5/fmkRXzApL3q2n20Z7YXUzDvFZg1ItTsXdX9g5hTyEKjmcOPJON37O5TiDew=="],
+
     "@mythica/gameplay/@dotenvx/dotenvx": ["@dotenvx/dotenvx@1.61.4", "", { "dependencies": { "commander": "^11.1.0", "dotenv": "^17.2.1", "eciesjs": "^0.4.10", "execa": "^5.1.1", "fdir": "^6.2.0", "ignore": "^5.3.0", "object-treeify": "1.1.33", "picomatch": "^4.0.4", "which": "^4.0.0", "yocto-spinner": "^1.1.0" }, "bin": { "dotenvx": "src/cli/dotenvx.js" } }, "sha512-g6QvAdXmSKMxmF1oFeCcDwklB5/fmkRXzApL3q2n20Z7YXUzDvFZg1ItTsXdX9g5hTyEKjmcOPJON37O5TiDew=="],
 
     "@mythica/gateway/@dotenvx/dotenvx": ["@dotenvx/dotenvx@1.61.4", "", { "dependencies": { "commander": "^11.1.0", "dotenv": "^17.2.1", "eciesjs": "^0.4.10", "execa": "^5.1.1", "fdir": "^6.2.0", "ignore": "^5.3.0", "object-treeify": "1.1.33", "picomatch": "^4.0.4", "which": "^4.0.0", "yocto-spinner": "^1.1.0" }, "bin": { "dotenvx": "src/cli/dotenvx.js" } }, "sha512-g6QvAdXmSKMxmF1oFeCcDwklB5/fmkRXzApL3q2n20Z7YXUzDvFZg1ItTsXdX9g5hTyEKjmcOPJON37O5TiDew=="],
