@@ -1,9 +1,10 @@
-import { logger as elysiaLogger } from "@bogeychan/elysia-logger";
 import cors from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { env } from "./env";
 import { logger } from "./logger";
 import "./ws-proxy";
+
+const NO_BODY_METHODS = new Set(["GET", "HEAD"]);
 
 const proxy = async (request: Request, targetBase: string, prefix: string) => {
 	const url = new URL(request.url);
@@ -16,7 +17,7 @@ const proxy = async (request: Request, targetBase: string, prefix: string) => {
 	const response = await fetch(targetUrl, {
 		method: request.method,
 		headers,
-		body: ["GET", "HEAD"].includes(request.method) ? undefined : request.body,
+		body: NO_BODY_METHODS.has(request.method) ? undefined : request.body,
 		redirect: "manual",
 	});
 
@@ -33,11 +34,23 @@ const proxy = async (request: Request, targetBase: string, prefix: string) => {
 };
 
 const app = new Elysia()
-	.use(
-		elysiaLogger({
-			instance: logger,
-		}),
-	)
+	.onRequest(({ store }) => {
+		(store as Record<string, unknown>).startTime = performance.now();
+	})
+	.onAfterResponse(({ request, store }) => {
+		const responseTime =
+			performance.now() - (((store as Record<string, unknown>).startTime as number) ?? 0);
+		logger.info(
+			{ method: request.method, url: request.url, responseTime },
+			"request completed",
+		);
+	})
+	.onError(({ request, error, code }) => {
+		logger.error(
+			{ method: request.method, url: request.url, code, err: error },
+			"request error",
+		);
+	})
 	.use(
 		cors({
 			origin: [
