@@ -93,7 +93,7 @@ jobs:
         run: |
           curl -s -X POST "${{ secrets.DOCKPLOY_URL }}/api/application.deploy" \
             -H "accept: application/json" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_TOKEN }}" \
+            -H "x-api-key: ${{ secrets.DOCKPLOY_TOKEN }}" \
             -H "Content-Type: application/json" \
             -d "{\"applicationId\": \"$APP_ID\"}"
         working-directory: .
