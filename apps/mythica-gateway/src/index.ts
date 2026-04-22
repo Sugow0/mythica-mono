@@ -39,7 +39,8 @@ const app = new Elysia()
 	})
 	.onAfterResponse(({ request, store }) => {
 		const responseTime =
-			performance.now() - (((store as Record<string, unknown>).startTime as number) ?? 0);
+			performance.now() -
+			(((store as Record<string, unknown>).startTime as number) ?? 0);
 		logger.info(
 			{ method: request.method, url: request.url, responseTime },
 			"request completed",
