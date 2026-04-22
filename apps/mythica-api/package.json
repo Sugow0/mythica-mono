@@ -23,6 +23,7 @@
 		"@types/pg": "^8.16.0",
 		"arctic": "^3.7.0",
 		"dotenv": "^17.2.4",
+		"@sinclair/typebox": "^0.34.15",
 		"elysia": "latest",
 		"ioredis": "^5.4.1",
 		"lucia": "^3.2.2",

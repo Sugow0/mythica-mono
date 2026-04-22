@@ -10,6 +10,7 @@
 	"dependencies": {
 		"@bogeychan/elysia-logger": "^0.1.10",
 		"@dotenvx/dotenvx": "latest",
+		"@sinclair/typebox": "^0.34.15",
 		"elysia": "latest",
 		"pino": "^10.3.1"
 	},
