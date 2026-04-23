@@ -54,13 +54,13 @@ const app = new Elysia()
 	})
 	.use(
 		cors({
-      origin: [
-        "http://localhost:2200",
-        "http://localhost:2250",
-        "http://localhost:2300",
-        "http://localhost:2350",
-        "http://localhost:3000",
-        "http://localhost:5173",
+			origin: [
+				"http://localhost:2200",
+				"http://localhost:2250",
+				"http://localhost:2300",
+				"http://localhost:2350",
+				"http://localhost:3000",
+				"http://localhost:5173",
 				"http://localhost:2200",
 				"https://api.staging.mythica.tengram.fr",
 				"https://api.mythica.tengram.fr",
