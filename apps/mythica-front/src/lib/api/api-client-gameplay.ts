@@ -24,7 +24,8 @@ export class GameplayApiClient extends ApiClient {
 
 	constructor(baseUrl?: string) {
 		super(
-			baseUrl ?? `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay`
+			baseUrl ??
+				`${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay`
 		);
 
 		// Uncomment when gameplay types are generated:
