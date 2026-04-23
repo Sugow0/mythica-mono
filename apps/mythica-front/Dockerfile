@@ -14,7 +14,8 @@ RUN bun run build
 FROM oven/bun:1-alpine AS prod-deps
 WORKDIR /app
 COPY apps/mythica-front/package.json ./package.json
-RUN bun install --production
+COPY apps/mythica-front/bun.lock ./bun.lock
+RUN bun install --frozen-lockfile --production
 
 FROM node:22-alpine AS runner
 WORKDIR /app
