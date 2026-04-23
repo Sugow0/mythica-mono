@@ -1,9 +1,8 @@
 import { fail } from "@sveltejs/kit";
-import { env } from "$env/dynamic/public";
 import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ fetch, request }) => {
-	const apiUrl = `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+	const apiUrl = `${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 	const cookieHeader = request.headers.get("cookie") ?? "";
 	const headers = { Cookie: cookieHeader };
 
@@ -23,7 +22,7 @@ export const load: PageServerLoad = async ({ fetch, request }) => {
 
 export const actions: Actions = {
 	create: async ({ request, fetch }) => {
-		const apiUrl = `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+		const apiUrl = `${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 		const cookieHeader = request.headers.get("cookie") ?? "";
 		const formData = await request.formData();
 
@@ -52,7 +51,7 @@ export const actions: Actions = {
 	},
 
 	delete: async ({ request, fetch }) => {
-		const apiUrl = `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+		const apiUrl = `${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 		const cookieHeader = request.headers.get("cookie") ?? "";
 		const formData = await request.formData();
 		const id = formData.get("id")?.toString();
@@ -78,7 +77,7 @@ export const actions: Actions = {
 	},
 
 	addVersion: async ({ request, fetch }) => {
-		const apiUrl = `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+		const apiUrl = `${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 		const cookieHeader = request.headers.get("cookie") ?? "";
 		const formData = await request.formData();
 
@@ -112,7 +111,7 @@ export const actions: Actions = {
 	},
 
 	deleteVersion: async ({ request, fetch }) => {
-		const apiUrl = `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+		const apiUrl = `${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 		const cookieHeader = request.headers.get("cookie") ?? "";
 		const formData = await request.formData();
 

@@ -1,8 +1,7 @@
-import { env } from "$env/dynamic/public";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ fetch, request }) => {
-	const apiUrl = `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+	const apiUrl = `${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 	const cookieHeader = request.headers.get("cookie") ?? "";
 	const headers = { Cookie: cookieHeader };
 

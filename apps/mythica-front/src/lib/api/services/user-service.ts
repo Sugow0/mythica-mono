@@ -1,4 +1,3 @@
-import { env } from "$env/dynamic/public";
 import { ApiClient } from "../api-client";
 import type { paths } from "../generated/platform";
 
@@ -20,7 +19,10 @@ export class UserService extends ApiClient {
 	private client;
 
 	constructor(baseUrl?: string) {
-		super(baseUrl ?? `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`);
+		super(
+			baseUrl ??
+				`${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`
+		);
 		this.client = this.createClient<paths>();
 	}
 
