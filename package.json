@@ -2,8 +2,12 @@
   "name": "mythica-mono",
   "private": true,
   "version": "0.0.1",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
+    "dev": "bun run --filter '*' dev",
     "dev:front": "bun run --cwd apps/mythica-front dev",
     "dev:api": "bun run --cwd apps/mythica-api dev",
     "dev:gateway": "bun run --cwd apps/mythica-gateway dev",
