@@ -13,7 +13,7 @@ RUN bun run build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
-RUN corepack enable pnpm
+RUN npm install -g pnpm
 COPY apps/mythica-front/package.json ./
 RUN pnpm install --prod --ignore-scripts --shamefully-hoist
 COPY --from=builder /app/apps/mythica-front/build ./build
