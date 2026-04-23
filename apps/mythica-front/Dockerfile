@@ -22,5 +22,6 @@ WORKDIR /app
 COPY --from=builder /app/apps/mythica-front/build ./build
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY apps/mythica-front/package.json ./package.json
+COPY apps/mythica-front/tsconfig.json ./tsconfig.json
 EXPOSE 3000
 CMD ["node", "build/index.js"]
