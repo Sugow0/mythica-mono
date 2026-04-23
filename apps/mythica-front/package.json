@@ -16,8 +16,8 @@
 		"format:ci": "prettier --check .",
 		"test": "vitest run",
 		"generate:types": "bun run generate:types:platform && bun run generate:types:gameplay",
-		"generate:types:platform": "openapi-typescript ${PUBLIC_API_URL:-http://localhost:2100}/api/swagger/json -o ./src/lib/api/generated/platform.ts",
-		"generate:types:gameplay": "openapi-typescript ${PUBLIC_API_URL:-http://localhost:2100}/gameplay/swagger/json -o ./src/lib/api/generated/gameplay.ts",
+		"generate:types:platform": "openapi-typescript ${VITE_PUBLIC_API_URL:-http://localhost:2100}/api/swagger/json -o ./src/lib/api/generated/platform.ts",
+		"generate:types:gameplay": "openapi-typescript ${VITE_PUBLIC_API_URL:-http://localhost:2100}/gameplay/swagger/json -o ./src/lib/api/generated/gameplay.ts",
 		"knip": "knip"
 	},
 	"devDependencies": {

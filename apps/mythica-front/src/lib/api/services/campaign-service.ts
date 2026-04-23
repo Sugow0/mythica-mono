@@ -50,7 +50,7 @@ export class CampaignService extends ApiClient {
 	constructor(baseUrl?: string) {
 		super(
 			baseUrl ??
-				`${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`
+				`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/api`
 		);
 		this.client = this.createClient<paths>();
 	}

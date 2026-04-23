@@ -35,7 +35,7 @@ export const actions: Actions = {
 			});
 		}
 
-		const apiUrl = `${import.meta.env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+		const apiUrl = `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 
 		let response: Response;
 		try {
