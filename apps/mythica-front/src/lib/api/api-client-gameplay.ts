@@ -1,4 +1,3 @@
-import { env } from "$env/dynamic/public";
 import { ApiClient } from "./api-client";
 // TODO: Generate gameplay types with:
 // openapi-typescript <gameplay-api-url>/swagger/json -o ./src/lib/api/generated/gameplay.ts
