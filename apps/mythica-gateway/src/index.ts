@@ -5,6 +5,7 @@ import { logger } from "./logger";
 import "./ws-proxy";
 
 const NO_BODY_METHODS = new Set(["GET", "HEAD"]);
+const CORS_URL = process.env.CORS_URL;
 
 const proxy = async (request: Request, targetBase: string, prefix: string) => {
 	const url = new URL(request.url);
@@ -54,21 +55,7 @@ const app = new Elysia()
 	})
 	.use(
 		cors({
-			origin: [
-				"http://localhost:2200",
-				"http://localhost:2250",
-				"http://localhost:2300",
-				"http://localhost:2350",
-				"http://localhost:3000",
-				"http://localhost:5173",
-				"http://localhost:2200",
-				"https://api.staging.mythica.tengram.fr",
-				"https://api.mythica.tengram.fr",
-				"https://gp.staging.mythica.tengram.fr",
-				"https://gp.mythica.tengram.fr",
-				"https://staging.mythica.tengram.fr",
-				"https://mythica.tengram.fr",
-			],
+			origin: CORS_URL,
 			methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 			allowedHeaders: ["Content-Type", "Authorization"],
 			exposeHeaders: ["Content-Type", "Authorization"],
