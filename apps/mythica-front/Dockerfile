@@ -1,4 +1,4 @@
-FROM oven/bun:1-alpine AS builder
+FROM oven/bun:1-alpine-alpine AS builder
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/mythica-front/package.json ./apps/mythica-front/
@@ -11,7 +11,7 @@ COPY apps/mythica-front ./apps/mythica-front
 WORKDIR /app/apps/mythica-front
 RUN bun run build
 
-FROM oven/bun:1-alpine AS prod-deps
+FROM oven/bun:1-alpine-alpine AS prod-deps
 WORKDIR /app
 COPY apps/mythica-front/package.json ./package.json
 COPY apps/mythica-front/bun.lock ./bun.lock
