@@ -1,0 +1,59 @@
+name: "mythica-dev"
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123!
+      POSTGRES_DB: mythica_db_dev
+    ports:
+      - "22000:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "23000:6379" # Expose le port 6379 de Redis sur le port 23000 de l'hôte
+    volumes:
+      - redis_data:/data # Persiste les données Redis (optionnel)
+    restart: unless-stopped
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    container_name: rustfs
+    ports:
+      - "24000:9000"
+      - "24100:9001"
+    environment:
+      RUSTFS_ACCESS_KEY: dockploy-1
+      RUSTFS_SECRET_KEY: "aK51Y*fXcVOR3NWi3xva5osXBW*abf^q"
+      RUSTFS_VOLUMES: /data
+      RUSTFS_CONSOLE_ENABLE: "true"
+    volumes:
+      - rustfs_data:/data
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: rabbitmq
+    ports:
+      - "25000:5672"
+      - "25100:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=password123!
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  rustfs_data:
