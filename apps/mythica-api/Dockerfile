@@ -1,4 +1,4 @@
-FROM oven/bun:1 AS deps
+FROM oven/bun:1-alpine AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/mythica-api/package.json ./apps/mythica-api/
@@ -10,7 +10,7 @@ RUN bun install --frozen-lockfile
 COPY apps/mythica-api/prisma ./apps/mythica-api/prisma
 RUN cd apps/mythica-api && bunx prisma generate
 
-FROM oven/bun:1 AS runner
+FROM oven/bun:1-alpine AS runner
 WORKDIR /app/apps/mythica-api
 COPY --from=deps /app/node_modules ../../node_modules
 COPY --from=deps /app/apps/mythica-api/node_modules ./node_modules
