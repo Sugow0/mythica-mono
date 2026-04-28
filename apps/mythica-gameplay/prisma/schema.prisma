@@ -142,6 +142,7 @@ model CharacterSheetProperty {
   options      Json?
   description  String?      @db.Text
   createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
   gameSystems    GameSystemProperty[]
