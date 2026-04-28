@@ -87,6 +87,7 @@ enum FileDomain {
 model User {
   id        String   @id @db.Uuid
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
   ownedCampaigns  Campaign[]       @relation("CampaignOwner")
@@ -171,6 +172,7 @@ model GameSystemProperty {
   overrideDefault String?  @map("override_default") @db.Text
   formula         String?  @db.Text
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
   gameSystem GameSystem             @relation(fields: [gameSystemId], references: [id], onDelete: Cascade)
@@ -220,6 +222,9 @@ model CampaignMember {
   userId     String     @map("user_id") @db.Uuid
   role       MemberRole @default(player)
   joinedAt   DateTime   @default(now()) @map("joined_at") @db.Timestamptz
+  leftAt     DateTime?  @map("left_at") @db.Timestamptz
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
@@ -272,6 +277,7 @@ model CharacterSheetValue {
   characterSheetId String   @map("character_sheet_id") @db.Uuid
   propertyId       String   @map("property_id") @db.Uuid
   value            Json     @default("{}")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
@@ -291,7 +297,8 @@ model CampaignCharacterSheet {
   id               String   @id @db.Uuid
   campaignId       String   @map("campaign_id") @db.Uuid
   characterSheetId String   @map("character_sheet_id") @db.Uuid
-  joinedAt         DateTime @default(now()) @map("joined_at") @db.Timestamptz
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
   campaign       Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
@@ -370,6 +377,7 @@ model SessionTokenOverride {
   sessionTokenId String   @map("session_token_id") @db.Uuid
   propertyId     String   @map("property_id") @db.Uuid
   value          Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
@@ -398,6 +406,7 @@ model File {
   sizeBytes   BigInt?    @map("size_bytes")
   isPublic    Boolean    @default(false) @map("is_public")
   createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz
 
   // Relations
