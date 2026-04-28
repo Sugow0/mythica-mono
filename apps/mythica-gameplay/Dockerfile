@@ -8,7 +8,7 @@ COPY apps/mythica-gateway/package.json ./apps/mythica-gateway/
 COPY apps/mythica-mobile/package.json ./apps/mythica-mobile/
 RUN bun install --frozen-lockfile
 
-FROM oven/bun:1-alpine-alpine AS runner
+FROM oven/bun:1-alpine AS runner
 WORKDIR /app/apps/mythica-gameplay
 COPY --from=deps /app/node_modules ../../node_modules
 COPY --from=deps /app/apps/mythica-gameplay/node_modules ./node_modules
