@@ -4,6 +4,8 @@
 	"scripts": {
 		"dev": "bun --preload ./src/env.ts --watch src/index.ts",
 		"start": "bun --preload ./src/env.ts src/index.ts",
+		"db:generate": "prisma generate",
+		"db:push": "prisma db push",
 		"lint": "biome check --write",
 		"lint:ci": "biome ci"
 	},
@@ -15,6 +17,7 @@
 		"@sinclair/typebox": "^0.34.15",
 		"dotenv": "^17.4.2",
 		"elysia": "latest",
+		"ioredis": "^5.10.1",
 		"pg": "^8.20.0",
 		"pino": "^10.3.1"
 	},

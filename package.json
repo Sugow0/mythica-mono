@@ -13,7 +13,9 @@
     "dev:gateway": "bun run --cwd apps/mythica-gateway dev",
     "dev:gameplay": "bun run --cwd apps/mythica-gameplay dev",
     "lint": "bun run --filter '*' lint",
-    "lint:ci": "bun run --filter '*' lint:ci"
+    "lint:ci": "bun run --filter '*' lint:ci",
+    "db:generate": "bun run --filter '*' db:generate",
+    "db:push": "bun run --filter '*' db:push"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.0",
