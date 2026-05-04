@@ -1,6 +1,7 @@
 import { generateIdFromEntropySize } from "lucia";
 import { lucia } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/prisma";
+import { publishUserEvent } from "../../../../lib/user-events";
 import type { OAuthProfile, OAuthProviderId } from "./oauth.types";
 
 export type OAuthCallbackResult =
@@ -91,6 +92,7 @@ export async function oauthCallbackHandler(
 					},
 				}),
 			]);
+			await publishUserEvent("user.created", userId);
 		}
 	}
 
