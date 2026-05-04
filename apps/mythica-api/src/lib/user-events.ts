@@ -15,8 +15,11 @@ export async function publishUserEvent(
 	await redis.xadd(
 		STREAM_KEY,
 		"*", // ID auto-généré par Redis (timestamp + séquence)
-		"type", type,
-		"userId", userId,
-		"createdAt", new Date().toISOString(),
+		"type",
+		type,
+		"userId",
+		userId,
+		"createdAt",
+		new Date().toISOString(),
 	);
 }
