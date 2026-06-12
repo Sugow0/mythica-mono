@@ -30,10 +30,22 @@ const p = {
 		findUnique: mock(async () => null as unknown),
 		delete: mock(async () => ({}) as unknown),
 	},
+	file: { create: mock(async () => ({}) as unknown) },
 	$transaction: mock(async (ops: Promise<unknown>[]) => Promise.all(ops)),
 };
 
 mock.module("../../lib/prisma", () => ({ prisma: p }));
+
+// Stockage objet mocké : pas d'I/O réseau dans les tests.
+const uploadCampaignCover = mock(async () => "cover-key");
+const getPresignedCoverUrl = mock(
+	async (id: string) => `https://cdn.test/${id}/cover`,
+);
+mock.module("../../lib/cover-storage", () => ({
+	uploadCampaignCover,
+	getPresignedCoverUrl,
+	coverObjectKey: (id: string) => `${id}/cover`,
+}));
 
 const { campaignsController } =
 	require("../campaigns.controller") as typeof import("../campaigns.controller");
@@ -106,7 +118,43 @@ beforeEach(() => {
 	p.session.delete.mockResolvedValue({} as unknown);
 	p.campaignInvite.create.mockResolvedValue({} as unknown);
 	p.campaignInvite.delete.mockResolvedValue({} as unknown);
+	p.file.create.mockResolvedValue({} as unknown);
+	uploadCampaignCover.mockReset();
+	uploadCampaignCover.mockResolvedValue("cover-key");
+	getPresignedCoverUrl.mockReset();
+	getPresignedCoverUrl.mockResolvedValue("https://cdn.test/cover");
 });
+
+/** Requête multipart d'upload de couverture (champ `cover`). */
+async function callCover(
+	path: string,
+	opts: { userId?: string; mime?: string; bytes?: number } = {},
+) {
+	const headers: Record<string, string> = {};
+	if (opts.userId) headers["x-user-id"] = opts.userId;
+	const form = new FormData();
+	const size = opts.bytes ?? 1024;
+	const mime = opts.mime ?? "image/png";
+	const ext =
+		{ "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[mime] ??
+		"bin";
+	form.set(
+		"cover",
+		new File([new Uint8Array(size)], `cover.${ext}`, { type: mime }),
+	);
+	const res = await campaignsController.handle(
+		new Request(`http://localhost${path}`, {
+			method: "POST",
+			headers,
+			body: form,
+		}),
+	);
+	const text = await res.text();
+	return {
+		status: res.status,
+		json: text ? (JSON.parse(text) as Record<string, unknown>) : null,
+	};
+}
 
 describe("campaigns CRUD", () => {
 	it("GET /campaigns/ liste publique (200)", async () => {
@@ -370,5 +418,68 @@ describe("campaigns invitations", () => {
 		});
 		expect(r.status).toBe(200);
 		expect(r.json?.campaignId).toBe(CID);
+	});
+
+	// ==================== COUVERTURE (FEAT-22) ====================
+
+	it("POST /:id/cover sans auth (401)", async () => {
+		const r = await callCover(`/campaigns/${CID}/cover`);
+		expect(r.status).toBe(401);
+	});
+
+	it("POST /:id/cover campagne introuvable (404)", async () => {
+		p.campaign.findFirst.mockResolvedValue(null as unknown);
+		const r = await callCover(`/campaigns/${CID}/cover`, { userId: OWNER });
+		expect(r.status).toBe(404);
+	});
+
+	it("POST /:id/cover non propriétaire (403)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		const r = await callCover(`/campaigns/${CID}/cover`, { userId: OTHER });
+		expect(r.status).toBe(403);
+	});
+
+	it("POST /:id/cover type non autorisé (400)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		const r = await callCover(`/campaigns/${CID}/cover`, {
+			userId: OWNER,
+			mime: "application/pdf",
+		});
+		expect(r.status).toBe(400);
+	});
+
+	it("POST /:id/cover fichier trop volumineux (400)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		const r = await callCover(`/campaigns/${CID}/cover`, {
+			userId: OWNER,
+			bytes: 11 * 1024 * 1024,
+		});
+		expect(r.status).toBe(400);
+	});
+
+	it("POST /:id/cover succès (201) stocke et lie le fichier", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		const r = await callCover(`/campaigns/${CID}/cover`, { userId: OWNER });
+		expect(r.status).toBe(201);
+		expect(r.json?.success).toBe(true);
+		expect(typeof r.json?.fileId).toBe("string");
+		expect(uploadCampaignCover).toHaveBeenCalledTimes(1);
+		expect(p.file.create).toHaveBeenCalledTimes(1);
+		expect(p.campaign.update).toHaveBeenCalledTimes(1);
+	});
+
+	it("GET /:id expose coverUrl quand une couverture existe", async () => {
+		p.campaign.findFirst.mockResolvedValue(
+			activeCampaign({
+				coverFileId: "ffffffff-ffff-ffff-ffff-ffffffffffff",
+				members: [],
+			}),
+		);
+		getPresignedCoverUrl.mockResolvedValue("https://cdn.test/x/cover");
+		const r = await call("GET", `/campaigns/${CID}`);
+		expect(r.status).toBe(200);
+		expect((r.json?.campaign as Record<string, unknown>)?.coverUrl).toBe(
+			"https://cdn.test/x/cover",
+		);
 	});
 });
