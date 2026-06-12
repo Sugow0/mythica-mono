@@ -1,4 +1,3 @@
-import { generateIdFromEntropySize } from "lucia";
 import { lucia } from "../../../../lib/auth";
 import { sendVerificationEmail } from "../../../../lib/email";
 import { prisma } from "../../../../lib/prisma";
@@ -31,7 +30,7 @@ export async function registerHandler(
 		command.password,
 		PASSWORD_HASH_OPTIONS,
 	);
-	const userId = generateIdFromEntropySize(10);
+	const userId = crypto.randomUUID();
 	const verificationToken = generateVerificationToken();
 	const expiresAt = new Date(
 		Date.now() + VERIFICATION_EXPIRY_HOURS * 60 * 60 * 1000,

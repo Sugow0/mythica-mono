@@ -70,7 +70,7 @@ export async function oauthCallbackHandler(
 				}
 			}
 
-			userId = generateIdFromEntropySize(10);
+			userId = crypto.randomUUID();
 			userRole = "USER";
 			await prisma.$transaction([
 				prisma.users.create({
