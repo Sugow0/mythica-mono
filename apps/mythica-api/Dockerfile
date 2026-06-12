@@ -19,5 +19,18 @@ COPY apps/mythica-api/prisma ./prisma
 COPY apps/mythica-api/src ./src
 COPY apps/mythica-api/config ./config
 COPY apps/mythica-api/package.json ./
+
+LABEL org.opencontainers.image.title="mythica-api" \
+      org.opencontainers.image.description="API plateforme Mythica (Elysia · Bun · Prisma)" \
+      org.opencontainers.image.source="https://github.com/tengram-labs/mythica-mono" \
+      org.opencontainers.image.version="1.0.50"
+
 EXPOSE 3200 3250
+
+# Exécution en utilisateur non-root (fourni par l'image oven/bun)
+USER bun
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://localhost:3200/health || exit 1
+
 CMD ["bun", "--preload", "./src/env.ts", "src/index.ts"]
