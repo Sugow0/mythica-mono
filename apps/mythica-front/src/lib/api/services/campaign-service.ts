@@ -144,6 +144,32 @@ export class CampaignService extends GameplayApiClient {
 		return data;
 	}
 
+	// ==================== Chat ====================
+
+	/** Historique récent du chat d'une campagne (membre). */
+	async getMessages(id: string) {
+		const { data, error } = await this.client.GET("/campaigns/{id}/messages", {
+			params: { path: { id } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Envoyer un message dans le chat d'une campagne (membre). */
+	async postMessage(id: string, content: string) {
+		const { data, error } = await this.client.POST("/campaigns/{id}/messages", {
+			params: { path: { id } },
+			body: { content },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** URL du flux SSE temps réel du chat (à consommer via EventSource). */
+	messagesStreamUrl(id: string): string {
+		return `${this.baseUrl}/campaigns/${id}/messages/stream`;
+	}
+
 	// ==================== Membres ====================
 
 	/** Rejoindre une campagne publique. */

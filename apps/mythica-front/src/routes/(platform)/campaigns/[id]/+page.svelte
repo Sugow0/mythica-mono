@@ -10,9 +10,10 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import PlayIcon from "@lucide/svelte/icons/play";
 	import PlusIcon from "@lucide/svelte/icons/plus";
+	import SendIcon from "@lucide/svelte/icons/send";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import UsersIcon from "@lucide/svelte/icons/users";
-	import { onMount } from "svelte";
+	import { onDestroy, onMount, tick } from "svelte";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { Badge } from "$lib/components/ui/badge";
@@ -52,6 +53,19 @@
 	let busy = $state(false);
 	let inviteLink = $state<string | null>(null);
 	let inviteCopied = $state(false);
+
+	// Chat temps réel (SSE)
+	type ChatMessage = {
+		id: string;
+		userId: string;
+		content: string;
+		createdAt: string | number | Record<string, never>;
+	};
+	let messages = $state<ChatMessage[]>([]);
+	let chatInput = $state("");
+	let chatBusy = $state(false);
+	let messagesEl = $state<HTMLDivElement | null>(null);
+	let eventSource: EventSource | null = null;
 
 	// Édition des infos de campagne (propriétaire)
 	let editOpen = $state(false);
@@ -331,7 +345,70 @@
 		setTimeout(() => (inviteCopied = false), 2000);
 	}
 
-	onMount(loadCampaign);
+	async function scrollChatToBottom() {
+		await tick();
+		if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+	}
+
+	function appendMessage(msg: ChatMessage) {
+		if (messages.some((m) => m.id === msg.id)) return;
+		messages = [...messages, msg];
+		scrollChatToBottom();
+	}
+
+	async function loadMessages() {
+		try {
+			const res = await campaignService.getMessages(campaignId);
+			messages = (res?.items ?? []) as ChatMessage[];
+			scrollChatToBottom();
+		} catch {
+			// Le chat reste vide si l'historique est inaccessible.
+		}
+	}
+
+	function connectChat() {
+		eventSource?.close();
+		eventSource = new EventSource(
+			campaignService.messagesStreamUrl(campaignId),
+			{ withCredentials: true }
+		);
+		eventSource.onmessage = (event) => {
+			try {
+				appendMessage(JSON.parse(event.data) as ChatMessage);
+			} catch {
+				// Ignore les trames non-JSON (heartbeats).
+			}
+		};
+	}
+
+	async function sendMessage() {
+		const content = chatInput.trim();
+		if (!content || chatBusy) return;
+		chatBusy = true;
+		try {
+			await campaignService.postMessage(campaignId, content);
+			chatInput = "";
+		} catch (err) {
+			actionError =
+				err instanceof ApiError ? err.message : "Impossible d'envoyer.";
+		} finally {
+			chatBusy = false;
+		}
+	}
+
+	function authorLabel(userId: string) {
+		return userId === data.user?.id ? "Vous" : userId.slice(0, 8);
+	}
+
+	onMount(async () => {
+		await loadCampaign();
+		if (isMember) {
+			await loadMessages();
+			connectChat();
+		}
+	});
+
+	onDestroy(() => eventSource?.close());
 </script>
 
 <div class="mx-auto max-w-4xl px-6 py-8">
@@ -752,6 +829,65 @@
 							{/each}
 						</div>
 					{/if}
+				</Card.Content>
+			</Card.Root>
+
+			<!-- Chat temps réel -->
+			<Card.Root class="mt-6">
+				<Card.Header>
+					<Card.Title>Chat</Card.Title>
+				</Card.Header>
+				<Card.Content>
+					<div
+						bind:this={messagesEl}
+						class="mb-3 h-72 space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/20 p-3"
+					>
+						{#each messages as message (message.id)}
+							{@const mine = message.userId === data.user?.id}
+							<div class="flex flex-col {mine ? 'items-end' : 'items-start'}">
+								<div
+									class="max-w-[75%] rounded-2xl px-3 py-1.5 text-sm break-words {mine
+										? 'bg-primary text-primary-foreground'
+										: 'border border-border bg-card'}"
+								>
+									{message.content}
+								</div>
+								<span class="mt-0.5 px-1 text-[10px] text-muted-foreground">
+									{authorLabel(message.userId)} · {formatDateTime(
+										message.createdAt
+									)}
+								</span>
+							</div>
+						{:else}
+							<p
+								class="flex h-full items-center justify-center text-sm text-muted-foreground"
+							>
+								Aucun message. Lancez la conversation !
+							</p>
+						{/each}
+					</div>
+					<form
+						onsubmit={(e) => {
+							e.preventDefault();
+							sendMessage();
+						}}
+						class="flex gap-2"
+					>
+						<Input
+							placeholder="Votre message..."
+							bind:value={chatInput}
+							disabled={chatBusy}
+							maxlength={2000}
+						/>
+						<Button
+							type="submit"
+							disabled={chatBusy || !chatInput.trim()}
+							aria-label="Envoyer"
+							class="bg-red-600 text-white hover:bg-red-700"
+						>
+							<SendIcon class="h-4 w-4" />
+						</Button>
+					</form>
 				</Card.Content>
 			</Card.Root>
 		{/if}
