@@ -25,6 +25,7 @@ model Users {
   lastName                String
   pseudo                  String                    @unique
   avatar                  String?
+  bio                     String?
   email                   String                    @unique
   password                String? // null pour les comptes OAuth uniquement
   emailVerified           Boolean                   @default(false)

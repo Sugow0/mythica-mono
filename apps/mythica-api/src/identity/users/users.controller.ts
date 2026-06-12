@@ -16,6 +16,11 @@ import {
 	changePasswordRouteSchema,
 } from "./commands/change-password/change-password.dto";
 import { changePasswordHandler } from "./commands/change-password/change-password.handler";
+import {
+	type UpdateProfileBody,
+	updateProfileRouteSchema,
+} from "./commands/update-profile/update-profile.dto";
+import { updateProfileHandler } from "./commands/update-profile/update-profile.handler";
 import { uploadAvatarHandler } from "./commands/upload-avatar/upload-avatar.handler";
 import { getMeHandler } from "./queries/get-me/get-me.handler";
 import { getUserByIdHandler } from "./queries/get-user-by-id/get-user-by-id.handler";
@@ -54,6 +59,26 @@ export const usersController = new Elysia()
 				description: "Récupère les informations de l'utilisateur connecté",
 			},
 		},
+	)
+	.patch(
+		"/me",
+		async ({ body, set, request }) => {
+			const sessionResult = await getSessionFromRequest(request);
+			if (!sessionResult.ok) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const result = await updateProfileHandler(
+				sessionResult.user.id,
+				body as UpdateProfileBody,
+			);
+			if (!result.success) {
+				set.status = 400;
+				return { success: false as const, error: result.error };
+			}
+			return { success: true as const, user: result.user };
+		},
+		updateProfileRouteSchema,
 	)
 	.post(
 		"/me/change-password",
@@ -101,23 +126,15 @@ export const usersController = new Elysia()
 	)
 	.post(
 		"/me/avatar",
-		async ({ set, request }) => {
+		async ({ body, set, request }) => {
 			const sessionResult = await getSessionFromRequest(request);
 			if (!sessionResult.ok) {
 				set.status = 401;
 				return { success: false as const, error: "Non authentifié" };
 			}
-			let formData: FormData;
-			try {
-				formData = await request.formData();
-			} catch {
-				set.status = 400;
-				return {
-					success: false as const,
-					error: "Corps de requête multipart invalide",
-				};
-			}
-			const file = formData.get("avatar") ?? formData.get("file");
+			// Elysia parse déjà le multipart : on lit le fichier depuis `body`
+			// (appeler request.formData() ici échouerait, le flux étant consommé).
+			const file = body.avatar ?? body.file;
 			if (!file || !(file instanceof File)) {
 				set.status = 400;
 				return {
@@ -139,6 +156,10 @@ export const usersController = new Elysia()
 			return { success: true as const, avatarKey: result.avatarKey };
 		},
 		{
+			body: t.Object({
+				avatar: t.Optional(t.File()),
+				file: t.Optional(t.File()),
+			}),
 			response: {
 				200: t.Object({ success: t.Literal(true), avatarKey: t.String() }),
 				400: ErrorResponse,
