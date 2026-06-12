@@ -6,9 +6,7 @@
 	import ShieldIcon from "@lucide/svelte/icons/shield";
 	import SwordsIcon from "@lucide/svelte/icons/swords";
 	import UserIcon from "@lucide/svelte/icons/user";
-	import UsersIcon from "@lucide/svelte/icons/users";
 	import { onMount } from "svelte";
-	import * as Avatar from "$lib/components/ui/avatar";
 	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
@@ -21,7 +19,7 @@
 
 	type Campaign = NonNullable<
 		Awaited<ReturnType<typeof campaignService.getMyCampaigns>>
-	>["campaigns"][number];
+	>["items"][number];
 
 	// State
 	let allCampaigns = $state<Campaign[]>([]);
@@ -31,10 +29,10 @@
 
 	// Derived: filter campaigns by role
 	let myCampaigns = $derived(
-		allCampaigns.filter((c) => c.creatorId === data.user?.id)
+		allCampaigns.filter((c) => c.ownerId === data.user?.id)
 	);
 	let memberCampaigns = $derived(
-		allCampaigns.filter((c) => c.creatorId !== data.user?.id)
+		allCampaigns.filter((c) => c.ownerId !== data.user?.id)
 	);
 	let displayedCampaigns = $derived(
 		activeTab === "created"
@@ -49,11 +47,8 @@
 		isLoading = true;
 		error = null;
 		try {
-			const response = await campaignService.getMyCampaigns({
-				page: 1,
-				limit: 100,
-			});
-			allCampaigns = response?.campaigns ?? [];
+			const response = await campaignService.getMyCampaigns();
+			allCampaigns = response?.items ?? [];
 		} catch (err) {
 			if (err instanceof ApiError) {
 				error = err.message;
@@ -77,11 +72,11 @@
 	// Status helpers
 	function statusLabel(status: string) {
 		switch (status) {
-			case "ACTIVE":
+			case "active":
 				return "Active";
-			case "DRAFT":
-				return "Brouillon";
-			case "ARCHIVED":
+			case "paused":
+				return "En pause";
+			case "archived":
 				return "Archivee";
 			default:
 				return status;
@@ -90,9 +85,9 @@
 
 	function statusVariant(status: string): "default" | "secondary" | "outline" {
 		switch (status) {
-			case "ACTIVE":
+			case "active":
 				return "default";
-			case "DRAFT":
+			case "paused":
 				return "secondary";
 			default:
 				return "outline";
@@ -100,8 +95,8 @@
 	}
 
 	// Visibility helpers
-	function visibilityLabel(visibility: string) {
-		return visibility === "PRIVATE" ? "Privee" : "Publique";
+	function visibilityLabel(isPublic: boolean) {
+		return isPublic ? "Publique" : "Privee";
 	}
 
 	// Load on mount
@@ -311,37 +306,29 @@
 						<div
 							class="relative h-40 w-full overflow-hidden bg-gradient-to-br from-teal-500/20 to-cyan-500/20 dark:from-teal-900/40 dark:to-cyan-900/40"
 						>
-							{#if campaign.image}
-								<img
-									src={campaign.image}
-									alt={campaign.name}
-									class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+							<div class="flex h-full w-full items-center justify-center">
+								<SwordsIcon
+									class="h-12 w-12 text-teal-500/40 dark:text-teal-400/30"
 								/>
-							{:else}
-								<div class="flex h-full w-full items-center justify-center">
-									<SwordsIcon
-										class="h-12 w-12 text-teal-500/40 dark:text-teal-400/30"
-									/>
-								</div>
-							{/if}
+							</div>
 							<!-- Badges -->
 							<div class="absolute top-3 right-3 flex gap-1.5">
 								<Badge variant={statusVariant(campaign.status)} class="text-xs">
 									{statusLabel(campaign.status)}
 								</Badge>
-								{#if campaign.visibility === "PRIVATE"}
+								{#if !campaign.isPublic}
 									<Badge
 										variant="outline"
 										class="bg-stone-900/60 text-white border-stone-700 text-xs backdrop-blur-sm"
 									>
 										<LockIcon class="mr-1 h-3 w-3" />
-										{visibilityLabel(campaign.visibility)}
+										{visibilityLabel(campaign.isPublic)}
 									</Badge>
 								{/if}
 							</div>
 							<!-- Role indicator -->
 							<div class="absolute top-3 left-3">
-								{#if campaign.creatorId === data.user?.id}
+								{#if campaign.ownerId === data.user?.id}
 									<Badge
 										class="bg-amber-500/90 text-white border-amber-600 text-xs backdrop-blur-sm"
 									>
@@ -363,29 +350,8 @@
 							<Card.Title
 								class="text-lg font-bold text-slate-900 dark:text-white line-clamp-1"
 							>
-								{campaign.name}
+								{campaign.nom}
 							</Card.Title>
-							{#if campaign.creator}
-								<div
-									class="flex items-center gap-2 text-sm text-slate-500 dark:text-muted-foreground"
-								>
-									<Avatar.Root class="h-5 w-5">
-										{#if campaign.creator.avatar}
-											<Avatar.Image
-												src={campaign.creator.avatar}
-												alt={campaign.creator.pseudo}
-											/>
-										{/if}
-										<Avatar.Fallback
-											class="bg-gradient-to-br from-teal-500 to-cyan-600 text-[10px] font-bold text-white"
-										>
-											{campaign.creator.pseudo?.slice(0, 2).toUpperCase() ??
-												"??"}
-										</Avatar.Fallback>
-									</Avatar.Root>
-									<span>{campaign.creator.pseudo}</span>
-								</div>
-							{/if}
 						</Card.Header>
 
 						<Card.Content class="pb-2">
@@ -410,10 +376,6 @@
 							<div
 								class="flex items-center gap-4 text-xs text-slate-500 dark:text-muted-foreground"
 							>
-								<span class="flex items-center gap-1">
-									<UsersIcon class="h-3.5 w-3.5" />
-									{campaign._count?.members ?? 0}
-								</span>
 								<span class="flex items-center gap-1">
 									<CalendarIcon class="h-3.5 w-3.5" />
 									{formatDate(campaign.createdAt)}

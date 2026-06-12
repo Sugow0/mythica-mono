@@ -22,7 +22,7 @@
 
 	type GameSystem = NonNullable<
 		Awaited<ReturnType<typeof gameSystemService.getGameSystems>>
-	>["gameSystems"][number];
+	>["items"][number];
 
 	// Form state
 	let name = $state("");
@@ -42,7 +42,7 @@
 	const nameLength = $derived(name.length);
 	const descriptionLength = $derived(description.length);
 	const selectedGameSystemName = $derived(
-		gameSystems.find((gs) => gs.id === gameSystemId)?.name ?? ""
+		gameSystems.find((gs) => gs.id === gameSystemId)?.nom ?? ""
 	);
 	const isValid = $derived(
 		name.trim().length >= 3 &&
@@ -53,7 +53,7 @@
 	onMount(async () => {
 		try {
 			const response = await gameSystemService.getGameSystems({ limit: 100 });
-			gameSystems = response?.gameSystems ?? [];
+			gameSystems = response?.items ?? [];
 		} catch {
 			error = "Impossible de charger les systemes de jeu.";
 		} finally {
@@ -85,13 +85,13 @@
 
 		try {
 			const response = await campaignService.createCampaign({
-				name: name.trim(),
+				nom: name.trim(),
 				description: description.trim() || undefined,
-				visibility,
+				isPublic: visibility === "PUBLIC",
 				gameSystemId,
 			});
 
-			const campaignId = response?.campaignId;
+			const campaignId = response?.id;
 
 			if (campaignId) {
 				await goto(`/campaigns/${campaignId}`);
@@ -223,8 +223,8 @@
 							</Select.Trigger>
 							<Select.Content>
 								{#each gameSystems as gameSystem (gameSystem.id)}
-									<Select.Item value={gameSystem.id} label={gameSystem.name}>
-										{gameSystem.name}
+									<Select.Item value={gameSystem.id} label={gameSystem.nom}>
+										{gameSystem.nom}
 									</Select.Item>
 								{/each}
 							</Select.Content>

@@ -4,9 +4,7 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import SearchIcon from "@lucide/svelte/icons/search";
 	import SwordsIcon from "@lucide/svelte/icons/swords";
-	import UsersIcon from "@lucide/svelte/icons/users";
 	import { onMount } from "svelte";
-	import * as Avatar from "$lib/components/ui/avatar";
 	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
@@ -19,7 +17,7 @@
 
 	type Campaign = NonNullable<
 		Awaited<ReturnType<typeof campaignService.getCampaigns>>
-	>["campaigns"][number];
+	>["items"][number];
 
 	// State
 	let campaigns = $state<Campaign[]>([]);
@@ -38,9 +36,15 @@
 				page,
 				limit: pagination.limit,
 			});
-			campaigns = response?.campaigns ?? [];
-			if (response?.pagination) {
-				pagination = { ...pagination, ...response.pagination, page };
+			campaigns = response?.items ?? [];
+			if (response) {
+				const total = Number(response.total);
+				pagination = {
+					...pagination,
+					total,
+					page,
+					totalPages: Math.ceil(total / pagination.limit),
+				};
 			}
 		} catch (err) {
 			if (err instanceof ApiError) {
@@ -66,9 +70,15 @@
 				page: 1,
 				limit: pagination.limit,
 			});
-			campaigns = response?.campaigns ?? [];
-			if (response?.pagination) {
-				pagination = { ...pagination, ...response.pagination, page: 1 };
+			campaigns = response?.items ?? [];
+			if (response) {
+				const total = Number(response.total);
+				pagination = {
+					...pagination,
+					total,
+					page: 1,
+					totalPages: Math.ceil(total / pagination.limit),
+				};
 			}
 		} catch (err) {
 			if (err instanceof ApiError) {
@@ -100,11 +110,11 @@
 	// Status label
 	function statusLabel(status: string) {
 		switch (status) {
-			case "ACTIVE":
+			case "active":
 				return "Active";
-			case "DRAFT":
-				return "Brouillon";
-			case "ARCHIVED":
+			case "paused":
+				return "En pause";
+			case "archived":
 				return "Archivee";
 			default:
 				return status;
@@ -113,9 +123,9 @@
 
 	function statusVariant(status: string): "default" | "secondary" | "outline" {
 		switch (status) {
-			case "ACTIVE":
+			case "active":
 				return "default";
-			case "DRAFT":
+			case "paused":
 				return "secondary";
 			default:
 				return "outline";
@@ -268,19 +278,11 @@
 					<div
 						class="relative h-40 w-full overflow-hidden bg-gradient-to-br from-teal-500/20 to-cyan-500/20 dark:from-teal-900/40 dark:to-cyan-900/40"
 					>
-						{#if campaign.image}
-							<img
-								src={campaign.image}
-								alt={campaign.name}
-								class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+						<div class="flex h-full w-full items-center justify-center">
+							<SwordsIcon
+								class="h-12 w-12 text-teal-500/40 dark:text-teal-400/30"
 							/>
-						{:else}
-							<div class="flex h-full w-full items-center justify-center">
-								<SwordsIcon
-									class="h-12 w-12 text-teal-500/40 dark:text-teal-400/30"
-								/>
-							</div>
-						{/if}
+						</div>
 						<!-- Status badge -->
 						<div class="absolute top-3 right-3">
 							<Badge variant={statusVariant(campaign.status)} class="text-xs">
@@ -293,28 +295,8 @@
 						<Card.Title
 							class="text-lg font-bold text-slate-900 dark:text-white line-clamp-1"
 						>
-							{campaign.name}
+							{campaign.nom}
 						</Card.Title>
-						{#if campaign.creator}
-							<div
-								class="flex items-center gap-2 text-sm text-slate-500 dark:text-muted-foreground"
-							>
-								<Avatar.Root class="h-5 w-5">
-									{#if campaign.creator.avatar}
-										<Avatar.Image
-											src={campaign.creator.avatar}
-											alt={campaign.creator.pseudo}
-										/>
-									{/if}
-									<Avatar.Fallback
-										class="bg-gradient-to-br from-teal-500 to-cyan-600 text-[10px] font-bold text-white"
-									>
-										{campaign.creator.pseudo?.slice(0, 2).toUpperCase() ?? "??"}
-									</Avatar.Fallback>
-								</Avatar.Root>
-								<span>{campaign.creator.pseudo}</span>
-							</div>
-						{/if}
 					</Card.Header>
 
 					<Card.Content class="pb-2">
@@ -339,10 +321,6 @@
 						<div
 							class="flex items-center gap-4 text-xs text-slate-500 dark:text-muted-foreground"
 						>
-							<span class="flex items-center gap-1">
-								<UsersIcon class="h-3.5 w-3.5" />
-								{campaign._count?.members ?? 0}
-							</span>
 							<span class="flex items-center gap-1">
 								<CalendarIcon class="h-3.5 w-3.5" />
 								{formatDate(campaign.createdAt)}
