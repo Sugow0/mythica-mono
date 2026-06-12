@@ -3,6 +3,12 @@ import { authContext } from "../auth/context";
 import { getPresignedCoverUrl } from "../lib/cover-storage";
 import { ErrorResponse, SuccessMessageResponse } from "../lib/http";
 import { prisma } from "../lib/prisma";
+import { redis } from "../lib/redis";
+import {
+	chatChannel,
+	MAX_MESSAGE_LENGTH,
+	postMessageHandler,
+} from "./commands/post-message/post-message.handler";
 import { uploadCoverHandler } from "./commands/upload-cover/upload-cover.handler";
 
 // ------------------------------------------------------------
@@ -72,6 +78,14 @@ const SessionSchema = t.Object({
 	endedAt: t.Union([t.Date(), t.Null()]),
 	createdAt: t.Date(),
 	updatedAt: t.Date(),
+});
+
+const MessageSchema = t.Object({
+	id: t.String({ format: "uuid" }),
+	campaignId: t.String({ format: "uuid" }),
+	userId: t.String({ format: "uuid" }),
+	content: t.String(),
+	createdAt: t.Date(),
 });
 
 const CreateCampaignBody = t.Object({
@@ -912,6 +926,132 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 			detail: { tags: ["Campaigns"], summary: "Supprimer une session" },
 		},
 	)
+
+	// ==================== CHAT ====================
+
+	/** GET /campaigns/:id/messages - Historique du chat (membre) */
+	.get(
+		"/:id/messages",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const campaign = await findActiveCampaign(params.id);
+			if (!campaign) {
+				set.status = 404;
+				return { success: false as const, error: "Campagne introuvable" };
+			}
+			const role = await memberRole(params.id, currentUser.id);
+			if (campaign.ownerId !== currentUser.id && !role) {
+				set.status = 403;
+				return { success: false as const, error: "Accès refusé" };
+			}
+
+			const rows = await prisma.message.findMany({
+				where: { campaignId: params.id },
+				orderBy: { createdAt: "desc" },
+				take: 50,
+			});
+			return { success: true as const, items: rows.reverse() };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			response: {
+				200: t.Object({
+					success: t.Literal(true),
+					items: t.Array(MessageSchema),
+				}),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Historique du chat" },
+		},
+	)
+
+	/** POST /campaigns/:id/messages - Envoyer un message (membre) */
+	.post(
+		"/:id/messages",
+		async ({ set, currentUser, params, body }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const result = await postMessageHandler({
+				campaignId: params.id,
+				userId: currentUser.id,
+				content: body.content,
+			});
+			if (!result.ok) {
+				set.status = result.status;
+				return { success: false as const, error: result.error };
+			}
+			set.status = 201;
+			return { success: true as const, message: result.message };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: t.Object({ content: t.String({ maxLength: MAX_MESSAGE_LENGTH }) }),
+			response: {
+				201: t.Object({ success: t.Literal(true), message: MessageSchema }),
+				400: ErrorResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Envoyer un message" },
+		},
+	)
+
+	/** GET /campaigns/:id/messages/stream - Flux SSE temps réel (membre) */
+	.get("/:id/messages/stream", async ({ set, currentUser, params }) => {
+		if (!currentUser) {
+			set.status = 401;
+			return { success: false as const, error: "Non authentifié" };
+		}
+		const campaign = await findActiveCampaign(params.id);
+		if (!campaign) {
+			set.status = 404;
+			return { success: false as const, error: "Campagne introuvable" };
+		}
+		const role = await memberRole(params.id, currentUser.id);
+		if (campaign.ownerId !== currentUser.id && !role) {
+			set.status = 403;
+			return { success: false as const, error: "Accès refusé" };
+		}
+
+		const channel = chatChannel(params.id);
+		const sub = redis.duplicate();
+		const encoder = new TextEncoder();
+		let heartbeat: ReturnType<typeof setInterval> | undefined;
+
+		const stream = new ReadableStream({
+			async start(controller) {
+				controller.enqueue(encoder.encode(": connected\n\n"));
+				sub.on("message", (_channel, payload) => {
+					controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
+				});
+				await sub.subscribe(channel);
+				heartbeat = setInterval(() => {
+					controller.enqueue(encoder.encode(": ping\n\n"));
+				}, 25_000);
+			},
+			async cancel() {
+				if (heartbeat) clearInterval(heartbeat);
+				await sub.unsubscribe(channel).catch(() => {});
+				sub.disconnect();
+			},
+		});
+
+		return new Response(stream, {
+			headers: {
+				"content-type": "text/event-stream",
+				"cache-control": "no-cache",
+				connection: "keep-alive",
+			},
+		});
+	})
 
 	// ==================== INVITATIONS ====================
 
