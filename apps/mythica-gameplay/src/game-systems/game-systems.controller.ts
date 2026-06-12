@@ -57,7 +57,9 @@ export const gameSystemsController = new Elysia({ prefix: "/game-systems" })
 				? {
 						OR: [
 							{ nom: { contains: query.search, mode: "insensitive" as const } },
-							{ slug: { contains: query.search, mode: "insensitive" as const } },
+							{
+								slug: { contains: query.search, mode: "insensitive" as const },
+							},
 						],
 					}
 				: {};
