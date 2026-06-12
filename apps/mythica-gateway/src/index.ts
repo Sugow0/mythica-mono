@@ -2,6 +2,7 @@ import cors from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { resolveUser, USER_ID_HEADER, USER_ROLE_HEADER } from "./auth/session";
 import { env } from "./env";
+import { healthController } from "./health.controller";
 import { logger } from "./logger";
 import "./ws-proxy";
 
@@ -92,6 +93,7 @@ const app = new Elysia()
 			credentials: true,
 		}),
 	)
+	.use(healthController)
 	.all("/api/*", ({ request }) => proxy(request, env.API_URL, "/api"))
 	.all("/gameplay/*", ({ request }) =>
 		proxy(request, env.GAMEPLAY_URL, "/gameplay"),

@@ -6,12 +6,14 @@ import { campaignsController } from "./campaigns/campaigns.controller";
 import { env } from "./env";
 import { startUserSync } from "./events/user-sync";
 import { gameSystemsController } from "./game-systems/game-systems.controller";
+import { healthController } from "./health.controller";
 import { logger } from "./logger";
 
 await startUserSync();
 
 const app = new Elysia()
 	.use(elysiaLogger({ instance: logger }))
+	.use(healthController)
 	.use(
 		swagger({
 			path: "/swagger",
