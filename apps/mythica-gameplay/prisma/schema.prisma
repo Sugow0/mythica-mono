@@ -94,6 +94,7 @@ model User {
   campaignMembers CampaignMember[]
   characterSheets CharacterSheet[]
   files           File[]
+  messages        Message[]
 
   @@map("users")
 }
@@ -208,9 +209,30 @@ model Campaign {
   sessions        Session[]
   files           File[]                   @relation("CampaignFiles")
   invites         CampaignInvite[]
+  messages        Message[]
 
   @@index([deletedAt], name: "idx_campaigns_deleted")
   @@map("campaigns")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN MESSAGES
+// Messages du chat de campagne (diffusés en temps réel via Redis pub/sub).
+// ------------------------------------------------------------
+
+model Message {
+  id         String   @id @db.Uuid
+  campaignId String   @map("campaign_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  content    String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, createdAt], name: "idx_messages_campaign_created")
+  @@map("campaign_messages")
 }
 
 // ------------------------------------------------------------
