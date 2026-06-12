@@ -33,10 +33,10 @@ export class GameSystemService extends GameplayApiClient {
 	private client;
 
 	constructor(baseUrl?: string) {
-		super(
-			baseUrl ??
-				`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay`
-		);
+		const apiUrl = (
+			import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"
+		).replace(/\/+$/, "");
+		super(baseUrl ?? `${apiUrl}/gameplay`);
 		this.client = this.createClient<paths>();
 	}
 
