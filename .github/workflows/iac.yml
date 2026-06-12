@@ -1,0 +1,65 @@
+name: iac
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - "iac/**"
+      - ".github/workflows/iac.yml"
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - "iac/**"
+      - ".github/workflows/iac.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/terraform
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Format check
+        continue-on-error: true
+        run: terraform fmt -check -recursive
+
+      - name: Init (sans backend)
+        run: terraform init -backend=false
+
+      - name: Validate
+        run: terraform validate
+
+  ansible:
+    name: Ansible lint & syntax
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/ansible
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+
+      - name: Installer Ansible
+        run: |
+          pipx install --include-deps ansible
+          pipx install ansible-lint
+
+      - name: Syntax check
+        run: ansible-playbook --syntax-check playbook.yml
+
+      - name: Lint (informatif)
+        continue-on-error: true
+        run: ansible-lint
