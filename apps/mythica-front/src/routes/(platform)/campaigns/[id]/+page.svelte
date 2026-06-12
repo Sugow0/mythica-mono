@@ -2,6 +2,7 @@
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import CalendarIcon from "@lucide/svelte/icons/calendar";
 	import GlobeIcon from "@lucide/svelte/icons/globe";
+	import LinkIcon from "@lucide/svelte/icons/link";
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import PlusIcon from "@lucide/svelte/icons/plus";
@@ -38,6 +39,8 @@
 	let actionError = $state<string | null>(null);
 	let newSessionName = $state("");
 	let busy = $state(false);
+	let inviteLink = $state<string | null>(null);
+	let inviteCopied = $state(false);
 
 	const myMembership = $derived(
 		members.find((m) => m.userId === data.user?.id) ?? null
@@ -186,6 +189,30 @@
 		}
 	}
 
+	async function generateInvite() {
+		busy = true;
+		actionError = null;
+		inviteCopied = false;
+		try {
+			const response = await campaignService.createInvite(campaignId);
+			if (response?.token) {
+				inviteLink = `${window.location.origin}/join/${response.token}`;
+			}
+		} catch (err) {
+			actionError =
+				err instanceof ApiError ? err.message : "Impossible de creer le lien.";
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function copyInvite() {
+		if (!inviteLink) return;
+		await navigator.clipboard.writeText(inviteLink);
+		inviteCopied = true;
+		setTimeout(() => (inviteCopied = false), 2000);
+	}
+
 	onMount(loadCampaign);
 </script>
 
@@ -247,6 +274,11 @@
 				</p>
 			</div>
 			<div class="flex shrink-0 gap-2">
+				{#if isGm}
+					<Button onclick={generateInvite} disabled={busy} variant="outline">
+						<LinkIcon class="h-4 w-4" />Inviter
+					</Button>
+				{/if}
 				{#if data.user && !isMember && campaign.isPublic}
 					<Button
 						onclick={join}
@@ -278,6 +310,22 @@
 			<p class="mb-4 rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
 				{actionError}
 			</p>
+		{/if}
+
+		{#if inviteLink}
+			<div
+				class="mb-6 rounded-lg border border-teal-200 bg-teal-50/50 p-3 dark:border-teal-900 dark:bg-teal-950/30"
+			>
+				<p class="mb-2 text-sm font-medium text-slate-700 dark:text-teal-300">
+					Lien d'invitation (valable 7 jours)
+				</p>
+				<div class="flex gap-2">
+					<Input value={inviteLink} readonly class="font-mono text-xs" />
+					<Button onclick={copyInvite} variant="outline" class="shrink-0">
+						{inviteCopied ? "Copie !" : "Copier"}
+					</Button>
+				</div>
+			</div>
 		{/if}
 
 		<!-- Description -->

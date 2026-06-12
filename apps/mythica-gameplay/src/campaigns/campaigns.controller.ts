@@ -111,6 +111,16 @@ async function memberRole(
 	return member?.role ?? null;
 }
 
+/** Durée de validité d'un lien d'invitation. */
+const INVITE_EXPIRY_DAYS = 7;
+
+/** Génère un token d'invitation aléatoire (64 caractères hexadécimaux). */
+function generateInviteToken(): string {
+	const bytes = new Uint8Array(32);
+	crypto.getRandomValues(bytes);
+	return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 // ------------------------------------------------------------
 // Controller
 // ------------------------------------------------------------
@@ -747,5 +757,165 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				404: ErrorResponse,
 			},
 			detail: { tags: ["Campaigns"], summary: "Supprimer une session" },
+		},
+	)
+
+	// ==================== INVITATIONS ====================
+
+	/** POST /campaigns/:id/invites - Créer un lien d'invitation (MJ/propriétaire) */
+	.post(
+		"/:id/invites",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const campaign = await findActiveCampaign(params.id);
+			if (!campaign) {
+				set.status = 404;
+				return { success: false as const, error: "Campagne introuvable" };
+			}
+			const role = await memberRole(params.id, currentUser.id);
+			if (campaign.ownerId !== currentUser.id && role !== "gm") {
+				set.status = 403;
+				return { success: false as const, error: "Réservé au MJ" };
+			}
+
+			const token = generateInviteToken();
+			const expiresAt = new Date(
+				Date.now() + INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+			);
+			await prisma.campaignInvite.create({
+				data: {
+					id: crypto.randomUUID(),
+					campaignId: params.id,
+					token,
+					createdBy: currentUser.id,
+					expiresAt,
+				},
+			});
+			set.status = 201;
+			return { success: true as const, token, expiresAt };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			response: {
+				201: t.Object({
+					success: t.Literal(true),
+					token: t.String(),
+					expiresAt: t.Date(),
+				}),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Créer un lien d'invitation" },
+		},
+	)
+
+	/** GET /campaigns/invites/:token - Prévisualiser une invitation (sans rejoindre) */
+	.get(
+		"/invites/:token",
+		async ({ set, params }) => {
+			const invite = await prisma.campaignInvite.findUnique({
+				where: { token: params.token },
+				include: { campaign: true },
+			});
+			if (!invite || invite.campaign.deletedAt) {
+				set.status = 404;
+				return { success: false as const, error: "Invitation introuvable" };
+			}
+			if (invite.expiresAt < new Date()) {
+				set.status = 410;
+				return { success: false as const, error: "Invitation expirée" };
+			}
+			return {
+				success: true as const,
+				campaign: {
+					id: invite.campaign.id,
+					nom: invite.campaign.nom,
+					description: invite.campaign.description,
+				},
+				expiresAt: invite.expiresAt,
+			};
+		},
+		{
+			params: t.Object({ token: t.String() }),
+			response: {
+				200: t.Object({
+					success: t.Literal(true),
+					campaign: t.Object({
+						id: t.String(),
+						nom: t.String(),
+						description: t.Union([t.String(), t.Null()]),
+					}),
+					expiresAt: t.Date(),
+				}),
+				404: ErrorResponse,
+				410: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Prévisualiser une invitation" },
+		},
+	)
+
+	/** POST /campaigns/invites/:token/accept - Rejoindre une campagne via un lien */
+	.post(
+		"/invites/:token/accept",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const invite = await prisma.campaignInvite.findUnique({
+				where: { token: params.token },
+				include: { campaign: true },
+			});
+			if (!invite || invite.campaign.deletedAt) {
+				set.status = 404;
+				return { success: false as const, error: "Invitation introuvable" };
+			}
+			if (invite.expiresAt < new Date()) {
+				set.status = 410;
+				return { success: false as const, error: "Invitation expirée" };
+			}
+
+			const campaignId = invite.campaignId;
+			if (invite.campaign.ownerId === currentUser.id) {
+				return { success: true as const, campaignId };
+			}
+
+			const existing = await prisma.campaignMember.findUnique({
+				where: {
+					campaignId_userId: { campaignId, userId: currentUser.id },
+				},
+			});
+			if (existing) {
+				if (existing.leftAt !== null) {
+					await prisma.campaignMember.update({
+						where: { id: existing.id },
+						data: { leftAt: null, role: "player", joinedAt: new Date() },
+					});
+				}
+			} else {
+				await prisma.campaignMember.create({
+					data: {
+						id: crypto.randomUUID(),
+						campaignId,
+						userId: currentUser.id,
+						role: "player",
+					},
+				});
+			}
+			return { success: true as const, campaignId };
+		},
+		{
+			params: t.Object({ token: t.String() }),
+			response: {
+				200: t.Object({ success: t.Literal(true), campaignId: t.String() }),
+				401: ErrorResponse,
+				404: ErrorResponse,
+				410: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Rejoindre via une invitation" },
 		},
 	);

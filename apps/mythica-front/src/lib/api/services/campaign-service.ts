@@ -191,6 +191,37 @@ export class CampaignService extends GameplayApiClient {
 		if (error) throw error;
 		return data;
 	}
+
+	// ==================== Invitations ====================
+
+	/** Créer un lien d'invitation (MJ/propriétaire). Retourne le token. */
+	async createInvite(id: string) {
+		const { data, error } = await this.client.POST("/campaigns/{id}/invites", {
+			params: { path: { id } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Prévisualiser une invitation à partir de son token (sans rejoindre). */
+	async getInvite(token: string) {
+		const { data, error } = await this.client.GET(
+			"/campaigns/invites/{token}",
+			{ params: { path: { token } } }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Rejoindre une campagne via un token d'invitation. */
+	async acceptInvite(token: string) {
+		const { data, error } = await this.client.POST(
+			"/campaigns/invites/{token}/accept",
+			{ params: { path: { token } } }
+		);
+		if (error) throw error;
+		return data;
+	}
 }
 
 /** Singleton du service campagnes. */
