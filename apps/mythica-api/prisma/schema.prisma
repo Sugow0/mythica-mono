@@ -37,6 +37,7 @@ model Users {
   role                    RoleEnum                  @default(USER)
   oauthAccounts           OAuthAccounts[]
   emailVerificationTokens EmailVerificationTokens[]
+  passwordResetTokens     PasswordResetTokens[]
 
   @@map("users")
 }
@@ -51,6 +52,19 @@ model EmailVerificationTokens {
   @@index([userId])
   @@index([token])
   @@map("email_verification_tokens")
+}
+
+model PasswordResetTokens {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("password_reset_tokens")
 }
 
 model OAuthAccounts {
