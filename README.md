@@ -11,6 +11,7 @@ Monorepo des services et applications Mythica, géré avec [Bun workspaces](http
 | Gateway | [![mythica-gateway CI](https://github.com/tengram-labs/mythica-mono/actions/workflows/gateway.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/gateway.yml) |
 | Front | [![mythica-front CI](https://github.com/tengram-labs/mythica-mono/actions/workflows/front.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/front.yml) |
 | Mobile | [![mythica-mobile CI](https://github.com/tengram-labs/mythica-mono/actions/workflows/mobile.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/mobile.yml) |
+| Sécurité | [![security](https://github.com/tengram-labs/mythica-mono/actions/workflows/security.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/security.yml) |
 
 ## Structure
 
@@ -78,6 +79,20 @@ Chaque pipeline lance un scan [Trivy](https://aquasecurity.github.io/trivy/) :
 - **Système de fichiers** scanné pour `front` et `mobile`.
 
 Le rapport des vulnérabilités HIGH/CRITICAL est publié dans le résumé de CI, et **le job échoue dès qu'une vulnérabilité CRITICAL corrigeable est détectée**. La configuration partagée se trouve dans [`.github/actions/trivy`](.github/actions/trivy/action.yml).
+
+### Sécurité — secrets & workflows
+
+Le workflow [`security.yml`](.github/workflows/security.yml) (push, PR, et hebdomadaire) exécute :
+
+- **[gitleaks](https://github.com/gitleaks/gitleaks)** — détection de secrets commités (les `.env` chiffrés par dotenvx sont exclus via [`.gitleaks.toml`](.gitleaks.toml)) ;
+- **[actionlint](https://github.com/rhysd/actionlint)** + **shellcheck** — lint des workflows GitHub Actions et de leurs scripts.
+
+### Robustesse des pipelines
+
+- **Cache du store Bun** mutualisé via l'action composite [`.github/actions/bun-install`](.github/actions/bun-install/action.yml) ;
+- **Concurrency** : les runs obsolètes d'une même branche sont annulés automatiquement ;
+- **Actions épinglées en SHA** (commit complet) — mises à jour automatiquement par [Dependabot](.github/dependabot.yml) (npm, github-actions, docker) ;
+- **Artifacts** : rapports de couverture et de scan Trivy/gitleaks archivés sur chaque run.
 
 ## Versioning & déploiement
 
