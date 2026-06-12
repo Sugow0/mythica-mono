@@ -152,6 +152,7 @@ export const MeUserSchema = t.Object({
 	lastName: t.String(),
 	pseudo: t.String(),
 	avatar: t.Nullable(t.String()),
+	bio: t.Nullable(t.String()),
 	emailVerified: t.Boolean(),
 	createdAt: t.Date(),
 	email: t.String({
