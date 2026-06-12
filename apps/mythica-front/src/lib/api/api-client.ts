@@ -35,11 +35,11 @@ export class ApiClient {
 	private authMiddleware(): Middleware {
 		return {
 			async onRequest({ request }) {
-				// Ensure cookies are sent with requests
-				return new Request(request.url, {
-					...request,
-					credentials: "include",
-				});
+				// Ensure cookies are sent with requests. On clone la Request
+				// existante (en la passant en 1er argument) pour préserver method,
+				// headers et body — un spread `{...request}` les perdrait (ce sont
+				// des accesseurs du prototype), transformant tout POST/PUT en GET.
+				return new Request(request, { credentials: "include" });
 			},
 		};
 	}
