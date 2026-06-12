@@ -39,6 +39,17 @@ const CampaignSchema = t.Object({
 	updatedAt: t.Date(),
 });
 
+/** Campagne enrichie pour le dashboard (système, membres, dernière session). */
+const CampaignDashboardSchema = t.Composite([
+	CampaignSchema,
+	t.Object({
+		gameSystemName: t.String(),
+		memberCount: t.Integer(),
+		myRole: MemberRole,
+		lastSessionAt: t.Union([t.Date(), t.Null()]),
+	}),
+]);
+
 const MemberSchema = t.Object({
 	id: t.String({ format: "uuid" }),
 	campaignId: t.String({ format: "uuid" }),
@@ -180,7 +191,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				return { success: false as const, error: "Non authentifié" };
 			}
 
-			const items = await prisma.campaign.findMany({
+			const campaigns = await prisma.campaign.findMany({
 				where: {
 					deletedAt: null,
 					OR: [
@@ -189,6 +200,44 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 					],
 				},
 				orderBy: { updatedAt: "desc" },
+				include: {
+					gameSystem: { select: { nom: true } },
+					members: {
+						where: { leftAt: null },
+						select: { userId: true, role: true },
+					},
+					sessions: {
+						orderBy: { createdAt: "desc" },
+						take: 1,
+						select: { scheduledAt: true, createdAt: true },
+					},
+				},
+			});
+
+			const items = campaigns.map((c) => {
+				const lastSession = c.sessions[0];
+				const myRole =
+					c.ownerId === currentUser.id
+						? "gm"
+						: (c.members.find((m) => m.userId === currentUser.id)?.role ??
+							"player");
+				return {
+					id: c.id,
+					ownerId: c.ownerId,
+					gameSystemId: c.gameSystemId,
+					nom: c.nom,
+					description: c.description,
+					isPublic: c.isPublic,
+					status: c.status,
+					coverFileId: c.coverFileId,
+					createdAt: c.createdAt,
+					updatedAt: c.updatedAt,
+					gameSystemName: c.gameSystem.nom,
+					memberCount: c.members.length,
+					myRole,
+					lastSessionAt:
+						lastSession?.scheduledAt ?? lastSession?.createdAt ?? null,
+				};
 			});
 
 			return { success: true as const, items };
@@ -197,7 +246,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 			response: {
 				200: t.Object({
 					success: t.Literal(true),
-					items: t.Array(CampaignSchema),
+					items: t.Array(CampaignDashboardSchema),
 				}),
 				401: ErrorResponse,
 			},
