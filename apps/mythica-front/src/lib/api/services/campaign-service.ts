@@ -1,4 +1,6 @@
-import { ApiClient } from "../api-client";
+import { GameplayApiClient } from "../api-client-gameplay";
+// TODO: remplacer par les types gameplay une fois l'API gameplay exposée
+// (openapi-typescript <gameplay-api-url>/swagger/json -o ./generated/gameplay.ts)
 import type { paths } from "../generated/platform";
 
 /**
@@ -44,13 +46,13 @@ export interface PaginationParams {
  * - Campaign administration (archive, promote, demote)
  * - Session scheduling and management
  */
-export class CampaignService extends ApiClient {
+export class CampaignService extends GameplayApiClient {
 	private client;
 
 	constructor(baseUrl?: string) {
 		super(
 			baseUrl ??
-				`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/api`
+				`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay`
 		);
 		this.client = this.createClient<paths>();
 	}

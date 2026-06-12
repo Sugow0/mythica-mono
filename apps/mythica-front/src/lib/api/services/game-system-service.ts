@@ -1,4 +1,6 @@
-import { ApiClient } from "../api-client";
+import { GameplayApiClient } from "../api-client-gameplay";
+// TODO: remplacer par les types gameplay une fois l'API gameplay exposée
+// (openapi-typescript <gameplay-api-url>/swagger/json -o ./generated/gameplay.ts)
 import type { paths } from "../generated/platform";
 
 export interface CreateGameSystemData {
@@ -22,13 +24,13 @@ export interface PaginationParams {
  * - Game system CRUD operations (admin only for create/update/delete)
  * - Game system version management (add, update, delete)
  */
-export class GameSystemService extends ApiClient {
+export class GameSystemService extends GameplayApiClient {
 	private client;
 
 	constructor(baseUrl?: string) {
 		super(
 			baseUrl ??
-				`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/api`
+				`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay`
 		);
 		this.client = this.createClient<paths>();
 	}
