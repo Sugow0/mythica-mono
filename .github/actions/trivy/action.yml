@@ -16,17 +16,29 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Installer Trivy
+      shell: bash
+      env:
+        TRIVY_VERSION: "0.65.0"
+      run: |
+        curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+        tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
+        sudo mv /tmp/trivy /usr/local/bin/trivy
+        trivy --version
+
     - name: Rapport Trivy (HIGH/CRITICAL)
-      uses: aquasecurity/trivy-action@v0.33.1
-      with:
-        scan-type: ${{ inputs.scan-type }}
-        image-ref: ${{ inputs.scan-type == 'image' && inputs.scan-ref || '' }}
-        scan-ref: ${{ inputs.scan-type == 'fs' && inputs.scan-ref || '.' }}
-        format: table
-        output: trivy-report.txt
-        severity: HIGH,CRITICAL
-        ignore-unfixed: true
-        exit-code: "0"
+      shell: bash
+      env:
+        SCAN_TYPE: ${{ inputs.scan-type }}
+        SCAN_REF: ${{ inputs.scan-ref }}
+      run: |
+        trivy "$SCAN_TYPE" \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 0 \
+          --format table \
+          --output trivy-report.txt \
+          "$SCAN_REF"
 
     - name: Publier le rapport dans le résumé de CI
       if: always()
@@ -45,12 +57,13 @@ runs:
         } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Échec si vulnérabilité CRITICAL
-      uses: aquasecurity/trivy-action@v0.33.1
-      with:
-        scan-type: ${{ inputs.scan-type }}
-        image-ref: ${{ inputs.scan-type == 'image' && inputs.scan-ref || '' }}
-        scan-ref: ${{ inputs.scan-type == 'fs' && inputs.scan-ref || '.' }}
-        format: table
-        severity: CRITICAL
-        ignore-unfixed: true
-        exit-code: "1"
+      shell: bash
+      env:
+        SCAN_TYPE: ${{ inputs.scan-type }}
+        SCAN_REF: ${{ inputs.scan-ref }}
+      run: |
+        trivy "$SCAN_TYPE" \
+          --severity CRITICAL \
+          --ignore-unfixed \
+          --exit-code 1 \
+          "$SCAN_REF"
