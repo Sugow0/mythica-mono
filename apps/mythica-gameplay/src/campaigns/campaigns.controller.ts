@@ -298,8 +298,8 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 		},
 	)
 
-	/** PUT /campaigns/:id - Modifier une campagne (propriétaire) */
-	.put(
+	/** PATCH /campaigns/:id - Modifier une campagne (propriétaire) */
+	.patch(
 		"/:id",
 		async ({ set, currentUser, params, body }) => {
 			if (!currentUser) {

@@ -94,7 +94,7 @@ export class CampaignService extends GameplayApiClient {
 
 	/** Modifier une campagne (propriétaire). */
 	async updateCampaign(id: string, body: UpdateCampaignData) {
-		const { data, error } = await this.client.PUT("/campaigns/{id}", {
+		const { data, error } = await this.client.PATCH("/campaigns/{id}", {
 			params: { path: { id } },
 			body,
 		});
