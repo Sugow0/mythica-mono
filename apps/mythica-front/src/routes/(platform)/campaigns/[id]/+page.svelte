@@ -240,6 +240,18 @@
 			</Empty.Content>
 		</Empty.Root>
 	{:else if campaign}
+		<!-- Couverture -->
+		{#if campaign.coverUrl}
+			<div
+				class="mb-6 aspect-[3/1] w-full overflow-hidden rounded-2xl border border-border"
+			>
+				<img
+					src={campaign.coverUrl}
+					alt={campaign.nom}
+					class="h-full w-full object-cover"
+				/>
+			</div>
+		{/if}
 		<!-- En-tete -->
 		<div class="mb-6 flex items-start justify-between gap-4">
 			<div>
