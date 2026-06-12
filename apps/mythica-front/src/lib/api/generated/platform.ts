@@ -145,6 +145,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/identity/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Demander une réinitialisation de mot de passe
+         * @description Envoie un email de réinitialisation si un compte existe (réponse identique sinon, anti-énumération).
+         */
+        post: operations["postIdentityForgot-password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/identity/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Réinitialiser le mot de passe
+         * @description Définit un nouveau mot de passe à partir d'un token valide.
+         */
+        post: operations["postIdentityReset-password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/identity/resend-verification": {
         parameters: {
             query?: never;
@@ -1854,6 +1894,173 @@ export interface operations {
             };
         };
     };
+    "postIdentityForgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: email
+                     * @description Adresse email du compte
+                     */
+                    email: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: email
+                     * @description Adresse email du compte
+                     */
+                    email: string;
+                };
+                "text/plain": {
+                    /**
+                     * Format: email
+                     * @description Adresse email du compte
+                     */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "postIdentityReset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Token reçu par email */
+                    token: string;
+                    /** @description Nouveau mot de passe (8 caractères minimum) */
+                    newPassword: string;
+                };
+                "multipart/form-data": {
+                    /** @description Token reçu par email */
+                    token: string;
+                    /** @description Nouveau mot de passe (8 caractères minimum) */
+                    newPassword: string;
+                };
+                "text/plain": {
+                    /** @description Token reçu par email */
+                    token: string;
+                    /** @description Nouveau mot de passe (8 caractères minimum) */
+                    newPassword: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
     "postIdentityResend-verification": {
         parameters: {
             query?: never;
@@ -3023,7 +3230,46 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    avatar?: string;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file?: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    avatar?: string;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file?: string;
+                };
+                "text/plain": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    avatar?: string;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file?: string;
+                };
+            };
+        };
         responses: {
             200: {
                 headers: {
