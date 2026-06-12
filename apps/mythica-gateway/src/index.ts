@@ -4,6 +4,12 @@ import { resolveUser, USER_ID_HEADER, USER_ROLE_HEADER } from "./auth/session";
 import { env } from "./env";
 import { healthController } from "./health.controller";
 import { logger } from "./logger";
+import {
+	httpRequestDuration,
+	httpRequestsTotal,
+	metricsController,
+	normalizeRoute,
+} from "./metrics";
 import "./ws-proxy";
 
 const NO_BODY_METHODS = new Set(["GET", "HEAD"]);
@@ -69,12 +75,19 @@ const app = new Elysia()
 	.onRequest(({ store }) => {
 		(store as Record<string, unknown>).startTime = performance.now();
 	})
-	.onAfterResponse(({ request, store }) => {
+	.onAfterResponse(({ request, store, set }) => {
 		const responseTime =
 			performance.now() -
 			(((store as Record<string, unknown>).startTime as number) ?? 0);
+		const route = normalizeRoute(new URL(request.url).pathname);
+		const status = String(set.status ?? 200);
+		httpRequestsTotal.inc({ method: request.method, route, status });
+		httpRequestDuration.observe(
+			{ method: request.method, route, status },
+			responseTime / 1000,
+		);
 		logger.info(
-			{ method: request.method, url: request.url, responseTime },
+			{ method: request.method, url: request.url, responseTime, status },
 			"request completed",
 		);
 	})
@@ -94,6 +107,7 @@ const app = new Elysia()
 		}),
 	)
 	.use(healthController)
+	.use(metricsController)
 	.all("/api/*", ({ request }) => proxy(request, env.API_URL, "/api"))
 	.all("/gameplay/*", ({ request }) =>
 		proxy(request, env.GAMEPLAY_URL, "/gameplay"),
