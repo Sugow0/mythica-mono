@@ -10,6 +10,7 @@
 	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
+	import * as Empty from "$lib/components/ui/empty";
 	import { Skeleton } from "$lib/components/ui/skeleton";
 	import * as Tabs from "$lib/components/ui/tabs";
 	import { ApiError, campaignService } from "$lib/index.js";
@@ -252,48 +253,50 @@
 
 			<!-- Empty state -->
 		{:else if displayedCampaigns.length === 0}
-			<div class="flex flex-col items-center justify-center py-20">
-				<div
-					class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-100 dark:bg-teal-950"
-				>
-					<SwordsIcon class="h-8 w-8 text-teal-600 dark:text-teal-400" />
-				</div>
-				<h3 class="text-lg font-semibold text-slate-900 dark:text-white">
-					{#if activeTab === "created"}
-						Aucune campagne creee
-					{:else if activeTab === "member"}
-						Aucune campagne rejointe
+			<Empty.Root class="py-20">
+				<Empty.Header>
+					<Empty.Media variant="icon">
+						<SwordsIcon class="h-6 w-6 text-teal-600 dark:text-teal-400" />
+					</Empty.Media>
+					<Empty.Title>
+						{#if activeTab === "created"}
+							Aucune campagne creee
+						{:else if activeTab === "member"}
+							Aucune campagne rejointe
+						{:else}
+							Aucune campagne
+						{/if}
+					</Empty.Title>
+					<Empty.Description>
+						{#if activeTab === "created"}
+							Vous n'avez pas encore cree de campagne.
+						{:else if activeTab === "member"}
+							Vous n'avez rejoint aucune campagne pour le moment.
+						{:else}
+							Creez votre premiere campagne ou rejoignez-en une !
+						{/if}
+					</Empty.Description>
+				</Empty.Header>
+				<Empty.Content>
+					{#if activeTab !== "member"}
+						<Button
+							href="/campaigns/new"
+							class="bg-teal-600 text-white hover:bg-teal-700"
+						>
+							<PlusIcon class="h-4 w-4" />
+							Creer une campagne
+						</Button>
 					{:else}
-						Aucune campagne
+						<Button
+							href="/campaigns"
+							class="bg-teal-600 text-white hover:bg-teal-700"
+						>
+							<SwordsIcon class="h-4 w-4" />
+							Explorer les campagnes
+						</Button>
 					{/if}
-				</h3>
-				<p class="mt-1 text-center text-slate-600 dark:text-muted-foreground">
-					{#if activeTab === "created"}
-						Vous n'avez pas encore cree de campagne.
-					{:else if activeTab === "member"}
-						Vous n'avez rejoint aucune campagne pour le moment.
-					{:else}
-						Creez votre premiere campagne ou rejoignez-en une !
-					{/if}
-				</p>
-				{#if activeTab !== "member"}
-					<Button
-						href="/campaigns/new"
-						class="mt-4 bg-teal-600 text-white hover:bg-teal-700"
-					>
-						<PlusIcon class="h-4 w-4" />
-						Creer une campagne
-					</Button>
-				{:else}
-					<Button
-						href="/campaigns"
-						class="mt-4 bg-teal-600 text-white hover:bg-teal-700"
-					>
-						<SwordsIcon class="h-4 w-4" />
-						Explorer les campagnes
-					</Button>
-				{/if}
-			</div>
+				</Empty.Content>
+			</Empty.Root>
 
 			<!-- Campaign grid -->
 		{:else}
