@@ -1123,6 +1123,10 @@ export interface operations {
                             coverFileId: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
+                            gameSystemName: string;
+                            memberCount: string | number;
+                            myRole: "gm" | "player" | "spectator";
+                            lastSessionAt: (Record<string, never> | string | number) | null;
                         }[];
                     };
                     "multipart/form-data": {
@@ -1142,6 +1146,10 @@ export interface operations {
                             coverFileId: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
+                            gameSystemName: string;
+                            memberCount: string | number;
+                            myRole: "gm" | "player" | "spectator";
+                            lastSessionAt: (Record<string, never> | string | number) | null;
                         }[];
                     };
                     "text/plain": {
@@ -1161,6 +1169,10 @@ export interface operations {
                             coverFileId: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
+                            gameSystemName: string;
+                            memberCount: string | number;
+                            myRole: "gm" | "player" | "spectator";
+                            lastSessionAt: (Record<string, never> | string | number) | null;
                         }[];
                     };
                 };

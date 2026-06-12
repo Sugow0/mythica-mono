@@ -127,10 +127,42 @@ describe("campaigns CRUD", () => {
 		expect(r.status).toBe(401);
 	});
 
-	it("GET /campaigns/mine (200)", async () => {
-		p.campaign.findMany.mockResolvedValue([activeCampaign()] as unknown);
+	it("GET /campaigns/mine enrichi (200)", async () => {
+		p.campaign.findMany.mockResolvedValue([
+			activeCampaign({
+				gameSystem: { nom: "D&D 5e" },
+				members: [
+					{ userId: OWNER, role: "gm" },
+					{ userId: OTHER, role: "player" },
+				],
+				sessions: [
+					{ scheduledAt: new Date("2026-01-01"), createdAt: new Date() },
+				],
+			}),
+		] as unknown);
 		const r = await call("GET", "/campaigns/mine", { userId: OWNER });
 		expect(r.status).toBe(200);
+		const item = (r.json?.items as Record<string, unknown>[])[0];
+		expect(item.gameSystemName).toBe("D&D 5e");
+		expect(item.memberCount).toBe(2);
+		expect(item.myRole).toBe("gm");
+		expect(item.lastSessionAt).toBeDefined();
+	});
+
+	it("GET /campaigns/mine : rôle joueur si non-propriétaire", async () => {
+		p.campaign.findMany.mockResolvedValue([
+			activeCampaign({
+				ownerId: OTHER,
+				gameSystem: { nom: "CoC" },
+				members: [{ userId: OWNER, role: "player" }],
+				sessions: [],
+			}),
+		] as unknown);
+		const r = await call("GET", "/campaigns/mine", { userId: OWNER });
+		expect(r.status).toBe(200);
+		const item = (r.json?.items as Record<string, unknown>[])[0];
+		expect(item.myRole).toBe("player");
+		expect(item.lastSessionAt).toBeNull();
 	});
 
 	it("POST /campaigns/ sans auth (401)", async () => {
