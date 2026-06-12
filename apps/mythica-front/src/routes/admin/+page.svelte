@@ -57,12 +57,12 @@
 	]);
 
 	const colorMap: Record<string, string> = {
-		teal: "bg-teal-500/10 text-teal-400",
+		teal: "bg-orange-500/10 text-orange-400",
 		blue: "bg-blue-500/10 text-blue-400",
 		green: "bg-green-500/10 text-green-400",
 		yellow: "bg-yellow-500/10 text-yellow-400",
 		stone: "bg-stone-500/10 text-stone-400",
-		indigo: "bg-indigo-500/10 text-indigo-400",
+		indigo: "bg-rose-500/10 text-rose-400",
 		rose: "bg-rose-500/10 text-rose-400",
 	};
 </script>

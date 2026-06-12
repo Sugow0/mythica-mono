@@ -132,7 +132,7 @@
 						onclick={() => goto(`/admin/campaigns?page=${p}`)}
 						class="rounded-lg px-3 py-2 text-sm font-medium transition-colors {p ===
 						data.page
-							? 'bg-teal-600 text-white'
+							? 'bg-orange-600 text-white'
 							: 'border border-stone-700 bg-stone-900 text-stone-300 hover:bg-stone-800'}"
 					>
 						{p}

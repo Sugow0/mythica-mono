@@ -220,7 +220,7 @@
 	<Button
 		variant="ghost"
 		href="/campaigns"
-		class="mb-6 -ml-2 text-slate-600 hover:text-teal-600 dark:text-muted-foreground"
+		class="mb-6 -ml-2 text-slate-600 hover:text-orange-600 dark:text-muted-foreground"
 	>
 		<ArrowLeftIcon class="h-4 w-4" />
 		Retour aux campagnes
@@ -283,7 +283,7 @@
 					<Button
 						onclick={join}
 						disabled={busy}
-						class="bg-teal-600 text-white hover:bg-teal-700"
+						class="bg-orange-600 text-white hover:bg-orange-700"
 					>
 						<PlusIcon class="h-4 w-4" />Rejoindre
 					</Button>
@@ -314,9 +314,9 @@
 
 		{#if inviteLink}
 			<div
-				class="mb-6 rounded-lg border border-teal-200 bg-teal-50/50 p-3 dark:border-teal-900 dark:bg-teal-950/30"
+				class="mb-6 rounded-lg border border-orange-200 bg-orange-50/50 p-3 dark:border-orange-900 dark:bg-orange-950/30"
 			>
-				<p class="mb-2 text-sm font-medium text-slate-700 dark:text-teal-300">
+				<p class="mb-2 text-sm font-medium text-slate-700 dark:text-orange-300">
 					Lien d'invitation (valable 7 jours)
 				</p>
 				<div class="flex gap-2">
@@ -380,7 +380,7 @@
 							<Button
 								onclick={createSession}
 								disabled={busy || !newSessionName.trim()}
-								class="bg-teal-600 text-white hover:bg-teal-700"
+								class="bg-orange-600 text-white hover:bg-orange-700"
 							>
 								<PlusIcon class="h-4 w-4" />Creer
 							</Button>

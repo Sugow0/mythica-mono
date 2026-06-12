@@ -114,7 +114,7 @@
 								/>
 							{:else}
 								<div
-									class="flex h-7 w-7 items-center justify-center rounded-full bg-teal-600/20 text-xs font-bold text-teal-400"
+									class="flex h-7 w-7 items-center justify-center rounded-full bg-orange-600/20 text-xs font-bold text-orange-400"
 								>
 									{u.pseudo?.slice(0, 2).toUpperCase() ?? "?"}
 								</div>

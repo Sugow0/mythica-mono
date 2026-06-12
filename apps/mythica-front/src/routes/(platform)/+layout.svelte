@@ -20,7 +20,7 @@
 				class="flex items-center gap-2.5 transition-transform hover:scale-105"
 			>
 				<svg class="h-8 w-8" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-					<rect width="40" height="40" rx="10" class="fill-teal-600" />
+					<rect width="40" height="40" rx="10" class="fill-orange-600" />
 					<path
 						d="M12 28V12h4l4 10 4-10h4v16h-3.5v-10l-3.5 8h-2l-3.5-8v10H12z"
 						class="fill-white"
@@ -79,14 +79,14 @@
 						variant="ghost"
 						size="sm"
 						href="/sign-in"
-						class="font-medium text-slate-600 hover:text-teal-600"
+						class="font-medium text-slate-600 hover:text-orange-600"
 					>
 						Connexion
 					</Button>
 					<Button
 						size="sm"
 						href="/sign-up"
-						class="bg-teal-600 text-white shadow-md shadow-teal-600/20 transition-all hover:bg-teal-700 hover:scale-105 hover:shadow-lg"
+						class="bg-orange-600 text-white shadow-md shadow-orange-600/20 transition-all hover:bg-orange-700 hover:scale-105 hover:shadow-lg"
 					>
 						Commencer
 					</Button>

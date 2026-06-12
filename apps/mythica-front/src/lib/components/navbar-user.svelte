@@ -49,7 +49,7 @@
 	<DropdownMenu.Trigger>
 		<button
 			type="button"
-			class="group flex h-9 w-9 items-center justify-center rounded-full outline-none ring-2 ring-transparent transition-all hover:ring-teal-500 focus-visible:ring-teal-500"
+			class="group flex h-9 w-9 items-center justify-center rounded-full outline-none ring-2 ring-transparent transition-all hover:ring-orange-500 focus-visible:ring-orange-500"
 			aria-label={m.user_menu_label()}
 		>
 			<Avatar.Root class="h-9 w-9">
@@ -57,7 +57,7 @@
 					<Avatar.Image src={user?.avatar} alt={user?.pseudo} />
 				{/if}
 				<Avatar.Fallback
-					class="bg-linear-to-br from-teal-500 to-cyan-600 text-xs font-bold text-white"
+					class="bg-linear-to-br from-orange-500 to-amber-600 text-xs font-bold text-white"
 				>
 					{initials}
 				</Avatar.Fallback>

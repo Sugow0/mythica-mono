@@ -59,7 +59,7 @@
 
 	{#if done}
 		<div
-			class="rounded-lg bg-teal-500/10 px-4 py-3 text-center text-sm text-teal-600 dark:text-teal-400"
+			class="rounded-lg bg-orange-500/10 px-4 py-3 text-center text-sm text-orange-600 dark:text-orange-400"
 		>
 			Mot de passe réinitialisé. Redirection vers la connexion...
 		</div>

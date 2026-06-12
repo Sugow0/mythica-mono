@@ -68,7 +68,7 @@
 		<Empty.Root class="py-16">
 			<Empty.Header>
 				<Empty.Media variant="icon">
-					<SwordsIcon class="h-6 w-6 text-teal-600 dark:text-teal-400" />
+					<SwordsIcon class="h-6 w-6 text-orange-600 dark:text-orange-400" />
 				</Empty.Media>
 				<Empty.Title>Invitation indisponible</Empty.Title>
 				<Empty.Description
@@ -85,9 +85,9 @@
 		<Card.Root>
 			<Card.Header class="text-center">
 				<div
-					class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-100 dark:bg-teal-950"
+					class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-100 dark:bg-orange-950"
 				>
-					<SwordsIcon class="h-7 w-7 text-teal-600 dark:text-teal-400" />
+					<SwordsIcon class="h-7 w-7 text-orange-600 dark:text-orange-400" />
 				</div>
 				<Card.Title class="text-2xl">Vous êtes invité !</Card.Title>
 				<Card.Description>
@@ -111,7 +111,7 @@
 					<Button
 						onclick={join}
 						disabled={isJoining}
-						class="w-full bg-teal-600 text-white hover:bg-teal-700"
+						class="w-full bg-orange-600 text-white hover:bg-orange-700"
 					>
 						{isJoining ? "Connexion..." : "Rejoindre la campagne"}
 					</Button>
@@ -123,7 +123,7 @@
 					</p>
 					<Button
 						href="/sign-in"
-						class="w-full bg-teal-600 text-white hover:bg-teal-700"
+						class="w-full bg-orange-600 text-white hover:bg-orange-700"
 					>
 						Se connecter
 					</Button>

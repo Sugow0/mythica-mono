@@ -40,7 +40,7 @@
 		<!-- Logo -->
 		<div class="flex h-16 items-center gap-2.5 border-b border-stone-800 px-5">
 			<svg class="h-7 w-7" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-				<rect width="40" height="40" rx="10" class="fill-teal-600" />
+				<rect width="40" height="40" rx="10" class="fill-orange-600" />
 				<path
 					d="M12 28V12h4l4 10 4-10h4v16h-3.5v-10l-3.5 8h-2l-3.5-8v10H12z"
 					class="fill-white"
@@ -48,7 +48,7 @@
 			</svg>
 			<span class="text-lg font-bold tracking-tight">Mythica</span>
 			<span
-				class="ml-auto rounded bg-teal-600/20 px-1.5 py-0.5 text-xs font-semibold text-teal-400"
+				class="ml-auto rounded bg-orange-600/20 px-1.5 py-0.5 text-xs font-semibold text-orange-400"
 				>Admin</span
 			>
 		</div>
@@ -62,7 +62,7 @@
 				<a
 					href={item.href}
 					class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors {isActive
-						? 'bg-teal-600/20 text-teal-400'
+						? 'bg-orange-600/20 text-orange-400'
 						: 'text-stone-400 hover:bg-stone-800 hover:text-white'}"
 				>
 					<item.icon class="h-4 w-4 flex-shrink-0" />

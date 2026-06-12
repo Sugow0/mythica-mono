@@ -133,7 +133,7 @@
 					type="button"
 					onclick={() => handleOAuth("google")}
 					disabled={isLoading}
-					class="border-slate-300 hover:border-teal-500 hover:text-teal-600 dark:border-border dark:hover:border-teal-700 dark:hover:text-teal-400 transition-all hover:scale-105"
+					class="border-slate-300 hover:border-orange-500 hover:text-orange-600 dark:border-border dark:hover:border-orange-700 dark:hover:text-orange-400 transition-all hover:scale-105"
 					aria-label="Sign up with Google"
 				>
 					<svg
@@ -166,7 +166,7 @@
 					type="button"
 					onclick={() => handleOAuth("discord")}
 					disabled={isLoading}
-					class="border-slate-300 hover:border-teal-500 hover:text-teal-600 dark:border-border dark:hover:border-teal-700 dark:hover:text-teal-400 transition-all hover:scale-105"
+					class="border-slate-300 hover:border-orange-500 hover:text-orange-600 dark:border-border dark:hover:border-orange-700 dark:hover:text-orange-400 transition-all hover:scale-105"
 					aria-label="Sign up with Discord"
 				>
 					<svg
@@ -187,7 +187,7 @@
 					type="button"
 					onclick={() => handleOAuth("apple")}
 					disabled={isLoading}
-					class="border-slate-300 hover:border-teal-500 hover:text-teal-600 dark:border-border dark:hover:border-teal-700 dark:hover:text-teal-400 transition-all hover:scale-105"
+					class="border-slate-300 hover:border-orange-500 hover:text-orange-600 dark:border-border dark:hover:border-orange-700 dark:hover:text-orange-400 transition-all hover:scale-105"
 					aria-label="Sign up with Apple"
 				>
 					<svg

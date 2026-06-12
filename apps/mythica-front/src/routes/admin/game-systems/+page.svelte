@@ -23,7 +23,7 @@
 		<button
 			type="button"
 			onclick={() => (showCreateForm = !showCreateForm)}
-			class="flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
+			class="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
 		>
 			<PlusIcon class="h-4 w-4" />
 			{m.admin_btn_new_system()}
@@ -76,7 +76,7 @@
 							name="nom"
 							type="text"
 							required
-							class="w-full rounded-lg border border-stone-700 bg-stone-800 px-3 py-2 text-sm text-white outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+							class="w-full rounded-lg border border-stone-700 bg-stone-800 px-3 py-2 text-sm text-white outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
 						/>
 					</div>
 					<div class="grid grid-cols-2 gap-4">
@@ -93,7 +93,7 @@
 								type="text"
 								required
 								placeholder="ex: 5e, 7e, 2024..."
-								class="w-full rounded-lg border border-stone-700 bg-stone-800 px-3 py-2 text-sm text-white outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+								class="w-full rounded-lg border border-stone-700 bg-stone-800 px-3 py-2 text-sm text-white outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
 							/>
 						</div>
 						<div>
@@ -109,7 +109,7 @@
 								type="text"
 								required
 								placeholder="ex: dnd-5e"
-								class="w-full rounded-lg border border-stone-700 bg-stone-800 px-3 py-2 text-sm text-white outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+								class="w-full rounded-lg border border-stone-700 bg-stone-800 px-3 py-2 text-sm text-white outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
 							/>
 						</div>
 					</div>
@@ -124,7 +124,7 @@
 							id="description"
 							name="description"
 							rows="3"
-							class="w-full rounded-lg border border-stone-700 bg-stone-800 px-3 py-2 text-sm text-white outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+							class="w-full rounded-lg border border-stone-700 bg-stone-800 px-3 py-2 text-sm text-white outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
 						></textarea>
 					</div>
 					<div class="flex justify-end gap-3">
@@ -137,7 +137,7 @@
 						</button>
 						<button
 							type="submit"
-							class="rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-700"
+							class="rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700"
 						>
 							{m.admin_btn_create()}
 						</button>

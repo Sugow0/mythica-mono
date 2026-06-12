@@ -134,7 +134,7 @@
 		{/if}
 		{#if success}
 			<p
-				class="mt-6 rounded-lg bg-teal-500/10 px-3 py-2 text-sm text-teal-600 dark:text-teal-400"
+				class="mt-6 rounded-lg bg-orange-500/10 px-3 py-2 text-sm text-orange-600 dark:text-orange-400"
 			>
 				{success}
 			</p>
@@ -149,7 +149,7 @@
 							<Avatar.Image src={avatarUrl} alt={me.pseudo} />
 						{/if}
 						<Avatar.Fallback
-							class="bg-gradient-to-br from-teal-500 to-cyan-600 text-xl font-bold text-white"
+							class="bg-gradient-to-br from-orange-500 to-amber-600 text-xl font-bold text-white"
 						>
 							{initials}
 						</Avatar.Fallback>
@@ -221,7 +221,7 @@
 							<Button
 								type="submit"
 								disabled={isSaving || !dirty || !isValid}
-								class="bg-teal-600 text-white hover:bg-teal-700"
+								class="bg-orange-600 text-white hover:bg-orange-700"
 							>
 								{isSaving ? "Enregistrement..." : "Enregistrer"}
 							</Button>

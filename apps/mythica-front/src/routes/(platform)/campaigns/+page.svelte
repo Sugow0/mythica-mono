@@ -148,7 +148,7 @@
 		>
 			<div>
 				<div
-					class="mb-3 inline-flex items-center gap-2 rounded-full bg-teal-100 px-4 py-1.5 text-sm font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300"
+					class="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-1.5 text-sm font-medium text-orange-700 dark:bg-orange-950 dark:text-orange-300"
 				>
 					<GlobeIcon class="h-4 w-4" />
 					Campagnes publiques
@@ -166,7 +166,7 @@
 			{#if data.user}
 				<Button
 					href="/campaigns/new"
-					class="group bg-teal-600 text-white shadow-md shadow-teal-600/20 transition-all hover:bg-teal-700 hover:scale-105 hover:shadow-lg"
+					class="group bg-orange-600 text-white shadow-md shadow-orange-600/20 transition-all hover:bg-orange-700 hover:scale-105 hover:shadow-lg"
 				>
 					<PlusIcon class="h-4 w-4" />
 					Creer une campagne
@@ -244,7 +244,7 @@
 		<Empty.Root class="py-20">
 			<Empty.Header>
 				<Empty.Media variant="icon">
-					<SwordsIcon class="h-6 w-6 text-teal-600 dark:text-teal-400" />
+					<SwordsIcon class="h-6 w-6 text-orange-600 dark:text-orange-400" />
 				</Empty.Media>
 				<Empty.Title>
 					{searchQuery ? "Aucun resultat" : "Aucune campagne disponible"}
@@ -261,7 +261,7 @@
 				<Empty.Content>
 					<Button
 						href="/campaigns/new"
-						class="bg-teal-600 text-white hover:bg-teal-700"
+						class="bg-orange-600 text-white hover:bg-orange-700"
 					>
 						<PlusIcon class="h-4 w-4" />
 						Creer une campagne
@@ -275,15 +275,15 @@
 		<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 			{#each campaigns as campaign (campaign.id)}
 				<Card.Root
-					class="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/5 dark:hover:shadow-teal-500/10"
+					class="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-orange-500/5 dark:hover:shadow-orange-500/10"
 				>
 					<!-- Campaign image / placeholder -->
 					<div
-						class="relative h-40 w-full overflow-hidden bg-gradient-to-br from-teal-500/20 to-cyan-500/20 dark:from-teal-900/40 dark:to-cyan-900/40"
+						class="relative h-40 w-full overflow-hidden bg-gradient-to-br from-orange-500/20 to-amber-500/20 dark:from-orange-900/40 dark:to-amber-900/40"
 					>
 						<div class="flex h-full w-full items-center justify-center">
 							<SwordsIcon
-								class="h-12 w-12 text-teal-500/40 dark:text-teal-400/30"
+								class="h-12 w-12 text-orange-500/40 dark:text-orange-400/30"
 							/>
 						</div>
 						<!-- Status badge -->
@@ -333,7 +333,7 @@
 							variant="ghost"
 							size="sm"
 							href="/campaigns/{campaign.id}"
-							class="text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950"
+							class="text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950"
 						>
 							Voir
 						</Button>
