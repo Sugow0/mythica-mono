@@ -19,7 +19,7 @@ runs:
     - name: Installer Trivy
       shell: bash
       env:
-        TRIVY_VERSION: "0.65.0"
+        TRIVY_VERSION: "0.71.0"
       run: |
         curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
         tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
