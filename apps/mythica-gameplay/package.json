@@ -4,6 +4,9 @@
 	"scripts": {
 		"dev": "bun --preload ./src/env.ts --watch src/index.ts",
 		"start": "bun --preload ./src/env.ts src/index.ts",
+		"test": "bun test",
+		"test:watch": "bun test --watch",
+		"test:coverage": "bun test --coverage",
 		"db:generate": "prisma generate",
 		"db:push": "prisma db push",
 		"lint": "biome check --write",
