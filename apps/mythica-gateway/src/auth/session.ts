@@ -42,7 +42,9 @@ function readSessionId(cookieHeader: string | null): string | null {
  * Valide la session de la requête contre Redis et retourne l'utilisateur
  * (id + rôle). Retourne null si pas de cookie, session inexistante ou expirée.
  */
-export async function resolveUser(request: Request): Promise<ResolvedUser | null> {
+export async function resolveUser(
+	request: Request,
+): Promise<ResolvedUser | null> {
 	const sessionId = readSessionId(request.headers.get("cookie"));
 	if (!sessionId) return null;
 
