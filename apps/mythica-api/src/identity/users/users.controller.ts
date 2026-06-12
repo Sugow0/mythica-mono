@@ -126,23 +126,15 @@ export const usersController = new Elysia()
 	)
 	.post(
 		"/me/avatar",
-		async ({ set, request }) => {
+		async ({ body, set, request }) => {
 			const sessionResult = await getSessionFromRequest(request);
 			if (!sessionResult.ok) {
 				set.status = 401;
 				return { success: false as const, error: "Non authentifié" };
 			}
-			let formData: FormData;
-			try {
-				formData = await request.formData();
-			} catch {
-				set.status = 400;
-				return {
-					success: false as const,
-					error: "Corps de requête multipart invalide",
-				};
-			}
-			const file = formData.get("avatar") ?? formData.get("file");
+			// Elysia parse déjà le multipart : on lit le fichier depuis `body`
+			// (appeler request.formData() ici échouerait, le flux étant consommé).
+			const file = body.avatar ?? body.file;
 			if (!file || !(file instanceof File)) {
 				set.status = 400;
 				return {
@@ -164,6 +156,10 @@ export const usersController = new Elysia()
 			return { success: true as const, avatarKey: result.avatarKey };
 		},
 		{
+			body: t.Object({
+				avatar: t.Optional(t.File()),
+				file: t.Optional(t.File()),
+			}),
 			response: {
 				200: t.Object({ success: t.Literal(true), avatarKey: t.String() }),
 				400: ErrorResponse,
