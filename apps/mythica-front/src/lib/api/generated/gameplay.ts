@@ -118,14 +118,14 @@ export interface paths {
         };
         /** Détails d'une campagne */
         get: operations["getCampaignsById"];
-        /** Modifier une campagne */
-        put: operations["putCampaignsById"];
+        put?: never;
         post?: never;
         /** Supprimer une campagne */
         delete: operations["deleteCampaignsById"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Modifier une campagne */
+        patch: operations["patchCampaignsById"];
         trace?: never;
     };
     "/campaigns/{id}/join": {
@@ -1343,7 +1343,7 @@ export interface operations {
             };
         };
     };
-    putCampaignsById: {
+    deleteCampaignsById: {
         parameters: {
             query?: never;
             header?: never;
@@ -1352,28 +1352,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    nom?: string;
-                    description?: string;
-                    isPublic?: boolean;
-                    status?: "active" | "paused" | "archived";
-                };
-                "multipart/form-data": {
-                    nom?: string;
-                    description?: string;
-                    isPublic?: boolean;
-                    status?: "active" | "paused" | "archived";
-                };
-                "text/plain": {
-                    nom?: string;
-                    description?: string;
-                    isPublic?: boolean;
-                    status?: "active" | "paused" | "archived";
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             200: {
                 headers: {
@@ -1465,7 +1444,7 @@ export interface operations {
             };
         };
     };
-    deleteCampaignsById: {
+    patchCampaignsById: {
         parameters: {
             query?: never;
             header?: never;
@@ -1474,7 +1453,28 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    nom?: string;
+                    description?: string;
+                    isPublic?: boolean;
+                    status?: "active" | "paused" | "archived";
+                };
+                "multipart/form-data": {
+                    nom?: string;
+                    description?: string;
+                    isPublic?: boolean;
+                    status?: "active" | "paused" | "archived";
+                };
+                "text/plain": {
+                    nom?: string;
+                    description?: string;
+                    isPublic?: boolean;
+                    status?: "active" | "paused" | "archived";
+                };
+            };
+        };
         responses: {
             200: {
                 headers: {
