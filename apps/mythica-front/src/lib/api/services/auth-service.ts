@@ -104,6 +104,37 @@ export class AuthService extends ApiClient {
 		return response;
 	}
 
+	/**
+	 * Request a password reset link by email.
+	 * Always resolves (same response whether the account exists or not).
+	 */
+	async forgotPassword(email: string) {
+		const { data: response, error } = await this.client.POST(
+			"/identity/forgot-password",
+			{
+				body: { email },
+			}
+		);
+
+		if (error) throw error;
+		return response;
+	}
+
+	/**
+	 * Reset the password using a token received by email.
+	 */
+	async resetPassword(token: string, newPassword: string) {
+		const { data: response, error } = await this.client.POST(
+			"/identity/reset-password",
+			{
+				body: { token, newPassword },
+			}
+		);
+
+		if (error) throw error;
+		return response;
+	}
+
 	// ============================================
 	// Login & Logout
 	// ============================================
