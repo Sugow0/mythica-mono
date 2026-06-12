@@ -371,6 +371,56 @@ describe("campaigns sessions", () => {
 		});
 		expect(r.status).toBe(200);
 	});
+
+	it("PUT statut active renseigne startedAt", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.session.findFirst.mockResolvedValue({
+			id: "s1",
+			startedAt: null,
+		} as unknown);
+		await call("PUT", `/campaigns/${CID}/sessions/s1`, {
+			userId: OWNER,
+			body: { status: "active" },
+		});
+		const data = p.session.update.mock.calls[0]?.[0] as {
+			data: Record<string, unknown>;
+		};
+		expect(data.data.startedAt).toBeInstanceOf(Date);
+	});
+
+	it("PUT statut ended renseigne endedAt", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.session.findFirst.mockResolvedValue({
+			id: "s1",
+			startedAt: new Date(),
+			endedAt: null,
+		} as unknown);
+		await call("PUT", `/campaigns/${CID}/sessions/s1`, {
+			userId: OWNER,
+			body: { status: "ended" },
+		});
+		const data = p.session.update.mock.calls[0]?.[0] as {
+			data: Record<string, unknown>;
+		};
+		expect(data.data.endedAt).toBeInstanceOf(Date);
+	});
+
+	it("PUT ne réécrit pas startedAt déjà défini", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		const started = new Date("2026-01-01");
+		p.session.findFirst.mockResolvedValue({
+			id: "s1",
+			startedAt: started,
+		} as unknown);
+		await call("PUT", `/campaigns/${CID}/sessions/s1`, {
+			userId: OWNER,
+			body: { status: "active" },
+		});
+		const data = p.session.update.mock.calls[0]?.[0] as {
+			data: Record<string, unknown>;
+		};
+		expect(data.data.startedAt).toBeUndefined();
+	});
 });
 
 describe("campaigns invitations", () => {
