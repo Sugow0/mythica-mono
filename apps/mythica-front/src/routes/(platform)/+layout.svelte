@@ -8,10 +8,10 @@
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 </script>
 
-<div class="min-h-screen bg-stone-50 text-foreground dark:bg-background">
+<div class="min-h-screen bg-slate-50 text-foreground dark:bg-background">
 	<!-- Navbar -->
 	<nav
-		class="fixed top-0 left-0 right-0 z-50 border-b border-stone-200/60 bg-stone-50/90 backdrop-blur-xl dark:border-border/40 dark:bg-background/80"
+		class="fixed top-0 left-0 right-0 z-50 border-b border-slate-200/60 bg-slate-50/90 backdrop-blur-xl dark:border-border/40 dark:bg-background/80"
 	>
 		<div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
 			<!-- Logo -->
@@ -20,7 +20,7 @@
 				class="flex items-center gap-2.5 transition-transform hover:scale-105"
 			>
 				<svg class="h-8 w-8" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-					<rect width="40" height="40" rx="10" class="fill-teal-600" />
+					<rect width="40" height="40" rx="10" class="fill-red-600" />
 					<path
 						d="M12 28V12h4l4 10 4-10h4v16h-3.5v-10l-3.5 8h-2l-3.5-8v10H12z"
 						class="fill-white"
@@ -79,14 +79,14 @@
 						variant="ghost"
 						size="sm"
 						href="/sign-in"
-						class="font-medium text-slate-600 hover:text-teal-600"
+						class="font-medium text-slate-600 hover:text-red-600"
 					>
 						Connexion
 					</Button>
 					<Button
 						size="sm"
 						href="/sign-up"
-						class="bg-teal-600 text-white shadow-md shadow-teal-600/20 transition-all hover:bg-teal-700 hover:scale-105 hover:shadow-lg"
+						class="bg-red-600 text-white shadow-md shadow-red-600/20 transition-all hover:bg-red-700 hover:scale-105 hover:shadow-lg"
 					>
 						Commencer
 					</Button>

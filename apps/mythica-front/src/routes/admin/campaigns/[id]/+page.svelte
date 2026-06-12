@@ -9,12 +9,12 @@
 	const statusColors: Record<string, string> = {
 		ACTIVE: "bg-green-500/20 text-green-400",
 		DRAFT: "bg-yellow-500/20 text-yellow-400",
-		ARCHIVED: "bg-stone-500/20 text-stone-400",
+		ARCHIVED: "bg-slate-500/20 text-slate-400",
 	};
 
 	const visibilityColors: Record<string, string> = {
 		PUBLIC: "bg-blue-500/20 text-blue-400",
-		PRIVATE: "bg-rose-500/20 text-rose-400",
+		PRIVATE: "bg-red-500/20 text-red-400",
 	};
 </script>
 
@@ -22,22 +22,22 @@
 	<button
 		type="button"
 		onclick={() => goto("/admin/campaigns")}
-		class="mb-6 flex items-center gap-2 text-sm text-stone-400 transition-colors hover:text-white"
+		class="mb-6 flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
 	>
 		<ArrowLeftIcon class="h-4 w-4" />
 		{m.admin_campaigns_title()}
 	</button>
 
 	{#if !data.campaign}
-		<p class="text-stone-400">Campagne introuvable.</p>
+		<p class="text-slate-400">Campagne introuvable.</p>
 	{:else}
 		{@const c = data.campaign}
 		<h1 class="mb-6 text-2xl font-bold text-white">{c.name}</h1>
 
 		<!-- General info -->
 		<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-			<div class="rounded-xl border border-stone-800 bg-stone-900 p-4">
-				<p class="mb-1 text-xs font-medium text-stone-500">
+			<div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+				<p class="mb-1 text-xs font-medium text-slate-500">
 					{m.admin_col_status()}
 				</p>
 				<span
@@ -48,8 +48,8 @@
 					{c.status ?? "—"}
 				</span>
 			</div>
-			<div class="rounded-xl border border-stone-800 bg-stone-900 p-4">
-				<p class="mb-1 text-xs font-medium text-stone-500">
+			<div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+				<p class="mb-1 text-xs font-medium text-slate-500">
 					{m.admin_col_visibility()}
 				</p>
 				<span
@@ -60,8 +60,8 @@
 					{c.visibility ?? "—"}
 				</span>
 			</div>
-			<div class="rounded-xl border border-stone-800 bg-stone-900 p-4">
-				<p class="mb-1 text-xs font-medium text-stone-500">
+			<div class="rounded-xl border border-slate-800 bg-slate-900 p-4">
+				<p class="mb-1 text-xs font-medium text-slate-500">
 					{m.admin_col_creator()}
 				</p>
 				<p class="text-sm font-medium text-white">
@@ -69,17 +69,17 @@
 				</p>
 			</div>
 			<div
-				class="rounded-xl border border-stone-800 bg-stone-900 p-4 sm:col-span-2 lg:col-span-3"
+				class="rounded-xl border border-slate-800 bg-slate-900 p-4 sm:col-span-2 lg:col-span-3"
 			>
-				<p class="mb-1 text-xs font-medium text-stone-500">Description</p>
-				<p class="text-sm text-stone-300">{c.description || "—"}</p>
+				<p class="mb-1 text-xs font-medium text-slate-500">Description</p>
+				<p class="text-sm text-slate-300">{c.description || "—"}</p>
 			</div>
 		</div>
 
 		<!-- Game system -->
 		{#if c.gameSystem}
-			<div class="mb-6 rounded-xl border border-stone-800 bg-stone-900 p-4">
-				<p class="mb-2 text-xs font-medium text-stone-500">
+			<div class="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
+				<p class="mb-2 text-xs font-medium text-slate-500">
 					{m.admin_col_game_system()}
 				</p>
 				<p class="text-sm font-medium text-white">{c.gameSystem.name}</p>
@@ -87,7 +87,7 @@
 					<div class="mt-2 flex flex-wrap gap-1.5">
 						{#each c.gameSystem.versions as v (v.version ?? v)}
 							<span
-								class="rounded-full bg-stone-800 px-2 py-0.5 text-xs text-stone-400"
+								class="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400"
 								>{v.version ?? v}</span
 							>
 						{/each}
@@ -97,8 +97,8 @@
 		{/if}
 
 		<!-- Members -->
-		<div class="mb-6 rounded-xl border border-stone-800 bg-stone-900 p-4">
-			<p class="mb-3 text-xs font-medium text-stone-500">
+		<div class="mb-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
+			<p class="mb-3 text-xs font-medium text-slate-500">
 				{m.admin_campaign_members()}
 			</p>
 			{#if c.members?.length}
@@ -114,15 +114,15 @@
 								/>
 							{:else}
 								<div
-									class="flex h-7 w-7 items-center justify-center rounded-full bg-teal-600/20 text-xs font-bold text-teal-400"
+									class="flex h-7 w-7 items-center justify-center rounded-full bg-red-600/20 text-xs font-bold text-red-400"
 								>
 									{u.pseudo?.slice(0, 2).toUpperCase() ?? "?"}
 								</div>
 							{/if}
-							<span class="text-sm text-stone-300">{u.pseudo}</span>
+							<span class="text-sm text-slate-300">{u.pseudo}</span>
 							{#if member.role}
 								<span
-									class="ml-auto rounded-full bg-stone-800 px-2 py-0.5 text-xs text-stone-400"
+									class="ml-auto rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-400"
 									>{member.role}</span
 								>
 							{/if}
@@ -130,15 +130,15 @@
 					{/each}
 				</div>
 			{:else}
-				<p class="text-sm text-stone-500">Aucun membre.</p>
+				<p class="text-sm text-slate-500">Aucun membre.</p>
 			{/if}
 		</div>
 
 		<!-- Character sheets placeholder -->
 		<div
-			class="rounded-xl border border-dashed border-stone-700 p-6 text-center"
+			class="rounded-xl border border-dashed border-slate-700 p-6 text-center"
 		>
-			<p class="text-sm text-stone-500">{m.admin_campaign_characters()}</p>
+			<p class="text-sm text-slate-500">{m.admin_campaign_characters()}</p>
 		</div>
 	{/if}
 </div>

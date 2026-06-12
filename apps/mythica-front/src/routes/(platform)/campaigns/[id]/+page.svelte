@@ -220,7 +220,7 @@
 	<Button
 		variant="ghost"
 		href="/campaigns"
-		class="mb-6 -ml-2 text-slate-600 hover:text-teal-600 dark:text-muted-foreground"
+		class="mb-6 -ml-2 text-slate-600 hover:text-red-600 dark:text-muted-foreground"
 	>
 		<ArrowLeftIcon class="h-4 w-4" />
 		Retour aux campagnes
@@ -283,7 +283,7 @@
 					<Button
 						onclick={join}
 						disabled={busy}
-						class="bg-teal-600 text-white hover:bg-teal-700"
+						class="bg-red-600 text-white hover:bg-red-700"
 					>
 						<PlusIcon class="h-4 w-4" />Rejoindre
 					</Button>
@@ -298,7 +298,7 @@
 						onclick={removeCampaign}
 						disabled={busy}
 						variant="outline"
-						class="text-rose-500 hover:text-rose-600"
+						class="text-red-500 hover:text-red-600"
 					>
 						<Trash2Icon class="h-4 w-4" />Supprimer
 					</Button>
@@ -307,16 +307,16 @@
 		</div>
 
 		{#if actionError}
-			<p class="mb-4 rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+			<p class="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
 				{actionError}
 			</p>
 		{/if}
 
 		{#if inviteLink}
 			<div
-				class="mb-6 rounded-lg border border-teal-200 bg-teal-50/50 p-3 dark:border-teal-900 dark:bg-teal-950/30"
+				class="mb-6 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-900 dark:bg-red-950/30"
 			>
-				<p class="mb-2 text-sm font-medium text-slate-700 dark:text-teal-300">
+				<p class="mb-2 text-sm font-medium text-slate-700 dark:text-red-300">
 					Lien d'invitation (valable 7 jours)
 				</p>
 				<div class="flex gap-2">
@@ -346,7 +346,7 @@
 			<Card.Content class="space-y-2">
 				{#each members as member (member.id)}
 					<div
-						class="flex items-center justify-between rounded-lg border border-stone-100 px-3 py-2 dark:border-border/40"
+						class="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 dark:border-border/40"
 					>
 						<span
 							class="font-mono text-xs text-slate-500 dark:text-muted-foreground"
@@ -380,7 +380,7 @@
 							<Button
 								onclick={createSession}
 								disabled={busy || !newSessionName.trim()}
-								class="bg-teal-600 text-white hover:bg-teal-700"
+								class="bg-red-600 text-white hover:bg-red-700"
 							>
 								<PlusIcon class="h-4 w-4" />Creer
 							</Button>
@@ -388,7 +388,7 @@
 					{/if}
 					{#each sessions as session (session.id)}
 						<div
-							class="flex items-center justify-between rounded-lg border border-stone-100 px-3 py-2 dark:border-border/40"
+							class="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 dark:border-border/40"
 						>
 							<div class="flex items-center gap-2">
 								<span class="font-medium text-slate-900 dark:text-white"
@@ -400,7 +400,7 @@
 								<button
 									type="button"
 									onclick={() => removeSession(session.id)}
-									class="rounded p-1 text-stone-400 hover:text-rose-500"
+									class="rounded p-1 text-slate-400 hover:text-red-500"
 									title="Supprimer la session"
 								>
 									<Trash2Icon class="h-4 w-4" />

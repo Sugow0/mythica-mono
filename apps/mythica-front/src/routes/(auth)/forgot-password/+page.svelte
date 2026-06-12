@@ -51,7 +51,7 @@
 
 	{#if sent}
 		<div
-			class="rounded-lg bg-teal-500/10 px-4 py-3 text-center text-sm text-teal-600 dark:text-teal-400"
+			class="rounded-lg bg-red-500/10 px-4 py-3 text-center text-sm text-red-600 dark:text-red-400"
 		>
 			Si un compte correspond à cette adresse, un email de réinitialisation
 			vient d'être envoyé.
@@ -65,9 +65,7 @@
 		<form onsubmit={handleSubmit}>
 			<FieldGroup class="gap-4">
 				{#if error}
-					<div
-						class="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-500"
-					>
+					<div class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
 						{error}
 					</div>
 				{/if}

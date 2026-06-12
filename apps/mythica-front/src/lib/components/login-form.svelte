@@ -99,7 +99,7 @@
 					type="button"
 					onclick={() => handleOAuth("google")}
 					disabled={isLoading}
-					class="border-slate-300 hover:border-teal-500 hover:text-teal-600 dark:border-border dark:hover:border-teal-700 dark:hover:text-teal-400 transition-all hover:scale-105"
+					class="border-slate-300 hover:border-red-500 hover:text-red-600 dark:border-border dark:hover:border-red-700 dark:hover:text-red-400 transition-all hover:scale-105"
 					aria-label="Sign in with Google"
 				>
 					<svg
@@ -132,7 +132,7 @@
 					type="button"
 					onclick={() => handleOAuth("discord")}
 					disabled={isLoading}
-					class="border-slate-300 hover:border-teal-500 hover:text-teal-600 dark:border-border dark:hover:border-teal-700 dark:hover:text-teal-400 transition-all hover:scale-105"
+					class="border-slate-300 hover:border-red-500 hover:text-red-600 dark:border-border dark:hover:border-red-700 dark:hover:text-red-400 transition-all hover:scale-105"
 					aria-label="Sign in with Discord"
 				>
 					<svg
@@ -153,7 +153,7 @@
 					type="button"
 					onclick={() => handleOAuth("apple")}
 					disabled={isLoading}
-					class="border-slate-300 hover:border-teal-500 hover:text-teal-600 dark:border-border dark:hover:border-teal-700 dark:hover:text-teal-400 transition-all hover:scale-105"
+					class="border-slate-300 hover:border-red-500 hover:text-red-600 dark:border-border dark:hover:border-red-700 dark:hover:text-red-400 transition-all hover:scale-105"
 					aria-label="Sign in with Apple"
 				>
 					<svg
@@ -192,7 +192,7 @@
 				<FieldLabel for="password-{id}">Password</FieldLabel>
 				<a
 					href="/forgot-password"
-					class="ms-auto text-sm underline-offset-4 hover:underline hover:text-teal-600 dark:hover:text-teal-400"
+					class="ms-auto text-sm underline-offset-4 hover:underline hover:text-red-600 dark:hover:text-red-400"
 				>
 					Forgot your password?
 				</a>
