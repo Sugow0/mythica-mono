@@ -6,6 +6,7 @@ on:
     paths:
       - "apps/mythica-mobile/**"
       - ".github/workflows/mobile.yml"
+      - ".github/actions/**"
       - "package.json"
       - "bun.lock"
   pull_request:
@@ -13,8 +14,13 @@ on:
     paths:
       - "apps/mythica-mobile/**"
       - ".github/workflows/mobile.yml"
+      - ".github/actions/**"
       - "package.json"
       - "bun.lock"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run:
@@ -25,15 +31,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-        working-directory: .
+      - uses: ./.github/actions/bun-install
 
       - name: Lint
         run: bun run lint
@@ -43,15 +43,9 @@ jobs:
     needs: [lint]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-        working-directory: .
+      - uses: ./.github/actions/bun-install
 
       - name: Type check
         run: bunx tsc --noEmit
@@ -62,3 +56,11 @@ jobs:
           scan-type: fs
           scan-ref: apps/mythica-mobile
           title: mythica-mobile
+
+      - name: Archiver le rapport Trivy
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: trivy-mobile
+          path: trivy-report.txt
+          if-no-files-found: ignore
