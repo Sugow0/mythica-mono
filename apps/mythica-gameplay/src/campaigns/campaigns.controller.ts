@@ -1,7 +1,9 @@
 import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
+import { getPresignedCoverUrl } from "../lib/cover-storage";
 import { ErrorResponse, SuccessMessageResponse } from "../lib/http";
 import { prisma } from "../lib/prisma";
+import { uploadCoverHandler } from "./commands/upload-cover/upload-cover.handler";
 
 // ------------------------------------------------------------
 // Schémas
@@ -35,6 +37,7 @@ const CampaignSchema = t.Object({
 	isPublic: t.Boolean(),
 	status: CampaignStatus,
 	coverFileId: t.Union([t.String(), t.Null()]),
+	coverUrl: t.Union([t.String(), t.Null()]),
 	createdAt: t.Date(),
 	updatedAt: t.Date(),
 });
@@ -122,6 +125,19 @@ async function memberRole(
 	return member?.role ?? null;
 }
 
+/**
+ * URL présignée de la couverture d'une campagne, ou null si aucune couverture.
+ * Tolère une panne du stockage objet (retourne null) pour ne pas casser la
+ * sérialisation d'une liste de campagnes.
+ */
+async function coverUrlFor(c: {
+	id: string;
+	coverFileId: string | null;
+}): Promise<string | null> {
+	if (!c.coverFileId) return null;
+	return getPresignedCoverUrl(c.id).catch(() => null);
+}
+
 /** Durée de validité d'un lien d'invitation. */
 const INVITE_EXPIRY_DAYS = 7;
 
@@ -155,7 +171,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 					: {}),
 			};
 
-			const [items, total] = await Promise.all([
+			const [rows, total] = await Promise.all([
 				prisma.campaign.findMany({
 					where,
 					skip: (page - 1) * limit,
@@ -164,6 +180,10 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				}),
 				prisma.campaign.count({ where }),
 			]);
+
+			const items = await Promise.all(
+				rows.map(async (c) => ({ ...c, coverUrl: await coverUrlFor(c) })),
+			);
 
 			return { success: true as const, items, total, page, limit };
 		},
@@ -214,31 +234,34 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				},
 			});
 
-			const items = campaigns.map((c) => {
-				const lastSession = c.sessions[0];
-				const myRole =
-					c.ownerId === currentUser.id
-						? "gm"
-						: (c.members.find((m) => m.userId === currentUser.id)?.role ??
-							"player");
-				return {
-					id: c.id,
-					ownerId: c.ownerId,
-					gameSystemId: c.gameSystemId,
-					nom: c.nom,
-					description: c.description,
-					isPublic: c.isPublic,
-					status: c.status,
-					coverFileId: c.coverFileId,
-					createdAt: c.createdAt,
-					updatedAt: c.updatedAt,
-					gameSystemName: c.gameSystem.nom,
-					memberCount: c.members.length,
-					myRole,
-					lastSessionAt:
-						lastSession?.scheduledAt ?? lastSession?.createdAt ?? null,
-				};
-			});
+			const items = await Promise.all(
+				campaigns.map(async (c) => {
+					const lastSession = c.sessions[0];
+					const myRole =
+						c.ownerId === currentUser.id
+							? "gm"
+							: (c.members.find((m) => m.userId === currentUser.id)?.role ??
+								"player");
+					return {
+						id: c.id,
+						ownerId: c.ownerId,
+						gameSystemId: c.gameSystemId,
+						nom: c.nom,
+						description: c.description,
+						isPublic: c.isPublic,
+						status: c.status,
+						coverFileId: c.coverFileId,
+						coverUrl: await coverUrlFor(c),
+						createdAt: c.createdAt,
+						updatedAt: c.updatedAt,
+						gameSystemName: c.gameSystem.nom,
+						memberCount: c.members.length,
+						myRole,
+						lastSessionAt:
+							lastSession?.scheduledAt ?? lastSession?.createdAt ?? null,
+					};
+				}),
+			);
 
 			return { success: true as const, items };
 		},
@@ -277,7 +300,11 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 			}
 
 			const { members, ...rest } = campaign;
-			return { success: true as const, campaign: rest, members };
+			return {
+				success: true as const,
+				campaign: { ...rest, coverUrl: await coverUrlFor(rest) },
+				members,
+			};
 		},
 		{
 			params: t.Object({ id: t.String() }),
@@ -344,6 +371,68 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				401: ErrorResponse,
 			},
 			detail: { tags: ["Campaigns"], summary: "Créer une campagne" },
+		},
+	)
+
+	/** POST /campaigns/:id/cover - Téléverser l'image de couverture (propriétaire) */
+	.post(
+		"/:id/cover",
+		async ({ set, currentUser, params, body }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+
+			const file = body.cover ?? body.file;
+			if (!file || !(file instanceof File)) {
+				set.status = 400;
+				return {
+					success: false as const,
+					error: "Fichier manquant. Envoyez un champ 'cover' ou 'file'.",
+				};
+			}
+
+			const buffer = Buffer.from(await file.arrayBuffer());
+			const result = await uploadCoverHandler({
+				campaignId: params.id,
+				userId: currentUser.id,
+				data: buffer,
+				contentType: file.type || "image/jpeg",
+			});
+
+			if (!result.ok) {
+				set.status = result.status;
+				return { success: false as const, error: result.error };
+			}
+
+			set.status = 201;
+			return {
+				success: true as const,
+				fileId: result.fileId,
+				coverUrl: result.coverUrl,
+			};
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: t.Object({
+				cover: t.Optional(t.File()),
+				file: t.Optional(t.File()),
+			}),
+			response: {
+				201: t.Object({
+					success: t.Literal(true),
+					fileId: t.String(),
+					coverUrl: t.Union([t.String(), t.Null()]),
+				}),
+				400: ErrorResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["Campaigns"],
+				summary: "Téléverser l'image de couverture",
+			},
 		},
 	)
 

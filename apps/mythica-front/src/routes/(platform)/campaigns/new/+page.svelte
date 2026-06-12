@@ -1,8 +1,10 @@
 <script lang="ts">
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import GlobeIcon from "@lucide/svelte/icons/globe";
+	import ImageIcon from "@lucide/svelte/icons/image";
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import SwordsIcon from "@lucide/svelte/icons/swords";
+	import XIcon from "@lucide/svelte/icons/x";
 	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
 	import { Button } from "$lib/components/ui/button";
@@ -24,11 +26,18 @@
 		Awaited<ReturnType<typeof gameSystemService.getGameSystems>>
 	>["items"][number];
 
+	// Couverture
+	const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
+	const MAX_COVER_SIZE = 10 * 1024 * 1024; // 10 Mo
+
 	// Form state
 	let name = $state("");
 	let description = $state("");
 	let visibility = $state<"PUBLIC" | "PRIVATE">("PRIVATE");
 	let gameSystemId = $state("");
+	let coverFile = $state<File | null>(null);
+	let coverPreview = $state<string | null>(null);
+	let coverError = $state<string | null>(null);
 
 	// UI state
 	let isLoading = $state(false);
@@ -60,6 +69,33 @@
 			isLoadingGameSystems = false;
 		}
 	});
+
+	function onCoverChange(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		coverError = null;
+		if (!file) return;
+		if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+			coverError = "Format non supporte. Utilisez JPEG, PNG ou WebP.";
+			input.value = "";
+			return;
+		}
+		if (file.size > MAX_COVER_SIZE) {
+			coverError = "Image trop volumineuse (max. 10 Mo).";
+			input.value = "";
+			return;
+		}
+		if (coverPreview) URL.revokeObjectURL(coverPreview);
+		coverFile = file;
+		coverPreview = URL.createObjectURL(file);
+	}
+
+	function removeCover() {
+		if (coverPreview) URL.revokeObjectURL(coverPreview);
+		coverFile = null;
+		coverPreview = null;
+		coverError = null;
+	}
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
@@ -94,6 +130,15 @@
 			const campaignId = response?.id;
 
 			if (campaignId) {
+				// La couverture est optionnelle : un echec d'upload ne doit pas
+				// bloquer la creation de la campagne.
+				if (coverFile) {
+					try {
+						await campaignService.uploadCoverImage(campaignId, coverFile);
+					} catch {
+						// On poursuit : la couverture pourra etre ajoutee plus tard.
+					}
+				}
 				await goto(`/campaigns/${campaignId}`);
 			} else {
 				await goto("/campaigns");
@@ -154,6 +199,80 @@
 							{error}
 						</div>
 					{/if}
+
+					<!-- Cover image -->
+					<Field>
+						<FieldLabel for="cover-{id}">Image de couverture</FieldLabel>
+						{#if coverPreview}
+							<div
+								class="group relative aspect-video w-full overflow-hidden rounded-xl border border-border"
+							>
+								<img
+									src={coverPreview}
+									alt="Apercu de la couverture"
+									class="h-full w-full object-cover"
+								/>
+								<div
+									class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"
+								></div>
+								<button
+									type="button"
+									onclick={removeCover}
+									disabled={isLoading}
+									aria-label="Retirer l'image"
+									class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80"
+								>
+									<XIcon class="h-4 w-4" />
+								</button>
+								<label
+									class="absolute bottom-3 left-3 cursor-pointer rounded-lg bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-900 shadow-sm transition hover:bg-white"
+								>
+									Changer l'image
+									<input
+										type="file"
+										accept="image/jpeg,image/png,image/webp"
+										class="sr-only"
+										disabled={isLoading}
+										onchange={onCoverChange}
+									/>
+								</label>
+							</div>
+						{:else}
+							<label
+								for="cover-{id}"
+								class="flex aspect-video w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 text-center transition-colors hover:border-primary/60 hover:bg-primary/5"
+							>
+								<div
+									class="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:text-primary"
+								>
+									<ImageIcon class="h-6 w-6" />
+								</div>
+								<div>
+									<div class="text-sm font-medium text-foreground">
+										Ajouter une image de couverture
+									</div>
+									<div class="mt-0.5 text-xs text-muted-foreground">
+										JPEG, PNG ou WebP · format 16:9 conseille · max 10 Mo
+									</div>
+								</div>
+								<input
+									id="cover-{id}"
+									type="file"
+									accept="image/jpeg,image/png,image/webp"
+									class="sr-only"
+									disabled={isLoading}
+									onchange={onCoverChange}
+								/>
+							</label>
+						{/if}
+						{#if coverError}
+							<FieldError>{coverError}</FieldError>
+						{:else}
+							<FieldDescription>
+								Optionnel. Donnez une identite visuelle a votre campagne.
+							</FieldDescription>
+						{/if}
+					</Field>
 
 					<!-- Name -->
 					<Field>

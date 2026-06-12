@@ -1,5 +1,6 @@
 import { GameplayApiClient } from "../api-client-gameplay";
 import type { paths } from "../generated/gameplay";
+import { ApiError, type ApiErrorResponse } from "../types";
 
 export interface CreateCampaignData {
 	nom: string;
@@ -90,6 +91,38 @@ export class CampaignService extends GameplayApiClient {
 		const { data, error } = await this.client.POST("/campaigns/", { body });
 		if (error) throw error;
 		return data;
+	}
+
+	/**
+	 * Téléverser l'image de couverture d'une campagne (propriétaire).
+	 * Retourne l'identifiant du fichier et une URL présignée d'affichage.
+	 */
+	async uploadCoverImage(campaignId: string, file: File) {
+		const formData = new FormData();
+		formData.set("cover", file);
+		const res = await fetch(`${this.baseUrl}/campaigns/${campaignId}/cover`, {
+			method: "POST",
+			credentials: "include",
+			body: formData,
+		});
+		if (!res.ok) {
+			let body: ApiErrorResponse | undefined;
+			try {
+				body = await res.clone().json();
+			} catch {
+				// réponse non-JSON
+			}
+			throw new ApiError(
+				body?.error ?? `Echec de l'upload (${res.status})`,
+				res.status,
+				body
+			);
+		}
+		return (await res.json()) as {
+			success: true;
+			fileId: string;
+			coverUrl: string | null;
+		};
 	}
 
 	/** Modifier une campagne (propriétaire). */

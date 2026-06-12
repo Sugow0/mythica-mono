@@ -309,11 +309,19 @@
 						<div
 							class="relative h-40 w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800/60 dark:to-slate-900/60"
 						>
-							<div class="flex h-full w-full items-center justify-center">
-								<SwordsIcon
-									class="h-12 w-12 text-slate-400/50 dark:text-slate-500/40"
+							{#if campaign.coverUrl}
+								<img
+									src={campaign.coverUrl}
+									alt={campaign.nom}
+									class="h-full w-full object-cover"
 								/>
-							</div>
+							{:else}
+								<div class="flex h-full w-full items-center justify-center">
+									<SwordsIcon
+										class="h-12 w-12 text-slate-400/50 dark:text-slate-500/40"
+									/>
+								</div>
+							{/if}
 							<!-- Badges -->
 							<div class="absolute top-3 right-3 flex gap-1.5">
 								<Badge variant={statusVariant(campaign.status)} class="text-xs">

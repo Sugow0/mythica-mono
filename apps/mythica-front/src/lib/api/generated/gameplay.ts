@@ -936,6 +936,7 @@ export interface operations {
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
                             coverFileId: string | null;
+                            coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                         }[];
@@ -958,6 +959,7 @@ export interface operations {
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
                             coverFileId: string | null;
+                            coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                         }[];
@@ -980,6 +982,7 @@ export interface operations {
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
                             coverFileId: string | null;
+                            coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                         }[];
@@ -1121,6 +1124,7 @@ export interface operations {
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
                             coverFileId: string | null;
+                            coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                             gameSystemName: string;
@@ -1144,6 +1148,7 @@ export interface operations {
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
                             coverFileId: string | null;
+                            coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                             gameSystemName: string;
@@ -1167,6 +1172,7 @@ export interface operations {
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
                             coverFileId: string | null;
+                            coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                             gameSystemName: string;
@@ -1232,6 +1238,7 @@ export interface operations {
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
                             coverFileId: string | null;
+                            coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                         };
@@ -1262,6 +1269,7 @@ export interface operations {
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
                             coverFileId: string | null;
+                            coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                         };
@@ -1292,6 +1300,7 @@ export interface operations {
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
                             coverFileId: string | null;
+                            coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                         };
