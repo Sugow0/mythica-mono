@@ -12,6 +12,16 @@ Monorepo des services et applications Mythica, géré avec [Bun workspaces](http
 | Front | [![mythica-front CI](https://github.com/tengram-labs/mythica-mono/actions/workflows/front.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/front.yml) |
 | Mobile | [![mythica-mobile CI](https://github.com/tengram-labs/mythica-mono/actions/workflows/mobile.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/mobile.yml) |
 | Sécurité | [![security](https://github.com/tengram-labs/mythica-mono/actions/workflows/security.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/security.yml) |
+| IaC | [![iac](https://github.com/tengram-labs/mythica-mono/actions/workflows/iac.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/iac.yml) |
+| SonarCloud | [![sonarcloud](https://github.com/tengram-labs/mythica-mono/actions/workflows/sonarcloud.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/sonarcloud.yml) |
+| Release | [![release](https://github.com/tengram-labs/mythica-mono/actions/workflows/release.yml/badge.svg)](https://github.com/tengram-labs/mythica-mono/actions/workflows/release.yml) |
+
+## Documentation
+
+- [Architecture & pipeline CI/CD](docs/architecture.md) — schémas, déploiement, **rollback**
+- [Design Patterns](docs/patterns.md) — patterns utilisés, justifiés
+- [Monitoring & observabilité](monitoring/README.md) — Prometheus / Grafana / alerting
+- [Infrastructure as Code](iac/) — [Terraform](iac/terraform/README.md) · [Ansible](iac/ansible/README.md)
 
 ## Structure
 
@@ -48,7 +58,14 @@ bun run dev:gameplay
 
 # Services d'infrastructure (Postgres, Redis, etc.)
 docker compose up -d
+
+# Stack de monitoring (Prometheus + Grafana)
+docker compose -f monitoring/docker-compose.yml up -d
 ```
+
+Chaque service fournit un `.env.example` (variables attendues, sans valeurs). En
+dev, les vraies valeurs vivent dans `apps/*/config/<env>.env`, chiffrées via
+[dotenvx](https://dotenvx.com) — aucun secret en clair n'est committé.
 
 ## Qualité
 
@@ -63,7 +80,7 @@ bun run lint:ci     # vérification sans modification (utilisé en CI)
 
 ### Tests & couverture
 
-Les tests tournent dans la CI de chaque service qui en possède (`api`, `front`). Le **rapport de couverture est publié dans le résumé de chaque exécution CI** (onglet *Summary* du run GitHub Actions).
+Les tests tournent dans la CI de chaque service qui en possède (`api`, `front`). Le **rapport de couverture est publié dans le résumé de chaque exécution CI** (onglet *Summary*) et **archivé en artefact**. Le seuil de **70 % est bloquant** côté `api` (cf. [`bunfig.toml`](apps/mythica-api/bunfig.toml)).
 
 ```bash
 bun run --cwd apps/mythica-api test          # tests API (bun test)
@@ -94,11 +111,25 @@ Le workflow [`security.yml`](.github/workflows/security.yml) (push, PR, et hebdo
 - **Actions épinglées en SHA** (commit complet) — mises à jour automatiquement par [Dependabot](.github/dependabot.yml) (npm, github-actions, docker) ;
 - **Artifacts** : rapports de couverture et de scan Trivy/gitleaks archivés sur chaque run.
 
+### Qualité de code (hooks & SonarCloud)
+
+- **Pre-commit** ([lefthook](https://github.com/evilmartians/lefthook)) : Biome + Prettier sur les fichiers stagés, et validation du message de commit (Conventional Commits) — installés via `bun install`.
+- **SonarCloud** ([`sonarcloud.yml`](.github/workflows/sonarcloud.yml)) : analyse statique + quality gate. Activé si le secret `SONAR_TOKEN` est présent (gratuit pour les repos publics — voir la note pour les repos privés).
+
 ## Versioning & déploiement
 
 - Les changements de version sont gérés via [Changesets](https://github.com/changesets/changesets) (`bunx changeset`).
-- Les déploiements (staging / production) sont déclenchés automatiquement sur push vers `staging` / `main` via Dokploy.
+- **CD** : push sur `staging`/`main` → déploiement Dokploy (environnements GitHub `staging` / `production` avec approbation manuelle en prod). Le workflow [`release.yml`](.github/workflows/release.yml) publie les images sur **ghcr.io** (tags `v*` ou déclenchement manuel).
 - Les migrations Prisma sont générées et appliquées dans les pipelines `api` et `gameplay`.
+- **Rollback** : redéploiement d'un tag d'image précédent — procédure détaillée dans [docs/architecture.md](docs/architecture.md#stratégie-de-rollback).
+
+## Monitoring
+
+`/health` (état + dépendances) sur chaque service, `/metrics` Prometheus sur le gateway, dashboards Grafana et 3 alertes. Voir [monitoring/README.md](monitoring/README.md).
+
+## Infrastructure as Code
+
+[Terraform](iac/terraform/) (provider Docker : Postgres + Redis) et [Ansible](iac/ansible/) (reverse proxy nginx), validés en CI par [`iac.yml`](.github/workflows/iac.yml).
 
 ## Conventions de commit
 
