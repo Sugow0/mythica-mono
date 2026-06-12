@@ -1,0 +1,19 @@
+# {{ ansible_managed }}
+# Reverse proxy Mythica — généré par Ansible, ne pas éditer à la main.
+server {
+    listen 80;
+    server_name {{ server_name }};
+
+    location /health {
+        proxy_pass http://{{ gateway_host }}:{{ gateway_port }}/health;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://{{ gateway_host }}:{{ gateway_port }};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

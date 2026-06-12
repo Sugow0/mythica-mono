@@ -1,0 +1,40 @@
+---
+- name: Mettre à jour le cache apt
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Installer nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Déployer le vhost Mythica depuis le template
+  ansible.builtin.template:
+    src: mythica.conf.j2
+    dest: /etc/nginx/sites-available/mythica.conf
+    mode: "0644"
+  notify: Recharger nginx
+
+- name: Activer le vhost Mythica
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/mythica.conf
+    dest: /etc/nginx/sites-enabled/mythica.conf
+    state: link
+  notify: Recharger nginx
+
+- name: Désactiver le vhost par défaut
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Recharger nginx
+
+- name: Vérifier la validité de la configuration nginx
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: S'assurer que nginx est démarré et activé
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
