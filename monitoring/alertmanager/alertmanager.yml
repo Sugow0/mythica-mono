@@ -1,0 +1,16 @@
+route:
+  receiver: discord
+  group_by: ["alertname"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: discord
+    # Alertmanager 0.25+ supporte nativement Discord.
+    # L'URL du webhook est un secret : la fournir via un fichier monté ou
+    # remplacer la valeur ci-dessous (ne jamais committer un vrai webhook).
+    discord_configs:
+      - webhook_url: "https://discord.com/api/webhooks/REMPLACER_PAR_VOTRE_WEBHOOK"
+        title: "{{ .CommonAnnotations.summary }}"
+        message: "{{ .CommonAnnotations.description }}"
