@@ -6,7 +6,24 @@ import { logger } from "./logger";
 import "./ws-proxy";
 
 const NO_BODY_METHODS = new Set(["GET", "HEAD"]);
-const CORS_URL = process.env.CORS_URL;
+
+/**
+ * CORS_URL est fourni sous forme de tableau JSON dans l'environnement
+ * (ex: ["http://localhost:5173", ...]). Il faut le parser : passer la chaîne
+ * brute à `cors({ origin })` empêche le plugin de matcher l'origine et donc
+ * d'émettre l'en-tête Access-Control-Allow-Origin (requêtes navigateur bloquées).
+ */
+function parseCorsOrigins(raw: string | undefined): string[] | undefined {
+	if (!raw) return undefined;
+	try {
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? parsed : [String(parsed)];
+	} catch {
+		return raw.split(",").map((origin) => origin.trim());
+	}
+}
+
+const CORS_URL = parseCorsOrigins(process.env.CORS_URL);
 
 const proxy = async (request: Request, targetBase: string, prefix: string) => {
 	const url = new URL(request.url);
