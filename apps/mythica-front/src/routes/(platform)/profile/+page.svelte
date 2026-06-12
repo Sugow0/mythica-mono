@@ -125,16 +125,16 @@
 	{#if isLoading}
 		<Skeleton class="mt-6 h-64 w-full rounded-xl" />
 	{:else if !me}
-		<p class="mt-6 text-rose-500">{error ?? "Profil indisponible."}</p>
+		<p class="mt-6 text-red-500">{error ?? "Profil indisponible."}</p>
 	{:else}
 		{#if error}
-			<p class="mt-6 rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-500">
+			<p class="mt-6 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
 				{error}
 			</p>
 		{/if}
 		{#if success}
 			<p
-				class="mt-6 rounded-lg bg-teal-500/10 px-3 py-2 text-sm text-teal-600 dark:text-teal-400"
+				class="mt-6 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-600 dark:text-red-400"
 			>
 				{success}
 			</p>
@@ -149,7 +149,7 @@
 							<Avatar.Image src={avatarUrl} alt={me.pseudo} />
 						{/if}
 						<Avatar.Fallback
-							class="bg-gradient-to-br from-teal-500 to-cyan-600 text-xl font-bold text-white"
+							class="bg-gradient-to-br from-red-500 to-red-600 text-xl font-bold text-white"
 						>
 							{initials}
 						</Avatar.Fallback>
@@ -157,7 +157,7 @@
 					<div>
 						<label
 							for="avatar-input"
-							class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-stone-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-stone-50 dark:border-border dark:text-muted-foreground dark:hover:bg-muted"
+							class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-border dark:text-muted-foreground dark:hover:bg-muted"
 						>
 							<CameraIcon class="h-4 w-4" />
 							{isUploading ? "Envoi..." : "Changer l'avatar"}
@@ -221,7 +221,7 @@
 							<Button
 								type="submit"
 								disabled={isSaving || !dirty || !isValid}
-								class="bg-teal-600 text-white hover:bg-teal-700"
+								class="bg-red-600 text-white hover:bg-red-700"
 							>
 								{isSaving ? "Enregistrement..." : "Enregistrer"}
 							</Button>

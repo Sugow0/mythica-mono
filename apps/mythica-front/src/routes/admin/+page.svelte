@@ -57,13 +57,13 @@
 	]);
 
 	const colorMap: Record<string, string> = {
-		teal: "bg-teal-500/10 text-teal-400",
+		teal: "bg-red-500/10 text-red-400",
 		blue: "bg-blue-500/10 text-blue-400",
 		green: "bg-green-500/10 text-green-400",
 		yellow: "bg-yellow-500/10 text-yellow-400",
-		stone: "bg-stone-500/10 text-stone-400",
-		indigo: "bg-indigo-500/10 text-indigo-400",
-		rose: "bg-rose-500/10 text-rose-400",
+		stone: "bg-slate-500/10 text-slate-400",
+		indigo: "bg-red-500/10 text-red-400",
+		rose: "bg-red-500/10 text-red-400",
 	};
 </script>
 
@@ -76,9 +76,9 @@
 		class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
 	>
 		{#each stats as stat (stat.label)}
-			<div class="rounded-xl border border-stone-800 bg-stone-900 p-5">
+			<div class="rounded-xl border border-slate-800 bg-slate-900 p-5">
 				<div class="mb-4 flex items-center justify-between">
-					<span class="text-sm font-medium text-stone-400">{stat.label}</span>
+					<span class="text-sm font-medium text-slate-400">{stat.label}</span>
 					<div class="rounded-lg p-2 {colorMap[stat.color]}">
 						<stat.icon class="h-4 w-4" />
 					</div>

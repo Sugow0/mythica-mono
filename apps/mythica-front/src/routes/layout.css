@@ -2,85 +2,83 @@
 
 @import "tw-animate-css";
 
+/* Mythica — Neutre & Crimson : Bricolage Grotesque (titres) + Public Sans (corps) */
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap");
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
-	--radius: 0.625rem;
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.129 0.042 264.695);
+	/* Mythica — base neutre (gris froid) + accent crimson D&D, agnostique au genre */
+	--radius: 0.7rem;
+	--background: oklch(0.985 0.001 264);
+	--foreground: oklch(0.21 0.006 264);
 	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.129 0.042 264.695);
+	--card-foreground: oklch(0.21 0.006 264);
 	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.129 0.042 264.695);
-	/* teal-600 */
-	--primary: oklch(0.6 0.118 184.704);
-	--primary-foreground: oklch(1 0 0);
-	/* teal-50 */
-	--secondary: oklch(0.984 0.014 180.72);
-	--secondary-foreground: oklch(0.511 0.096 186.391);
-	--muted: oklch(0.968 0.007 247.896);
-	--muted-foreground: oklch(0.554 0.046 257.417);
-	/* teal-50 */
-	--accent: oklch(0.953 0.051 180.801);
-	/* teal-700 */
-	--accent-foreground: oklch(0.511 0.096 186.391);
+	--popover-foreground: oklch(0.21 0.006 264);
+	/* crimson */
+	--primary: oklch(0.545 0.205 24);
+	--primary-foreground: oklch(0.985 0.006 24);
+	--secondary: oklch(0.968 0.002 264);
+	--secondary-foreground: oklch(0.27 0.006 264);
+	--muted: oklch(0.968 0.002 264);
+	--muted-foreground: oklch(0.553 0.006 264);
+	--accent: oklch(0.966 0.002 264);
+	--accent-foreground: oklch(0.27 0.006 264);
 	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.929 0.013 255.508);
-	--input: oklch(0.929 0.013 255.508);
-	/* teal-500 */
-	--ring: oklch(0.704 0.14 182.503);
-	--chart-1: oklch(0.646 0.222 41.116);
-	--chart-2: oklch(0.6 0.118 184.704);
-	--chart-3: oklch(0.398 0.07 227.392);
-	--chart-4: oklch(0.828 0.189 84.429);
-	--chart-5: oklch(0.769 0.188 70.08);
-	--sidebar: oklch(0.984 0.003 247.858);
-	--sidebar-foreground: oklch(0.129 0.042 264.695);
-	--sidebar-primary: oklch(0.208 0.042 265.755);
-	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-accent: oklch(0.968 0.007 247.896);
-	--sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-	--sidebar-border: oklch(0.929 0.013 255.508);
-	--sidebar-ring: oklch(0.704 0.04 256.788);
+	--border: oklch(0.922 0.003 264);
+	--input: oklch(0.922 0.003 264);
+	--ring: oklch(0.545 0.205 24);
+	/* charts — palette multi-genre équilibrée (crimson, ardoise, ambre, sauge, indigo) */
+	--chart-1: oklch(0.545 0.205 24);
+	--chart-2: oklch(0.55 0.03 250);
+	--chart-3: oklch(0.7 0.13 70);
+	--chart-4: oklch(0.6 0.09 160);
+	--chart-5: oklch(0.55 0.13 280);
+	--sidebar: oklch(0.984 0.001 264);
+	--sidebar-foreground: oklch(0.21 0.006 264);
+	--sidebar-primary: oklch(0.545 0.205 24);
+	--sidebar-primary-foreground: oklch(0.985 0.006 24);
+	--sidebar-accent: oklch(0.966 0.002 264);
+	--sidebar-accent-foreground: oklch(0.27 0.006 264);
+	--sidebar-border: oklch(0.922 0.003 264);
+	--sidebar-ring: oklch(0.545 0.205 24);
 }
 
 .dark {
-	--background: oklch(0.129 0.042 264.695);
-	--foreground: oklch(0.984 0.003 247.858);
-	--card: oklch(0.208 0.042 265.755);
-	--card-foreground: oklch(0.984 0.003 247.858);
-	--popover: oklch(0.208 0.042 265.755);
-	--popover-foreground: oklch(0.984 0.003 247.858);
-	/* teal-400 */
-	--primary: oklch(0.777 0.152 181.912);
-	--primary-foreground: oklch(0.129 0.042 264.695);
-	/* teal-950 */
-	--secondary: oklch(0.277 0.046 192.524);
-	--secondary-foreground: oklch(0.855 0.138 181.071);
-	--muted: oklch(0.279 0.041 260.031);
-	--muted-foreground: oklch(0.704 0.04 256.788);
-	/* teal-950 */
-	--accent: oklch(0.277 0.046 192.524);
-	/* teal-300 */
-	--accent-foreground: oklch(0.855 0.138 181.071);
+	/* base charbon neutre + crimson plus clair pour le contraste */
+	--background: oklch(0.185 0.004 264);
+	--foreground: oklch(0.96 0.003 264);
+	--card: oklch(0.225 0.005 264);
+	--card-foreground: oklch(0.96 0.003 264);
+	--popover: oklch(0.225 0.005 264);
+	--popover-foreground: oklch(0.96 0.003 264);
+	/* crimson clair */
+	--primary: oklch(0.62 0.2 24);
+	--primary-foreground: oklch(0.985 0.01 24);
+	--secondary: oklch(0.27 0.005 264);
+	--secondary-foreground: oklch(0.96 0.003 264);
+	--muted: oklch(0.27 0.005 264);
+	--muted-foreground: oklch(0.708 0.006 264);
+	--accent: oklch(0.3 0.006 264);
+	--accent-foreground: oklch(0.96 0.003 264);
 	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	/* teal-500 */
-	--ring: oklch(0.704 0.14 182.503);
-	--chart-1: oklch(0.488 0.243 264.376);
-	--chart-2: oklch(0.696 0.17 162.48);
-	--chart-3: oklch(0.769 0.188 70.08);
-	--chart-4: oklch(0.627 0.265 303.9);
-	--chart-5: oklch(0.645 0.246 16.439);
-	--sidebar: oklch(0.208 0.042 265.755);
-	--sidebar-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-accent: oklch(0.279 0.041 260.031);
-	--sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.551 0.027 264.364);
+	--border: oklch(1 0 0 / 9%);
+	--input: oklch(1 0 0 / 13%);
+	--ring: oklch(0.62 0.2 24);
+	--chart-1: oklch(0.62 0.2 24);
+	--chart-2: oklch(0.65 0.03 250);
+	--chart-3: oklch(0.74 0.13 70);
+	--chart-4: oklch(0.68 0.1 160);
+	--chart-5: oklch(0.64 0.13 280);
+	--sidebar: oklch(0.205 0.004 264);
+	--sidebar-foreground: oklch(0.96 0.003 264);
+	--sidebar-primary: oklch(0.62 0.2 24);
+	--sidebar-primary-foreground: oklch(0.985 0.01 24);
+	--sidebar-accent: oklch(0.3 0.006 264);
+	--sidebar-accent-foreground: oklch(0.96 0.003 264);
+	--sidebar-border: oklch(1 0 0 / 9%);
+	--sidebar-ring: oklch(0.62 0.2 24);
 }
 
 @theme inline {
@@ -88,6 +86,8 @@
 	--radius-md: calc(var(--radius) - 2px);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) + 4px);
+	--font-sans: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+	--font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
 	--color-background: var(--background);
 	--color-foreground: var(--foreground);
 	--color-card: var(--card);
@@ -127,6 +127,14 @@
 	}
 	body {
 		@apply bg-background text-foreground;
+		font-family: var(--font-sans);
+	}
+	h1,
+	h2,
+	h3 {
+		font-family: var(--font-display);
+		letter-spacing: -0.02em;
+		font-weight: 600;
 	}
 }
 

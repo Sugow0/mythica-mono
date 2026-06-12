@@ -118,7 +118,7 @@
 	<Button
 		variant="ghost"
 		href="/campaigns"
-		class="mb-6 -ml-2 text-slate-600 hover:text-teal-600 dark:text-muted-foreground"
+		class="mb-6 -ml-2 text-slate-600 hover:text-red-600 dark:text-muted-foreground"
 	>
 		<ArrowLeftIcon class="h-4 w-4" />
 		Retour aux campagnes
@@ -127,7 +127,7 @@
 	<!-- Header -->
 	<div class="mb-8">
 		<div
-			class="mb-3 inline-flex items-center gap-2 rounded-full bg-teal-100 px-4 py-1.5 text-sm font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300"
+			class="mb-3 inline-flex items-center gap-2 rounded-full bg-red-100 px-4 py-1.5 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
 		>
 			<SwordsIcon class="h-4 w-4" />
 			Nouvelle campagne
@@ -248,18 +248,18 @@
 								disabled={isLoading}
 								class="flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all {visibility ===
 								'PRIVATE'
-									? 'border-teal-500 bg-teal-50/50 shadow-sm dark:border-teal-600 dark:bg-teal-950/30'
-									: 'border-stone-200 bg-white hover:border-stone-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
+									? 'border-red-500 bg-red-50/50 shadow-sm dark:border-red-600 dark:bg-red-950/30'
+									: 'border-slate-200 bg-white hover:border-slate-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
 							>
 								<div
 									class="flex h-12 w-12 items-center justify-center rounded-xl {visibility ===
 									'PRIVATE'
-										? 'bg-teal-100 dark:bg-teal-900/50'
-										: 'bg-stone-100 dark:bg-muted'}"
+										? 'bg-red-100 dark:bg-red-900/50'
+										: 'bg-slate-100 dark:bg-muted'}"
 								>
 									<LockIcon
 										class="h-5 w-5 {visibility === 'PRIVATE'
-											? 'text-teal-600 dark:text-teal-400'
+											? 'text-red-600 dark:text-red-400'
 											: 'text-slate-500 dark:text-muted-foreground'}"
 									/>
 								</div>
@@ -283,18 +283,18 @@
 								disabled={isLoading}
 								class="flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all {visibility ===
 								'PUBLIC'
-									? 'border-teal-500 bg-teal-50/50 shadow-sm dark:border-teal-600 dark:bg-teal-950/30'
-									: 'border-stone-200 bg-white hover:border-stone-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
+									? 'border-red-500 bg-red-50/50 shadow-sm dark:border-red-600 dark:bg-red-950/30'
+									: 'border-slate-200 bg-white hover:border-slate-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
 							>
 								<div
 									class="flex h-12 w-12 items-center justify-center rounded-xl {visibility ===
 									'PUBLIC'
-										? 'bg-teal-100 dark:bg-teal-900/50'
-										: 'bg-stone-100 dark:bg-muted'}"
+										? 'bg-red-100 dark:bg-red-900/50'
+										: 'bg-slate-100 dark:bg-muted'}"
 								>
 									<GlobeIcon
 										class="h-5 w-5 {visibility === 'PUBLIC'
-											? 'text-teal-600 dark:text-teal-400'
+											? 'text-red-600 dark:text-red-400'
 											: 'text-slate-500 dark:text-muted-foreground'}"
 									/>
 								</div>
@@ -326,7 +326,7 @@
 			</Card.Content>
 
 			<Card.Footer
-				class="flex items-center justify-between border-t bg-stone-50/50 dark:bg-muted/20"
+				class="flex items-center justify-between border-t bg-slate-50/50 dark:bg-muted/20"
 			>
 				<Button variant="outline" href="/campaigns" disabled={isLoading}>
 					Annuler
@@ -334,7 +334,7 @@
 				<Button
 					type="submit"
 					disabled={isLoading || !isValid}
-					class="bg-teal-600 text-white shadow-md shadow-teal-600/20 hover:bg-teal-700"
+					class="bg-red-600 text-white shadow-md shadow-red-600/20 hover:bg-red-700"
 				>
 					{#if isLoading}
 						Creation en cours...

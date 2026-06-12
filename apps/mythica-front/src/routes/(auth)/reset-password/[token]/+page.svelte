@@ -59,7 +59,7 @@
 
 	{#if done}
 		<div
-			class="rounded-lg bg-teal-500/10 px-4 py-3 text-center text-sm text-teal-600 dark:text-teal-400"
+			class="rounded-lg bg-red-500/10 px-4 py-3 text-center text-sm text-red-600 dark:text-red-400"
 		>
 			Mot de passe réinitialisé. Redirection vers la connexion...
 		</div>
@@ -67,9 +67,7 @@
 		<form onsubmit={handleSubmit}>
 			<FieldGroup class="gap-4">
 				{#if error}
-					<div
-						class="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-500"
-					>
+					<div class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
 						{error}
 					</div>
 				{/if}
@@ -97,7 +95,7 @@
 						aria-invalid={mismatch}
 					/>
 					{#if mismatch}
-						<FieldDescription class="text-rose-500">
+						<FieldDescription class="text-red-500">
 							Les mots de passe ne correspondent pas.
 						</FieldDescription>
 					{/if}
