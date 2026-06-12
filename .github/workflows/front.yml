@@ -116,6 +116,7 @@ jobs:
     needs: [build]
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     env:
       APP_ID: ${{ github.ref_name == 'main' && secrets.DOKPLOY_APP_ID_FRONT_PRODUCTION || secrets.DOKPLOY_APP_ID_FRONT_STAGING }}
     steps:
