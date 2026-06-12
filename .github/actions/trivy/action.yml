@@ -1,0 +1,56 @@
+name: "Scan Trivy"
+description: "Scanne une image Docker ou le système de fichiers avec Trivy, publie le rapport dans le résumé CI et échoue en cas de vulnérabilité CRITICAL."
+
+inputs:
+  scan-type:
+    description: "Type de scan Trivy : 'image' ou 'fs'"
+    required: true
+  scan-ref:
+    description: "Référence à scanner (tag d'image pour 'image', chemin pour 'fs')"
+    required: true
+  title:
+    description: "Titre affiché dans le résumé de CI"
+    required: false
+    default: "Trivy"
+
+runs:
+  using: composite
+  steps:
+    - name: Rapport Trivy (HIGH/CRITICAL)
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: ${{ inputs.scan-type }}
+        image-ref: ${{ inputs.scan-type == 'image' && inputs.scan-ref || '' }}
+        scan-ref: ${{ inputs.scan-type == 'fs' && inputs.scan-ref || '.' }}
+        format: table
+        output: trivy-report.txt
+        severity: HIGH,CRITICAL
+        ignore-unfixed: true
+        exit-code: "0"
+
+    - name: Publier le rapport dans le résumé de CI
+      if: always()
+      shell: bash
+      run: |
+        {
+          echo "## 🛡️ ${{ inputs.title }} — rapport Trivy"
+          echo ""
+          if [ -s trivy-report.txt ]; then
+            echo '```'
+            cat trivy-report.txt
+            echo '```'
+          else
+            echo "✅ Aucune vulnérabilité HIGH/CRITICAL détectée."
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Échec si vulnérabilité CRITICAL
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: ${{ inputs.scan-type }}
+        image-ref: ${{ inputs.scan-type == 'image' && inputs.scan-ref || '' }}
+        scan-ref: ${{ inputs.scan-type == 'fs' && inputs.scan-ref || '.' }}
+        format: table
+        severity: CRITICAL
+        ignore-unfixed: true
+        exit-code: "1"

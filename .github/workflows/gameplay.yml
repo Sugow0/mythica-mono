@@ -55,7 +55,15 @@ jobs:
           context: .
           file: apps/mythica-gameplay/Dockerfile
           push: false
+          load: true
           tags: mythica-gameplay:ci
+
+      - name: Scan Trivy de l'image
+        uses: ./.github/actions/trivy
+        with:
+          scan-type: image
+          scan-ref: mythica-gameplay:ci
+          title: mythica-gameplay
 
   deploy-staging:
     runs-on: ubuntu-latest

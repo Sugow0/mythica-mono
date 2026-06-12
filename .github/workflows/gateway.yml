@@ -55,7 +55,15 @@ jobs:
           context: .
           file: apps/mythica-gateway/Dockerfile
           push: false
+          load: true
           tags: mythica-gateway:ci
+
+      - name: Scan Trivy de l'image
+        uses: ./.github/actions/trivy
+        with:
+          scan-type: image
+          scan-ref: mythica-gateway:ci
+          title: mythica-gateway
 
   deploy:
     needs: [build]

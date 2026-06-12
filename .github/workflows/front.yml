@@ -64,6 +64,25 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Couverture de tests (best-effort)
+        continue-on-error: true
+        run: bunx vitest run --coverage --coverage.reporter=text 2>&1 | tee coverage.txt
+
+      - name: Publier la couverture dans le résumé de CI
+        if: always()
+        run: |
+          {
+            echo "## 🧪 Couverture de tests — mythica-front"
+            echo ""
+            if [ -s coverage.txt ]; then
+              echo '```'
+              cat coverage.txt
+              echo '```'
+            else
+              echo "Aucun rapport de couverture généré."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
   build:
     runs-on: ubuntu-latest
     needs: [lint, test]
@@ -81,6 +100,13 @@ jobs:
 
       - name: Build
         run: bun run build
+
+      - name: Scan Trivy du système de fichiers
+        uses: ./.github/actions/trivy
+        with:
+          scan-type: fs
+          scan-ref: apps/mythica-front
+          title: mythica-front
 
   deploy:
     needs: [build]

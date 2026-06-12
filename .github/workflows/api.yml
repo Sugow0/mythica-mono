@@ -55,8 +55,23 @@ jobs:
       - name: Generate Prisma client
         run: bunx prisma generate
 
-      - name: Run tests
-        run: bun run test
+      - name: Run tests with coverage
+        run: bun test --coverage 2>&1 | tee coverage.txt
+
+      - name: Publier la couverture dans le résumé de CI
+        if: always()
+        run: |
+          {
+            echo "## 🧪 Couverture de tests — mythica-api"
+            echo ""
+            if [ -s coverage.txt ]; then
+              echo '```'
+              cat coverage.txt
+              echo '```'
+            else
+              echo "Aucun rapport de couverture généré."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   build:
     runs-on: ubuntu-latest
@@ -72,7 +87,15 @@ jobs:
           context: .
           file: apps/mythica-api/Dockerfile
           push: false
+          load: true
           tags: mythica-api:ci
+
+      - name: Scan Trivy de l'image
+        uses: ./.github/actions/trivy
+        with:
+          scan-type: image
+          scan-ref: mythica-api:ci
+          title: mythica-api
 
   deploy-staging:
     runs-on: ubuntu-latest
