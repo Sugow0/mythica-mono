@@ -2,6 +2,7 @@ import { logger as elysiaLogger } from "@bogeychan/elysia-logger";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { authContext } from "./auth/context";
+import { campaignsController } from "./campaigns/campaigns.controller";
 import { env } from "./env";
 import { startUserSync } from "./events/user-sync";
 import { gameSystemsController } from "./game-systems/game-systems.controller";
@@ -30,6 +31,7 @@ const app = new Elysia()
 	.use(authContext)
 	.get("/", () => "Hello Elysia")
 	.use(gameSystemsController)
+	.use(campaignsController)
 	.listen(env.PORT);
 
 logger.info(
