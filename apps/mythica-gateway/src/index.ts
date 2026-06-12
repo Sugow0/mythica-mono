@@ -1,5 +1,6 @@
 import cors from "@elysiajs/cors";
 import { Elysia } from "elysia";
+import { resolveUser, USER_ID_HEADER, USER_ROLE_HEADER } from "./auth/session";
 import { env } from "./env";
 import { logger } from "./logger";
 import "./ws-proxy";
@@ -14,6 +15,18 @@ const proxy = async (request: Request, targetBase: string, prefix: string) => {
 
 	const headers = new Headers(request.headers);
 	headers.delete("host");
+
+	// Toujours retirer d'éventuels en-têtes d'identité entrants (anti-spoof),
+	// puis injecter l'identité résolue depuis la session si authentifié.
+	headers.delete(USER_ID_HEADER);
+	headers.delete(USER_ROLE_HEADER);
+	const user = await resolveUser(request);
+	if (user) {
+		headers.set(USER_ID_HEADER, user.id);
+		if (user.role) {
+			headers.set(USER_ROLE_HEADER, user.role);
+		}
+	}
 
 	const response = await fetch(targetUrl, {
 		method: request.method,
