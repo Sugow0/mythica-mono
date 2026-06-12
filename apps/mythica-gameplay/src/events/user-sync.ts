@@ -1,5 +1,5 @@
-import { redisConsumer } from "../lib/redis";
 import { prisma } from "../lib/prisma";
+import { redisConsumer } from "../lib/redis";
 import { logger } from "../logger";
 
 const STREAM_KEY = "mythica:events:users";
@@ -26,9 +26,7 @@ function parseFields(fields: string[]): Record<string, string> {
 /**
  * Traite un event utilisateur reçu du stream.
  */
-async function handleUserEvent(
-	fields: Record<string, string>,
-): Promise<void> {
+async function handleUserEvent(fields: Record<string, string>): Promise<void> {
 	const { type, userId } = fields;
 
 	if (type === "user.created") {
@@ -56,9 +54,13 @@ async function handleUserEvent(
 async function processPendingMessages(): Promise<void> {
 	while (true) {
 		const results = (await redisConsumer.xreadgroup(
-			"GROUP", GROUP_NAME, CONSUMER_NAME,
-			"COUNT", String(BATCH_SIZE),
-			"STREAMS", STREAM_KEY,
+			"GROUP",
+			GROUP_NAME,
+			CONSUMER_NAME,
+			"COUNT",
+			String(BATCH_SIZE),
+			"STREAMS",
+			STREAM_KEY,
 			"0", // "0" = messages pending non ackés
 		)) as StreamEntry[] | null;
 
@@ -84,10 +86,15 @@ async function consumeLoop(): Promise<void> {
 	while (true) {
 		try {
 			const results = (await redisConsumer.xreadgroup(
-				"GROUP", GROUP_NAME, CONSUMER_NAME,
-				"COUNT", String(BATCH_SIZE),
-				"BLOCK", String(BLOCK_MS),
-				"STREAMS", STREAM_KEY,
+				"GROUP",
+				GROUP_NAME,
+				CONSUMER_NAME,
+				"COUNT",
+				String(BATCH_SIZE),
+				"BLOCK",
+				String(BLOCK_MS),
+				"STREAMS",
+				STREAM_KEY,
 				">", // ">" = uniquement les nouveaux messages non délivrés
 			)) as StreamEntry[] | null;
 
@@ -119,7 +126,13 @@ export async function startUserSync(): Promise<void> {
 	// "$" = ne lire que les nouveaux messages (pas l'historique)
 	// MKSTREAM = crée le stream s'il n'existe pas
 	try {
-		await redisConsumer.xgroup("CREATE", STREAM_KEY, GROUP_NAME, "$", "MKSTREAM");
+		await redisConsumer.xgroup(
+			"CREATE",
+			STREAM_KEY,
+			GROUP_NAME,
+			"$",
+			"MKSTREAM",
+		);
 		logger.info("Consumer group 'gameplay' créé");
 	} catch (err: unknown) {
 		// BUSYGROUP = le groupe existe déjà, c'est normal

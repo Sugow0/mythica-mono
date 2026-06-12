@@ -1,8 +1,8 @@
 import { logger as elysiaLogger } from "@bogeychan/elysia-logger";
 import { Elysia } from "elysia";
 import { env } from "./env";
-import { logger } from "./logger";
 import { startUserSync } from "./events/user-sync";
+import { logger } from "./logger";
 
 await startUserSync();
 
