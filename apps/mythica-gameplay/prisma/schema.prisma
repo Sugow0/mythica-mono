@@ -207,9 +207,31 @@ model Campaign {
   characterSheets CampaignCharacterSheet[]
   sessions        Session[]
   files           File[]                   @relation("CampaignFiles")
+  invites         CampaignInvite[]
 
   @@index([deletedAt], name: "idx_campaigns_deleted")
   @@map("campaigns")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN INVITES
+// Lien d'invitation à usage partagé, identifié par un token unique
+// et expirant après un délai (7 jours par défaut).
+// ------------------------------------------------------------
+
+model CampaignInvite {
+  id         String   @id @db.Uuid
+  campaignId String   @map("campaign_id") @db.Uuid
+  token      String   @unique @db.VarChar(64)
+  createdBy  String   @map("created_by") @db.Uuid
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId], name: "idx_campaign_invites_campaign")
+  @@map("campaign_invites")
 }
 
 // ------------------------------------------------------------
