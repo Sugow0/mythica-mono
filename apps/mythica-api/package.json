@@ -8,7 +8,9 @@
 		"test:watch": "bun test --watch",
 		"test:coverage": "bun test --coverage",
 		"lint": "biome check --write",
-		"lint:ci": "biome ci"
+		"lint:ci": "biome ci",
+		"db:generate": "prisma generate",
+		"db:push": "prisma db push"
 	},
 	"dependencies": {
 		"@bogeychan/elysia-logger": "^0.1.10",

@@ -1,7 +1,10 @@
 import { logger as elysiaLogger } from "@bogeychan/elysia-logger";
 import { Elysia } from "elysia";
 import { env } from "./env";
+import { startUserSync } from "./events/user-sync";
 import { logger } from "./logger";
+
+await startUserSync();
 
 const app = new Elysia()
 	.use(elysiaLogger({ instance: logger }))

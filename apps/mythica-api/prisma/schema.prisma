@@ -13,6 +13,12 @@ datasource db {
   provider = "postgresql"
 }
 
+enum RoleEnum {
+  ADMIN
+  SUPPORT
+  USER
+}
+
 model Users {
   id                      String                    @id @default(uuid())
   firstName               String
@@ -31,11 +37,7 @@ model Users {
   oauthAccounts           OAuthAccounts[]
   emailVerificationTokens EmailVerificationTokens[]
 
-  campaingsMember     CampaignMembers[]
-  campaigns           Campaigns[]
-  sessionResponses    CampaignSessionResponses[]
-  campaignInvitations CampaignInvitations[]
-  characters          Characters[]
+  @@map("users")
 }
 
 model EmailVerificationTokens {
@@ -47,6 +49,7 @@ model EmailVerificationTokens {
 
   @@index([userId])
   @@index([token])
+  @@map("email_verification_tokens")
 }
 
 model OAuthAccounts {
@@ -58,6 +61,7 @@ model OAuthAccounts {
 
   @@unique([providerId, providerUserId])
   @@index([userId])
+  @@map("oauth_accounts")
 }
 
 model Sessions {
@@ -66,179 +70,6 @@ model Sessions {
   expiresAt DateTime
 
   user Users @relation(references: [id], fields: [userId], onDelete: Cascade)
-}
 
-model Campaigns {
-  id           String                 @id @default(uuid())
-  name         String
-  description  String?
-  status       CampaignStatusEnum     @default(DRAFT)
-  visibility   CampaignVisibilityEnum @default(PRIVATE)
-  image        String?
-  gameSystem   GameSystems            @relation("CampaignGameSystem", fields: [gameSystemId], references: [id], onDelete: Cascade)
-  gameSystemId String
-
-  creatorId   String
-  creator     Users                 @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  members     CampaignMembers[]
-  sessions    CampaignSessions[]
-  invitations CampaignInvitations[]
-  characters  Characters[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model CampaignMembers {
-  campaignId String
-  userId     String
-  role       CampaignMemberRoleEnum @default(MEMBER)
-
-  campaign Campaigns @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  user     Users     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@id([campaignId, userId])
-}
-
-model CampaignSessions {
-  id          String                    @id @default(uuid())
-  campaignId  String
-  title       String
-  description String?
-  scheduledAt DateTime
-  duration    Int // durée en minutes
-  status      CampaignSessionStatusEnum @default(SCHEDULED)
-
-  campaign  Campaigns                  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  responses CampaignSessionResponses[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([campaignId])
-  @@index([scheduledAt])
-}
-
-model CampaignSessionResponses {
-  sessionId String
-  userId    String
-  status    CampaignSessionResponseStatusEnum @default(PENDING)
-
-  session CampaignSessions @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user    Users            @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@id([sessionId, userId])
-}
-
-model CampaignInvitations {
-  id         String                       @id @default(uuid())
-  campaignId String
-  userId     String
-  invitedBy  String
-  status     CampaignInvitationStatusEnum @default(PENDING)
-
-  campaign Campaigns @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  user     Users     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([campaignId, userId])
-  @@index([userId])
-}
-
-model GameSystems {
-  id                 String               @id @default(uuid())
-  name               String
-  description        String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  campaigns          Campaigns[]          @relation("CampaignGameSystem")
-  gameSystemVersions GameSystemVersions[] @relation("GameSystemVersions")
-
-  @@index([name])
-}
-
-model GameSystemVersions {
-  id           String      @id @default(uuid())
-  gameSystemId String
-  version      String
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  gameSystem   GameSystems @relation("GameSystemVersions", fields: [gameSystemId], references: [id], onDelete: Cascade)
-
-  @@unique([gameSystemId, version])
-  @@index([gameSystemId])
-  @@index([version])
-}
-
-enum CampaignMemberRoleEnum {
-  ADMIN
-  MEMBER
-}
-
-enum CampaignSessionStatusEnum {
-  SCHEDULED
-  COMPLETED
-  CANCELLED
-}
-
-enum CampaignSessionResponseStatusEnum {
-  PENDING
-  ACCEPTED
-  DECLINED
-}
-
-enum CampaignInvitationStatusEnum {
-  PENDING
-  ACCEPTED
-  REFUSED
-}
-
-enum CampaignStatusEnum {
-  DRAFT
-  ACTIVE
-  ARCHIVED
-}
-
-enum CampaignVisibilityEnum {
-  PUBLIC
-  PRIVATE
-}
-
-enum RoleEnum {
-  ADMIN
-  SUPPORT
-  USER
-}
-
-enum CharacterTypeEnum {
-  PLAYER
-  NPC
-}
-
-model Characters {
-  id       String            @id @default(uuid())
-  name     String
-  type     CharacterTypeEnum @default(PLAYER)
-  data     Json
-  isActive Boolean           @default(true)
-
-  campaignId String?
-  campaign   Campaigns? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-
-  userId String?
-  user   Users?  @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([userId])
-  @@index([campaignId])
-  @@index([campaignId, type])
+  @@map("sessions")
 }

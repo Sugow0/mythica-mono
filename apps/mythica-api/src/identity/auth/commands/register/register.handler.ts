@@ -2,6 +2,7 @@ import { generateIdFromEntropySize } from "lucia";
 import { lucia } from "../../../../lib/auth";
 import { sendVerificationEmail } from "../../../../lib/email";
 import { prisma } from "../../../../lib/prisma";
+import { publishUserEvent } from "../../../../lib/user-events";
 import type { RegisterCommand } from "./register.command";
 
 const PASSWORD_HASH_OPTIONS = {
@@ -62,6 +63,7 @@ export async function registerHandler(
 		return { success: false, error: "Erreur lors de la création du compte" };
 	}
 
+	await publishUserEvent("user.created", userId);
 	await sendVerificationEmail(command.email, verificationToken, command.pseudo);
 
 	const session = await lucia.createSession(userId, {});
