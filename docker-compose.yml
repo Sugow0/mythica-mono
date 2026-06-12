@@ -31,8 +31,8 @@ services:
       - "24000:9000"
       - "24100:9001"
     environment:
-      RUSTFS_ACCESS_KEY: dockploy-1
-      RUSTFS_SECRET_KEY: "aK51Y*fXcVOR3NWi3xva5osXBW*abf^q"
+      RUSTFS_ACCESS_KEY: admin
+      RUSTFS_SECRET_KEY: password123!
       RUSTFS_VOLUMES: /data
       RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
