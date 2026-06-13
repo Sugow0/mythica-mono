@@ -69,6 +69,21 @@ const MemberSchema = t.Object({
 	user: t.Object({ pseudo: t.Union([t.String(), t.Null()]) }),
 });
 
+const JoinRequestStatus = t.Union([
+	t.Literal("pending"),
+	t.Literal("accepted"),
+	t.Literal("declined"),
+]);
+
+const JoinRequestSchema = t.Object({
+	id: t.String({ format: "uuid" }),
+	campaignId: t.String({ format: "uuid" }),
+	userId: t.String({ format: "uuid" }),
+	status: JoinRequestStatus,
+	createdAt: t.Date(),
+	user: t.Object({ pseudo: t.Union([t.String(), t.Null()]) }),
+});
+
 const SessionSchema = t.Object({
 	id: t.String({ format: "uuid" }),
 	campaignId: t.String({ format: "uuid" }),
@@ -320,11 +335,27 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				return { success: false as const, error: "Accès refusé" };
 			}
 
+			// Statut de la demande d'accès du visiteur (pour afficher le bon bouton).
+			let myJoinRequestStatus: string | null = null;
+			if (currentUser && !isMember) {
+				const req = await prisma.campaignJoinRequest.findUnique({
+					where: {
+						campaignId_userId: {
+							campaignId: params.id,
+							userId: currentUser.id,
+						},
+					},
+					select: { status: true },
+				});
+				myJoinRequestStatus = req?.status ?? null;
+			}
+
 			const { members, ...rest } = campaign;
 			return {
 				success: true as const,
 				campaign: { ...rest, coverUrl: await coverUrlFor(rest) },
 				members,
+				myJoinRequestStatus,
 			};
 		},
 		{
@@ -334,6 +365,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 					success: t.Literal(true),
 					campaign: CampaignSchema,
 					members: t.Array(MemberSchema),
+					myJoinRequestStatus: t.Union([JoinRequestStatus, t.Null()]),
 				}),
 				403: ErrorResponse,
 				404: ErrorResponse,
@@ -540,7 +572,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 
 	// ==================== MEMBRES ====================
 
-	/** POST /campaigns/:id/join - Rejoindre une campagne publique */
+	/** POST /campaigns/:id/join - Demander l'accès à une campagne publique */
 	.post(
 		"/:id/join",
 		async ({ set, currentUser, params }) => {
@@ -558,46 +590,209 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				return { success: false as const, error: "Campagne privée" };
 			}
 
-			const existing = await prisma.campaignMember.findUnique({
-				where: {
-					campaignId_userId: {
-						campaignId: params.id,
-						userId: currentUser.id,
-					},
-				},
+			const member = await prisma.campaignMember.findFirst({
+				where: { campaignId: params.id, userId: currentUser.id, leftAt: null },
 			});
-			if (existing && existing.leftAt === null) {
+			if (member) {
 				set.status = 409;
 				return { success: false as const, error: "Déjà membre" };
 			}
 
+			const existing = await prisma.campaignJoinRequest.findUnique({
+				where: {
+					campaignId_userId: { campaignId: params.id, userId: currentUser.id },
+				},
+			});
+			if (existing?.status === "pending") {
+				set.status = 409;
+				return { success: false as const, error: "Demande déjà envoyée" };
+			}
+
 			if (existing) {
-				await prisma.campaignMember.update({
+				await prisma.campaignJoinRequest.update({
 					where: { id: existing.id },
-					data: { leftAt: null, role: "player", joinedAt: new Date() },
+					data: { status: "pending" },
 				});
 			} else {
-				await prisma.campaignMember.create({
+				await prisma.campaignJoinRequest.create({
 					data: {
 						id: crypto.randomUUID(),
 						campaignId: params.id,
 						userId: currentUser.id,
-						role: "player",
 					},
 				});
 			}
-			return { success: true as const, message: "Campagne rejointe" };
+			set.status = 201;
+			return { success: true as const, message: "Demande envoyée" };
 		},
 		{
 			params: t.Object({ id: t.String() }),
 			response: {
-				200: SuccessMessageResponse,
+				201: SuccessMessageResponse,
 				401: ErrorResponse,
 				403: ErrorResponse,
 				404: ErrorResponse,
 				409: ErrorResponse,
 			},
-			detail: { tags: ["Campaigns"], summary: "Rejoindre une campagne" },
+			detail: { tags: ["Campaigns"], summary: "Demander l'accès" },
+		},
+	)
+
+	/** GET /campaigns/:id/join-requests - Demandes en attente (MJ) */
+	.get(
+		"/:id/join-requests",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const campaign = await findActiveCampaign(params.id);
+			if (!campaign) {
+				set.status = 404;
+				return { success: false as const, error: "Campagne introuvable" };
+			}
+			const role = await memberRole(params.id, currentUser.id);
+			if (campaign.ownerId !== currentUser.id && role !== "gm") {
+				set.status = 403;
+				return { success: false as const, error: "Réservé au MJ" };
+			}
+			const items = await prisma.campaignJoinRequest.findMany({
+				where: { campaignId: params.id, status: "pending" },
+				orderBy: { createdAt: "asc" },
+				include: { user: { select: { pseudo: true } } },
+			});
+			return { success: true as const, items };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			response: {
+				200: t.Object({
+					success: t.Literal(true),
+					items: t.Array(JoinRequestSchema),
+				}),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Demandes d'accès en attente" },
+		},
+	)
+
+	/** POST /campaigns/:id/join-requests/:requestId/accept - Accepter (MJ) */
+	.post(
+		"/:id/join-requests/:requestId/accept",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const campaign = await findActiveCampaign(params.id);
+			if (!campaign) {
+				set.status = 404;
+				return { success: false as const, error: "Campagne introuvable" };
+			}
+			const role = await memberRole(params.id, currentUser.id);
+			if (campaign.ownerId !== currentUser.id && role !== "gm") {
+				set.status = 403;
+				return { success: false as const, error: "Réservé au MJ" };
+			}
+			const request = await prisma.campaignJoinRequest.findFirst({
+				where: {
+					id: params.requestId,
+					campaignId: params.id,
+					status: "pending",
+				},
+			});
+			if (!request) {
+				set.status = 404;
+				return { success: false as const, error: "Demande introuvable" };
+			}
+
+			const existingMember = await prisma.campaignMember.findUnique({
+				where: {
+					campaignId_userId: {
+						campaignId: params.id,
+						userId: request.userId,
+					},
+				},
+			});
+			await prisma.$transaction([
+				prisma.campaignJoinRequest.update({
+					where: { id: request.id },
+					data: { status: "accepted" },
+				}),
+				existingMember
+					? prisma.campaignMember.update({
+							where: { id: existingMember.id },
+							data: { leftAt: null, role: "player", joinedAt: new Date() },
+						})
+					: prisma.campaignMember.create({
+							data: {
+								id: crypto.randomUUID(),
+								campaignId: params.id,
+								userId: request.userId,
+								role: "player",
+							},
+						}),
+			]);
+			return { success: true as const, message: "Demande acceptée" };
+		},
+		{
+			params: t.Object({ id: t.String(), requestId: t.String() }),
+			response: {
+				200: SuccessMessageResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Accepter une demande" },
+		},
+	)
+
+	/** POST /campaigns/:id/join-requests/:requestId/decline - Refuser (MJ) */
+	.post(
+		"/:id/join-requests/:requestId/decline",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const campaign = await findActiveCampaign(params.id);
+			if (!campaign) {
+				set.status = 404;
+				return { success: false as const, error: "Campagne introuvable" };
+			}
+			const role = await memberRole(params.id, currentUser.id);
+			if (campaign.ownerId !== currentUser.id && role !== "gm") {
+				set.status = 403;
+				return { success: false as const, error: "Réservé au MJ" };
+			}
+			const request = await prisma.campaignJoinRequest.findFirst({
+				where: {
+					id: params.requestId,
+					campaignId: params.id,
+					status: "pending",
+				},
+			});
+			if (!request) {
+				set.status = 404;
+				return { success: false as const, error: "Demande introuvable" };
+			}
+			await prisma.campaignJoinRequest.update({
+				where: { id: request.id },
+				data: { status: "declined" },
+			});
+			return { success: true as const, message: "Demande refusée" };
+		},
+		{
+			params: t.Object({ id: t.String(), requestId: t.String() }),
+			response: {
+				200: SuccessMessageResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Refuser une demande" },
 		},
 	)
 
