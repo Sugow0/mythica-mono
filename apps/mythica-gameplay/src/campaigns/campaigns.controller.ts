@@ -42,6 +42,7 @@ const CampaignSchema = t.Object({
 	description: t.Union([t.String(), t.Null()]),
 	isPublic: t.Boolean(),
 	status: CampaignStatus,
+	tags: t.Array(t.String()),
 	coverFileId: t.Union([t.String(), t.Null()]),
 	coverUrl: t.Union([t.String(), t.Null()]),
 	createdAt: t.Date(),
@@ -105,11 +106,16 @@ const MessageSchema = t.Object({
 	user: t.Object({ pseudo: t.Union([t.String(), t.Null()]) }),
 });
 
+const TagsBody = t.Optional(
+	t.Array(t.String({ minLength: 1, maxLength: 30 }), { maxItems: 10 }),
+);
+
 const CreateCampaignBody = t.Object({
 	nom: t.String({ minLength: 1, maxLength: 255 }),
 	gameSystemId: t.String({ format: "uuid" }),
 	description: t.Optional(t.String()),
 	isPublic: t.Optional(t.Boolean()),
+	tags: TagsBody,
 });
 
 const UpdateCampaignBody = t.Object({
@@ -117,7 +123,18 @@ const UpdateCampaignBody = t.Object({
 	description: t.Optional(t.String()),
 	isPublic: t.Optional(t.Boolean()),
 	status: t.Optional(CampaignStatus),
+	tags: TagsBody,
 });
+
+/** Normalise une liste de tags : trim, minuscules, non vides, uniques. */
+function normalizeTags(tags: string[]): string[] {
+	const seen = new Set<string>();
+	for (const raw of tags) {
+		const tag = raw.trim().toLowerCase();
+		if (tag) seen.add(tag);
+	}
+	return [...seen];
+}
 
 const ListQuery = t.Object({
 	page: t.Optional(t.Numeric({ minimum: 1 })),
@@ -281,6 +298,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 						description: c.description,
 						isPublic: c.isPublic,
 						status: c.status,
+						tags: c.tags,
 						coverFileId: c.coverFileId,
 						coverUrl: await coverUrlFor(c),
 						createdAt: c.createdAt,
@@ -401,6 +419,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 						nom: body.nom,
 						description: body.description ?? null,
 						isPublic: body.isPublic ?? false,
+						tags: body.tags ? normalizeTags(body.tags) : [],
 					},
 				}),
 				prisma.campaignMember.create({
@@ -517,6 +536,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 					description: body.description,
 					isPublic: body.isPublic,
 					status: body.status,
+					tags: body.tags ? normalizeTags(body.tags) : undefined,
 				},
 			});
 			return { success: true as const, message: "Campagne modifiée" };

@@ -111,6 +111,7 @@ function activeCampaign(extra: Record<string, unknown> = {}) {
 		description: null,
 		isPublic: true,
 		status: "active",
+		tags: [],
 		coverFileId: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),
