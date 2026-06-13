@@ -154,8 +154,59 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rejoindre une campagne */
+        /** Demander l'accès */
         post: operations["postCampaignsByIdJoin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/campaigns/{id}/join-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Demandes d'accès en attente */
+        get: operations["getCampaignsByIdJoin-requests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/campaigns/{id}/join-requests/{requestId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accepter une demande */
+        post: operations["postCampaignsByIdJoin-requestsByRequestIdAccept"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/campaigns/{id}/join-requests/{requestId}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refuser une demande */
+        post: operations["postCampaignsByIdJoin-requestsByRequestIdDecline"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1307,6 +1358,7 @@ export interface operations {
                                 pseudo: string | null;
                             };
                         }[];
+                        myJoinRequestStatus: ("pending" | "accepted" | "declined") | null;
                     };
                     "multipart/form-data": {
                         /** @constant */
@@ -1341,6 +1393,7 @@ export interface operations {
                                 pseudo: string | null;
                             };
                         }[];
+                        myJoinRequestStatus: ("pending" | "accepted" | "declined") | null;
                     };
                     "text/plain": {
                         /** @constant */
@@ -1375,6 +1428,7 @@ export interface operations {
                                 pseudo: string | null;
                             };
                         }[];
+                        myJoinRequestStatus: ("pending" | "accepted" | "declined") | null;
                     };
                 };
             };
@@ -1823,7 +1877,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1912,6 +1966,347 @@ export interface operations {
                 };
             };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "getCampaignsByIdJoin-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            campaignId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            status: "pending" | "accepted" | "declined";
+                            createdAt: Record<string, never> | string | number;
+                            user: {
+                                pseudo: string | null;
+                            };
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            campaignId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            status: "pending" | "accepted" | "declined";
+                            createdAt: Record<string, never> | string | number;
+                            user: {
+                                pseudo: string | null;
+                            };
+                        }[];
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        items: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            campaignId: string;
+                            /** Format: uuid */
+                            userId: string;
+                            status: "pending" | "accepted" | "declined";
+                            createdAt: Record<string, never> | string | number;
+                            user: {
+                                pseudo: string | null;
+                            };
+                        }[];
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "postCampaignsByIdJoin-requestsByRequestIdAccept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        message: string;
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "postCampaignsByIdJoin-requestsByRequestIdDecline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                requestId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        message: string;
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
