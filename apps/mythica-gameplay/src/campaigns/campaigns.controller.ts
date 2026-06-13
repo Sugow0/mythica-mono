@@ -66,6 +66,7 @@ const MemberSchema = t.Object({
 	role: MemberRole,
 	joinedAt: t.Date(),
 	leftAt: t.Union([t.Date(), t.Null()]),
+	user: t.Object({ pseudo: t.Union([t.String(), t.Null()]) }),
 });
 
 const SessionSchema = t.Object({
@@ -86,6 +87,7 @@ const MessageSchema = t.Object({
 	userId: t.String({ format: "uuid" }),
 	content: t.String(),
 	createdAt: t.Date(),
+	user: t.Object({ pseudo: t.Union([t.String(), t.Null()]) }),
 });
 
 const CreateCampaignBody = t.Object({
@@ -297,7 +299,12 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 		async ({ set, params, currentUser }) => {
 			const campaign = await prisma.campaign.findFirst({
 				where: { id: params.id, deletedAt: null },
-				include: { members: { where: { leftAt: null } } },
+				include: {
+					members: {
+						where: { leftAt: null },
+						include: { user: { select: { pseudo: true } } },
+					},
+				},
 			});
 			if (!campaign) {
 				set.status = 404;
@@ -952,6 +959,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				where: { campaignId: params.id },
 				orderBy: { createdAt: "desc" },
 				take: 50,
+				include: { user: { select: { pseudo: true } } },
 			});
 			return { success: true as const, items: rows.reverse() };
 		},

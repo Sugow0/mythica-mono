@@ -1303,6 +1303,9 @@ export interface operations {
                             role: "gm" | "player" | "spectator";
                             joinedAt: Record<string, never> | string | number;
                             leftAt: (Record<string, never> | string | number) | null;
+                            user: {
+                                pseudo: string | null;
+                            };
                         }[];
                     };
                     "multipart/form-data": {
@@ -1334,6 +1337,9 @@ export interface operations {
                             role: "gm" | "player" | "spectator";
                             joinedAt: Record<string, never> | string | number;
                             leftAt: (Record<string, never> | string | number) | null;
+                            user: {
+                                pseudo: string | null;
+                            };
                         }[];
                     };
                     "text/plain": {
@@ -1365,6 +1371,9 @@ export interface operations {
                             role: "gm" | "player" | "spectator";
                             joinedAt: Record<string, never> | string | number;
                             leftAt: (Record<string, never> | string | number) | null;
+                            user: {
+                                pseudo: string | null;
+                            };
                         }[];
                     };
                 };
@@ -2774,6 +2783,9 @@ export interface operations {
                             userId: string;
                             content: string;
                             createdAt: Record<string, never> | string | number;
+                            user: {
+                                pseudo: string | null;
+                            };
                         }[];
                     };
                     "multipart/form-data": {
@@ -2788,6 +2800,9 @@ export interface operations {
                             userId: string;
                             content: string;
                             createdAt: Record<string, never> | string | number;
+                            user: {
+                                pseudo: string | null;
+                            };
                         }[];
                     };
                     "text/plain": {
@@ -2802,6 +2817,9 @@ export interface operations {
                             userId: string;
                             content: string;
                             createdAt: Record<string, never> | string | number;
+                            user: {
+                                pseudo: string | null;
+                            };
                         }[];
                     };
                 };
@@ -2914,6 +2932,9 @@ export interface operations {
                             userId: string;
                             content: string;
                             createdAt: Record<string, never> | string | number;
+                            user: {
+                                pseudo: string | null;
+                            };
                         };
                     };
                     "multipart/form-data": {
@@ -2928,6 +2949,9 @@ export interface operations {
                             userId: string;
                             content: string;
                             createdAt: Record<string, never> | string | number;
+                            user: {
+                                pseudo: string | null;
+                            };
                         };
                     };
                     "text/plain": {
@@ -2942,6 +2966,9 @@ export interface operations {
                             userId: string;
                             content: string;
                             createdAt: Record<string, never> | string | number;
+                            user: {
+                                pseudo: string | null;
+                            };
                         };
                     };
                 };

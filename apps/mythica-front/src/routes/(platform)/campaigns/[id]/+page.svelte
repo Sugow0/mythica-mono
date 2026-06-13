@@ -60,6 +60,7 @@
 		userId: string;
 		content: string;
 		createdAt: string | number | Record<string, never>;
+		user?: { pseudo: string | null };
 	};
 	let messages = $state<ChatMessage[]>([]);
 	let chatInput = $state("");
@@ -396,8 +397,9 @@
 		}
 	}
 
-	function authorLabel(userId: string) {
-		return userId === data.user?.id ? "Vous" : userId.slice(0, 8);
+	function authorLabel(message: ChatMessage) {
+		if (message.userId === data.user?.id) return "Vous";
+		return message.user?.pseudo ?? message.userId.slice(0, 8);
 	}
 
 	onMount(async () => {
@@ -844,12 +846,10 @@
 							<div
 								class="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 dark:border-border/40"
 							>
-								<span
-									class="font-mono text-xs text-slate-500 dark:text-muted-foreground"
-								>
+								<span class="text-sm text-foreground">
 									{member.userId === data.user?.id
 										? "Vous"
-										: member.userId.slice(0, 8)}
+										: (member.user?.pseudo ?? member.userId.slice(0, 8))}
 								</span>
 								<Badge variant="secondary">{roleLabel(member.role)}</Badge>
 							</div>
@@ -883,7 +883,7 @@
 											{message.content}
 										</div>
 										<span class="mt-0.5 px-1 text-[10px] text-muted-foreground">
-											{authorLabel(message.userId)} · {formatDateTime(
+											{authorLabel(message)} · {formatDateTime(
 												message.createdAt
 											)}
 										</span>
