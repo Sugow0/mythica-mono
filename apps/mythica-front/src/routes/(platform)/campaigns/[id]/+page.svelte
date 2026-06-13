@@ -411,7 +411,7 @@
 	onDestroy(() => eventSource?.close());
 </script>
 
-<div class="mx-auto max-w-4xl px-6 py-8">
+<div class="mx-auto max-w-6xl px-6 py-8">
 	<Button
 		variant="ghost"
 		href="/campaigns"
@@ -435,461 +435,493 @@
 			</Empty.Content>
 		</Empty.Root>
 	{:else if campaign}
-		<!-- Couverture -->
-		{#if campaign.coverUrl}
-			<div
-				class="mb-6 aspect-[3/1] w-full overflow-hidden rounded-2xl border border-border"
-			>
-				<img
-					src={campaign.coverUrl}
-					alt={campaign.nom}
-					class="h-full w-full object-cover"
-				/>
-			</div>
-		{/if}
-		<!-- En-tete -->
-		<div class="mb-6 flex items-start justify-between gap-4">
-			<div>
-				<div class="mb-2 flex items-center gap-2">
-					<Badge variant="secondary">{statusLabel(campaign.status)}</Badge>
-					{#if campaign.isPublic}
-						<Badge variant="outline"
-							><GlobeIcon class="mr-1 h-3 w-3" />Publique</Badge
-						>
-					{:else}
-						<Badge variant="outline"
-							><LockIcon class="mr-1 h-3 w-3" />Privee</Badge
-						>
-					{/if}
-				</div>
-				<h1
-					class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
-				>
-					{campaign.nom}
-				</h1>
-				<p
-					class="mt-1 flex items-center gap-3 text-sm text-slate-500 dark:text-muted-foreground"
-				>
-					<span class="flex items-center gap-1">
-						<CalendarIcon class="h-3.5 w-3.5" />
-						{formatDate(campaign.createdAt)}
-					</span>
-					<span class="flex items-center gap-1">
-						<UsersIcon class="h-3.5 w-3.5" />
-						{members.length} membre{members.length > 1 ? "s" : ""}
-					</span>
-				</p>
-			</div>
-			<div class="flex shrink-0 gap-2">
-				{#if isGm}
-					<Button onclick={generateInvite} disabled={busy} variant="outline">
-						<LinkIcon class="h-4 w-4" />Inviter
-					</Button>
-				{/if}
-				{#if data.user && !isMember && campaign.isPublic}
-					<Button
-						onclick={join}
-						disabled={busy}
-						class="bg-red-600 text-white hover:bg-red-700"
-					>
-						<PlusIcon class="h-4 w-4" />Rejoindre
-					</Button>
-				{/if}
-				{#if isMember && !isOwner}
-					<Button onclick={leave} disabled={busy} variant="outline">
-						<LogOutIcon class="h-4 w-4" />Quitter
-					</Button>
-				{/if}
-				{#if isOwner}
-					<Button onclick={openEdit} disabled={busy} variant="outline">
-						<PencilIcon class="h-4 w-4" />Modifier
-					</Button>
-					<Button
-						onclick={removeCampaign}
-						disabled={busy}
-						variant="outline"
-						class="text-red-500 hover:text-red-600"
-					>
-						<Trash2Icon class="h-4 w-4" />Supprimer
-					</Button>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Dialogue d'édition (propriétaire) -->
-		<Dialog.Root bind:open={editOpen}>
-			<Dialog.Content class="sm:max-w-lg">
-				<Dialog.Header>
-					<Dialog.Title>Modifier la campagne</Dialog.Title>
-					<Dialog.Description>
-						Mettez à jour les informations de votre campagne.
-					</Dialog.Description>
-				</Dialog.Header>
-				<div class="space-y-4 py-2">
-					{#if editError}
-						<p class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
-							{editError}
-						</p>
-					{/if}
-					<div class="space-y-1.5">
-						<Label for="edit-name">Nom</Label>
-						<Input
-							id="edit-name"
-							bind:value={editName}
-							disabled={busy}
-							maxlength={255}
-						/>
-						{#if !editValid}
-							<p class="text-xs text-muted-foreground">
-								Entre 3 et 255 caractères.
-							</p>
-						{/if}
-					</div>
-					<div class="space-y-1.5">
-						<Label for="edit-description">Description</Label>
-						<Textarea
-							id="edit-description"
-							bind:value={editDescription}
-							disabled={busy}
-							rows={4}
-							class="resize-none"
-						/>
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<div class="space-y-1.5">
-							<Label for="edit-visibility">Visibilité</Label>
-							<NativeSelect.Root
-								id="edit-visibility"
-								bind:value={editVisibility}
-								disabled={busy}
-							>
-								<NativeSelect.Option value="PRIVATE">Privée</NativeSelect.Option
-								>
-								<NativeSelect.Option value="PUBLIC"
-									>Publique</NativeSelect.Option
-								>
-							</NativeSelect.Root>
-						</div>
-						<div class="space-y-1.5">
-							<Label for="edit-status">Statut</Label>
-							<NativeSelect.Root
-								id="edit-status"
-								bind:value={editStatus}
-								disabled={busy}
-							>
-								<NativeSelect.Option value="active">Active</NativeSelect.Option>
-								<NativeSelect.Option value="paused"
-									>En pause</NativeSelect.Option
-								>
-								<NativeSelect.Option value="archived"
-									>Archivée</NativeSelect.Option
-								>
-							</NativeSelect.Root>
-						</div>
-					</div>
-				</div>
-				<Dialog.Footer>
-					<Button
-						variant="outline"
-						onclick={() => (editOpen = false)}
-						disabled={busy}
-					>
-						Annuler
-					</Button>
-					<Button
-						onclick={saveEdit}
-						disabled={busy || !editValid}
-						class="bg-red-600 text-white hover:bg-red-700"
-					>
-						Enregistrer
-					</Button>
-				</Dialog.Footer>
-			</Dialog.Content>
-		</Dialog.Root>
-
-		{#if actionError}
-			<p class="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
-				{actionError}
-			</p>
-		{/if}
-
-		{#if inviteLink}
-			<div
-				class="mb-6 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-900 dark:bg-red-950/30"
-			>
-				<p class="mb-2 text-sm font-medium text-slate-700 dark:text-red-300">
-					Lien d'invitation (valable 7 jours)
-				</p>
-				<div class="flex gap-2">
-					<Input value={inviteLink} readonly class="font-mono text-xs" />
-					<Button onclick={copyInvite} variant="outline" class="shrink-0">
-						{inviteCopied ? "Copie !" : "Copier"}
-					</Button>
-				</div>
-			</div>
-		{/if}
-
-		<!-- Description -->
-		<Card.Root class="mb-6">
-			<Card.Header><Card.Title>Description</Card.Title></Card.Header>
-			<Card.Content>
-				<p class="text-sm text-slate-600 dark:text-muted-foreground">
-					{campaign.description || "Aucune description."}
-				</p>
-			</Card.Content>
-		</Card.Root>
-
-		<!-- Membres -->
-		<Card.Root class="mb-6">
-			<Card.Header
-				><Card.Title>Membres ({members.length})</Card.Title></Card.Header
-			>
-			<Card.Content class="space-y-2">
-				{#each members as member (member.id)}
+		<div class="grid gap-6 lg:grid-cols-3 lg:items-start">
+			<!-- Colonne principale -->
+			<div class="space-y-6 lg:col-span-2">
+				<!-- Couverture -->
+				{#if campaign.coverUrl}
 					<div
-						class="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 dark:border-border/40"
+						class="mb-6 aspect-[3/1] w-full overflow-hidden rounded-2xl border border-border"
 					>
-						<span
-							class="font-mono text-xs text-slate-500 dark:text-muted-foreground"
-						>
-							{member.userId === data.user?.id
-								? "Vous"
-								: member.userId.slice(0, 8)}
-						</span>
-						<Badge variant="secondary">{roleLabel(member.role)}</Badge>
+						<img
+							src={campaign.coverUrl}
+							alt={campaign.nom}
+							class="h-full w-full object-cover"
+						/>
 					</div>
-				{:else}
-					<p class="text-sm text-slate-400">Aucun membre.</p>
-				{/each}
-			</Card.Content>
-		</Card.Root>
-
-		<!-- Sessions -->
-		{#if isMember}
-			{#snippet sessionRow(
-				session: Session,
-				kind: "active" | "upcoming" | "past"
-			)}
-				<div
-					class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 {kind ===
-					'active'
-						? 'border-primary/40 bg-primary/5'
-						: 'border-slate-100 dark:border-border/40'}"
-				>
-					<div class="min-w-0">
-						<div class="flex items-center gap-2">
-							<span class="truncate font-medium text-slate-900 dark:text-white"
-								>{session.nom}</span
-							>
-							<Badge
-								variant={kind === "active" ? "default" : "secondary"}
-								class="shrink-0 text-xs"
-							>
-								{sessionStatusLabel(session.status)}
-							</Badge>
-						</div>
-						{#if formatDateTime(session.scheduledAt ?? session.endedAt ?? session.startedAt)}
-							<span
-								class="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-muted-foreground"
-							>
-								<ClockIcon class="h-3 w-3" />
-								{formatDateTime(
-									session.scheduledAt ?? session.endedAt ?? session.startedAt
-								)}
-							</span>
-						{/if}
-					</div>
-					{#if isGm}
-						<div class="flex shrink-0 items-center gap-1.5">
-							{#if kind === "upcoming"}
-								<Button
-									size="sm"
-									onclick={() => setSessionStatus(session.id, "active")}
-									disabled={busy}
-									class="bg-primary text-primary-foreground hover:bg-primary/90"
+				{/if}
+				<!-- En-tete -->
+				<div class="mb-6 flex items-start justify-between gap-4">
+					<div>
+						<div class="mb-2 flex items-center gap-2">
+							<Badge variant="secondary">{statusLabel(campaign.status)}</Badge>
+							{#if campaign.isPublic}
+								<Badge variant="outline"
+									><GlobeIcon class="mr-1 h-3 w-3" />Publique</Badge
 								>
-									<PlayIcon class="h-3.5 w-3.5" />Lancer
-								</Button>
-							{:else if kind === "active"}
-								<Button
-									size="sm"
-									variant="outline"
-									onclick={() => setSessionStatus(session.id, "ended")}
-									disabled={busy}
+							{:else}
+								<Badge variant="outline"
+									><LockIcon class="mr-1 h-3 w-3" />Privee</Badge
 								>
-									<CircleCheckIcon class="h-3.5 w-3.5" />Terminer
-								</Button>
 							{/if}
-							<button
-								type="button"
-								onclick={() => removeSession(session.id)}
-								class="rounded p-1.5 text-slate-400 hover:text-red-500"
-								title="Supprimer la session"
-								aria-label="Supprimer la session"
-							>
-								<Trash2Icon class="h-4 w-4" />
-							</button>
 						</div>
-					{/if}
-				</div>
-			{/snippet}
-
-			<Card.Root>
-				<Card.Header class="flex flex-row items-center justify-between gap-2">
-					<Card.Title>Sessions</Card.Title>
-					<div class="flex rounded-lg border border-border p-0.5">
-						<button
-							type="button"
-							onclick={() => (sessionView = "list")}
-							class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
-							'list'
-								? 'bg-primary text-primary-foreground'
-								: 'text-muted-foreground hover:text-foreground'}"
+						<h1
+							class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
 						>
-							Liste
-						</button>
-						<button
-							type="button"
-							onclick={() => (sessionView = "calendar")}
-							class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
-							'calendar'
-								? 'bg-primary text-primary-foreground'
-								: 'text-muted-foreground hover:text-foreground'}"
+							{campaign.nom}
+						</h1>
+						<p
+							class="mt-1 flex items-center gap-3 text-sm text-slate-500 dark:text-muted-foreground"
 						>
-							Calendrier
-						</button>
+							<span class="flex items-center gap-1">
+								<CalendarIcon class="h-3.5 w-3.5" />
+								{formatDate(campaign.createdAt)}
+							</span>
+							<span class="flex items-center gap-1">
+								<UsersIcon class="h-3.5 w-3.5" />
+								{members.length} membre{members.length > 1 ? "s" : ""}
+							</span>
+						</p>
 					</div>
-				</Card.Header>
-				<Card.Content class="space-y-5">
-					{#if isGm}
-						<div class="flex flex-col gap-2 sm:flex-row">
-							<Input
-								placeholder="Nom de la session..."
-								bind:value={newSessionName}
-								disabled={busy}
-								class="sm:flex-1"
-							/>
-							<Input
-								type="datetime-local"
-								bind:value={newSessionDate}
-								disabled={busy}
-								class="sm:w-52"
-							/>
+					<div class="flex shrink-0 gap-2">
+						{#if isGm}
 							<Button
-								onclick={createSession}
-								disabled={busy || !newSessionName.trim()}
+								onclick={generateInvite}
+								disabled={busy}
+								variant="outline"
+							>
+								<LinkIcon class="h-4 w-4" />Inviter
+							</Button>
+						{/if}
+						{#if data.user && !isMember && campaign.isPublic}
+							<Button
+								onclick={join}
+								disabled={busy}
 								class="bg-red-600 text-white hover:bg-red-700"
 							>
-								<PlusIcon class="h-4 w-4" />Planifier
+								<PlusIcon class="h-4 w-4" />Rejoindre
+							</Button>
+						{/if}
+						{#if isMember && !isOwner}
+							<Button onclick={leave} disabled={busy} variant="outline">
+								<LogOutIcon class="h-4 w-4" />Quitter
+							</Button>
+						{/if}
+						{#if isOwner}
+							<Button onclick={openEdit} disabled={busy} variant="outline">
+								<PencilIcon class="h-4 w-4" />Modifier
+							</Button>
+							<Button
+								onclick={removeCampaign}
+								disabled={busy}
+								variant="outline"
+								class="text-red-500 hover:text-red-600"
+							>
+								<Trash2Icon class="h-4 w-4" />Supprimer
+							</Button>
+						{/if}
+					</div>
+				</div>
+
+				<!-- Dialogue d'édition (propriétaire) -->
+				<Dialog.Root bind:open={editOpen}>
+					<Dialog.Content class="sm:max-w-lg">
+						<Dialog.Header>
+							<Dialog.Title>Modifier la campagne</Dialog.Title>
+							<Dialog.Description>
+								Mettez à jour les informations de votre campagne.
+							</Dialog.Description>
+						</Dialog.Header>
+						<div class="space-y-4 py-2">
+							{#if editError}
+								<p
+									class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500"
+								>
+									{editError}
+								</p>
+							{/if}
+							<div class="space-y-1.5">
+								<Label for="edit-name">Nom</Label>
+								<Input
+									id="edit-name"
+									bind:value={editName}
+									disabled={busy}
+									maxlength={255}
+								/>
+								{#if !editValid}
+									<p class="text-xs text-muted-foreground">
+										Entre 3 et 255 caractères.
+									</p>
+								{/if}
+							</div>
+							<div class="space-y-1.5">
+								<Label for="edit-description">Description</Label>
+								<Textarea
+									id="edit-description"
+									bind:value={editDescription}
+									disabled={busy}
+									rows={4}
+									class="resize-none"
+								/>
+							</div>
+							<div class="grid grid-cols-2 gap-3">
+								<div class="space-y-1.5">
+									<Label for="edit-visibility">Visibilité</Label>
+									<NativeSelect.Root
+										id="edit-visibility"
+										bind:value={editVisibility}
+										disabled={busy}
+									>
+										<NativeSelect.Option value="PRIVATE"
+											>Privée</NativeSelect.Option
+										>
+										<NativeSelect.Option value="PUBLIC"
+											>Publique</NativeSelect.Option
+										>
+									</NativeSelect.Root>
+								</div>
+								<div class="space-y-1.5">
+									<Label for="edit-status">Statut</Label>
+									<NativeSelect.Root
+										id="edit-status"
+										bind:value={editStatus}
+										disabled={busy}
+									>
+										<NativeSelect.Option value="active"
+											>Active</NativeSelect.Option
+										>
+										<NativeSelect.Option value="paused"
+											>En pause</NativeSelect.Option
+										>
+										<NativeSelect.Option value="archived"
+											>Archivée</NativeSelect.Option
+										>
+									</NativeSelect.Root>
+								</div>
+							</div>
+						</div>
+						<Dialog.Footer>
+							<Button
+								variant="outline"
+								onclick={() => (editOpen = false)}
+								disabled={busy}
+							>
+								Annuler
+							</Button>
+							<Button
+								onclick={saveEdit}
+								disabled={busy || !editValid}
+								class="bg-red-600 text-white hover:bg-red-700"
+							>
+								Enregistrer
+							</Button>
+						</Dialog.Footer>
+					</Dialog.Content>
+				</Dialog.Root>
+
+				{#if actionError}
+					<p
+						class="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500"
+					>
+						{actionError}
+					</p>
+				{/if}
+
+				{#if inviteLink}
+					<div
+						class="mb-6 rounded-lg border border-red-200 bg-red-50/50 p-3 dark:border-red-900 dark:bg-red-950/30"
+					>
+						<p
+							class="mb-2 text-sm font-medium text-slate-700 dark:text-red-300"
+						>
+							Lien d'invitation (valable 7 jours)
+						</p>
+						<div class="flex gap-2">
+							<Input value={inviteLink} readonly class="font-mono text-xs" />
+							<Button onclick={copyInvite} variant="outline" class="shrink-0">
+								{inviteCopied ? "Copie !" : "Copier"}
 							</Button>
 						</div>
-					{/if}
+					</div>
+				{/if}
 
-					{#if sessions.length === 0}
-						<p class="text-sm text-slate-400">Aucune session pour le moment.</p>
-					{:else if sessionView === "calendar"}
-						<SessionCalendar {sessions} />
-					{/if}
+				<!-- Description -->
+				<Card.Root class="mb-6">
+					<Card.Header><Card.Title>Description</Card.Title></Card.Header>
+					<Card.Content>
+						<p class="text-sm text-slate-600 dark:text-muted-foreground">
+							{campaign.description || "Aucune description."}
+						</p>
+					</Card.Content>
+				</Card.Root>
 
-					{#if sessionView === "list" && activeSessions.length > 0}
-						<div class="space-y-2">
-							<h3
-								class="text-xs font-semibold uppercase tracking-wide text-primary"
-							>
-								En cours
-							</h3>
-							{#each activeSessions as session (session.id)}
-								{@render sessionRow(session, "active")}
-							{/each}
-						</div>
-					{/if}
-
-					{#if sessionView === "list" && upcomingSessions.length > 0}
-						<div class="space-y-2">
-							<h3
-								class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-muted-foreground"
-							>
-								A venir ({upcomingSessions.length})
-							</h3>
-							{#each upcomingSessions as session (session.id)}
-								{@render sessionRow(session, "upcoming")}
-							{/each}
-						</div>
-					{/if}
-
-					{#if sessionView === "list" && pastSessions.length > 0}
-						<div class="space-y-2">
-							<h3
-								class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-muted-foreground/70"
-							>
-								Passees ({pastSessions.length})
-							</h3>
-							{#each pastSessions as session (session.id)}
-								{@render sessionRow(session, "past")}
-							{/each}
-						</div>
-					{/if}
-				</Card.Content>
-			</Card.Root>
-
-			<!-- Chat temps réel -->
-			<Card.Root class="mt-6">
-				<Card.Header>
-					<Card.Title>Chat</Card.Title>
-				</Card.Header>
-				<Card.Content>
-					<div
-						bind:this={messagesEl}
-						class="mb-3 h-72 space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/20 p-3"
-					>
-						{#each messages as message (message.id)}
-							{@const mine = message.userId === data.user?.id}
-							<div class="flex flex-col {mine ? 'items-end' : 'items-start'}">
-								<div
-									class="max-w-[75%] rounded-2xl px-3 py-1.5 text-sm break-words {mine
-										? 'bg-primary text-primary-foreground'
-										: 'border border-border bg-card'}"
-								>
-									{message.content}
+				<!-- Sessions -->
+				{#if isMember}
+					{#snippet sessionRow(
+						session: Session,
+						kind: "active" | "upcoming" | "past"
+					)}
+						<div
+							class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 {kind ===
+							'active'
+								? 'border-primary/40 bg-primary/5'
+								: 'border-slate-100 dark:border-border/40'}"
+						>
+							<div class="min-w-0">
+								<div class="flex items-center gap-2">
+									<span
+										class="truncate font-medium text-slate-900 dark:text-white"
+										>{session.nom}</span
+									>
+									<Badge
+										variant={kind === "active" ? "default" : "secondary"}
+										class="shrink-0 text-xs"
+									>
+										{sessionStatusLabel(session.status)}
+									</Badge>
 								</div>
-								<span class="mt-0.5 px-1 text-[10px] text-muted-foreground">
-									{authorLabel(message.userId)} · {formatDateTime(
-										message.createdAt
-									)}
+								{#if formatDateTime(session.scheduledAt ?? session.endedAt ?? session.startedAt)}
+									<span
+										class="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-muted-foreground"
+									>
+										<ClockIcon class="h-3 w-3" />
+										{formatDateTime(
+											session.scheduledAt ??
+												session.endedAt ??
+												session.startedAt
+										)}
+									</span>
+								{/if}
+							</div>
+							{#if isGm}
+								<div class="flex shrink-0 items-center gap-1.5">
+									{#if kind === "upcoming"}
+										<Button
+											size="sm"
+											onclick={() => setSessionStatus(session.id, "active")}
+											disabled={busy}
+											class="bg-primary text-primary-foreground hover:bg-primary/90"
+										>
+											<PlayIcon class="h-3.5 w-3.5" />Lancer
+										</Button>
+									{:else if kind === "active"}
+										<Button
+											size="sm"
+											variant="outline"
+											onclick={() => setSessionStatus(session.id, "ended")}
+											disabled={busy}
+										>
+											<CircleCheckIcon class="h-3.5 w-3.5" />Terminer
+										</Button>
+									{/if}
+									<button
+										type="button"
+										onclick={() => removeSession(session.id)}
+										class="rounded p-1.5 text-slate-400 hover:text-red-500"
+										title="Supprimer la session"
+										aria-label="Supprimer la session"
+									>
+										<Trash2Icon class="h-4 w-4" />
+									</button>
+								</div>
+							{/if}
+						</div>
+					{/snippet}
+
+					<Card.Root>
+						<Card.Header
+							class="flex flex-row items-center justify-between gap-2"
+						>
+							<Card.Title>Sessions</Card.Title>
+							<div class="flex rounded-lg border border-border p-0.5">
+								<button
+									type="button"
+									onclick={() => (sessionView = "list")}
+									class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
+									'list'
+										? 'bg-primary text-primary-foreground'
+										: 'text-muted-foreground hover:text-foreground'}"
+								>
+									Liste
+								</button>
+								<button
+									type="button"
+									onclick={() => (sessionView = "calendar")}
+									class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
+									'calendar'
+										? 'bg-primary text-primary-foreground'
+										: 'text-muted-foreground hover:text-foreground'}"
+								>
+									Calendrier
+								</button>
+							</div>
+						</Card.Header>
+						<Card.Content class="space-y-5">
+							{#if isGm}
+								<div class="flex flex-col gap-2 sm:flex-row">
+									<Input
+										placeholder="Nom de la session..."
+										bind:value={newSessionName}
+										disabled={busy}
+										class="sm:flex-1"
+									/>
+									<Input
+										type="datetime-local"
+										bind:value={newSessionDate}
+										disabled={busy}
+										class="sm:w-52"
+									/>
+									<Button
+										onclick={createSession}
+										disabled={busy || !newSessionName.trim()}
+										class="bg-red-600 text-white hover:bg-red-700"
+									>
+										<PlusIcon class="h-4 w-4" />Planifier
+									</Button>
+								</div>
+							{/if}
+
+							{#if sessions.length === 0}
+								<p class="text-sm text-slate-400">
+									Aucune session pour le moment.
+								</p>
+							{:else if sessionView === "calendar"}
+								<SessionCalendar {sessions} />
+							{/if}
+
+							{#if sessionView === "list" && activeSessions.length > 0}
+								<div class="space-y-2">
+									<h3
+										class="text-xs font-semibold uppercase tracking-wide text-primary"
+									>
+										En cours
+									</h3>
+									{#each activeSessions as session (session.id)}
+										{@render sessionRow(session, "active")}
+									{/each}
+								</div>
+							{/if}
+
+							{#if sessionView === "list" && upcomingSessions.length > 0}
+								<div class="space-y-2">
+									<h3
+										class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-muted-foreground"
+									>
+										A venir ({upcomingSessions.length})
+									</h3>
+									{#each upcomingSessions as session (session.id)}
+										{@render sessionRow(session, "upcoming")}
+									{/each}
+								</div>
+							{/if}
+
+							{#if sessionView === "list" && pastSessions.length > 0}
+								<div class="space-y-2">
+									<h3
+										class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-muted-foreground/70"
+									>
+										Passees ({pastSessions.length})
+									</h3>
+									{#each pastSessions as session (session.id)}
+										{@render sessionRow(session, "past")}
+									{/each}
+								</div>
+							{/if}
+						</Card.Content>
+					</Card.Root>
+				{/if}
+			</div>
+
+			<!-- Colonne latérale -->
+			<aside class="space-y-6 lg:sticky lg:top-6 lg:self-start">
+				<!-- Membres -->
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Membres ({members.length})</Card.Title>
+					</Card.Header>
+					<Card.Content class="space-y-2">
+						{#each members as member (member.id)}
+							<div
+								class="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 dark:border-border/40"
+							>
+								<span
+									class="font-mono text-xs text-slate-500 dark:text-muted-foreground"
+								>
+									{member.userId === data.user?.id
+										? "Vous"
+										: member.userId.slice(0, 8)}
 								</span>
+								<Badge variant="secondary">{roleLabel(member.role)}</Badge>
 							</div>
 						{:else}
-							<p
-								class="flex h-full items-center justify-center text-sm text-muted-foreground"
-							>
-								Aucun message. Lancez la conversation !
-							</p>
+							<p class="text-sm text-slate-400">Aucun membre.</p>
 						{/each}
-					</div>
-					<form
-						onsubmit={(e) => {
-							e.preventDefault();
-							sendMessage();
-						}}
-						class="flex gap-2"
-					>
-						<Input
-							placeholder="Votre message..."
-							bind:value={chatInput}
-							disabled={chatBusy}
-							maxlength={2000}
-						/>
-						<Button
-							type="submit"
-							disabled={chatBusy || !chatInput.trim()}
-							aria-label="Envoyer"
-							class="bg-red-600 text-white hover:bg-red-700"
-						>
-							<SendIcon class="h-4 w-4" />
-						</Button>
-					</form>
-				</Card.Content>
-			</Card.Root>
-		{/if}
+					</Card.Content>
+				</Card.Root>
+
+				{#if isMember}
+					<!-- Chat temps réel -->
+					<Card.Root>
+						<Card.Header>
+							<Card.Title>Chat</Card.Title>
+						</Card.Header>
+						<Card.Content>
+							<div
+								bind:this={messagesEl}
+								class="mb-3 h-72 space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/20 p-3"
+							>
+								{#each messages as message (message.id)}
+									{@const mine = message.userId === data.user?.id}
+									<div
+										class="flex flex-col {mine ? 'items-end' : 'items-start'}"
+									>
+										<div
+											class="max-w-[75%] rounded-2xl px-3 py-1.5 text-sm break-words {mine
+												? 'bg-primary text-primary-foreground'
+												: 'border border-border bg-card'}"
+										>
+											{message.content}
+										</div>
+										<span class="mt-0.5 px-1 text-[10px] text-muted-foreground">
+											{authorLabel(message.userId)} · {formatDateTime(
+												message.createdAt
+											)}
+										</span>
+									</div>
+								{:else}
+									<p
+										class="flex h-full items-center justify-center text-sm text-muted-foreground"
+									>
+										Aucun message. Lancez la conversation !
+									</p>
+								{/each}
+							</div>
+							<form
+								onsubmit={(e) => {
+									e.preventDefault();
+									sendMessage();
+								}}
+								class="flex gap-2"
+							>
+								<Input
+									placeholder="Votre message..."
+									bind:value={chatInput}
+									disabled={chatBusy}
+									maxlength={2000}
+								/>
+								<Button
+									type="submit"
+									disabled={chatBusy || !chatInput.trim()}
+									aria-label="Envoyer"
+									class="bg-red-600 text-white hover:bg-red-700"
+								>
+									<SendIcon class="h-4 w-4" />
+								</Button>
+							</form>
+						</Card.Content>
+					</Card.Root>
+				{/if}
+			</aside>
+		</div>
 	{/if}
 </div>
