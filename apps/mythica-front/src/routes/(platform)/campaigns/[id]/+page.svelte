@@ -18,6 +18,7 @@
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
 	import * as Empty from "$lib/components/ui/empty";
+	import SessionCalendar from "$lib/components/session-calendar.svelte";
 	import { Input } from "$lib/components/ui/input";
 	import { Skeleton } from "$lib/components/ui/skeleton";
 	import { ApiError, campaignService } from "$lib/index.js";
@@ -42,6 +43,7 @@
 	let actionError = $state<string | null>(null);
 	let newSessionName = $state("");
 	let newSessionDate = $state("");
+	let sessionView = $state<"list" | "calendar">("list");
 	let busy = $state(false);
 	let inviteLink = $state<string | null>(null);
 	let inviteCopied = $state(false);
@@ -513,8 +515,30 @@
 			{/snippet}
 
 			<Card.Root>
-				<Card.Header>
+				<Card.Header class="flex flex-row items-center justify-between gap-2">
 					<Card.Title>Sessions</Card.Title>
+					<div class="flex rounded-lg border border-border p-0.5">
+						<button
+							type="button"
+							onclick={() => (sessionView = "list")}
+							class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
+							'list'
+								? 'bg-primary text-primary-foreground'
+								: 'text-muted-foreground hover:text-foreground'}"
+						>
+							Liste
+						</button>
+						<button
+							type="button"
+							onclick={() => (sessionView = "calendar")}
+							class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
+							'calendar'
+								? 'bg-primary text-primary-foreground'
+								: 'text-muted-foreground hover:text-foreground'}"
+						>
+							Calendrier
+						</button>
+					</div>
 				</Card.Header>
 				<Card.Content class="space-y-5">
 					{#if isGm}
@@ -543,9 +567,11 @@
 
 					{#if sessions.length === 0}
 						<p class="text-sm text-slate-400">Aucune session pour le moment.</p>
+					{:else if sessionView === "calendar"}
+						<SessionCalendar {sessions} />
 					{/if}
 
-					{#if activeSessions.length > 0}
+					{#if sessionView === "list" && activeSessions.length > 0}
 						<div class="space-y-2">
 							<h3
 								class="text-xs font-semibold uppercase tracking-wide text-primary"
@@ -558,7 +584,7 @@
 						</div>
 					{/if}
 
-					{#if upcomingSessions.length > 0}
+					{#if sessionView === "list" && upcomingSessions.length > 0}
 						<div class="space-y-2">
 							<h3
 								class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-muted-foreground"
@@ -571,7 +597,7 @@
 						</div>
 					{/if}
 
-					{#if pastSessions.length > 0}
+					{#if sessionView === "list" && pastSessions.length > 0}
 						<div class="space-y-2">
 							<h3
 								class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-muted-foreground/70"
