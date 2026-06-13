@@ -31,10 +31,29 @@ const p = {
 		delete: mock(async () => ({}) as unknown),
 	},
 	file: { create: mock(async () => ({}) as unknown) },
+	message: {
+		create: mock(async () => ({}) as unknown),
+		findMany: mock(async () => [] as unknown[]),
+	},
 	$transaction: mock(async (ops: Promise<unknown>[]) => Promise.all(ops)),
 };
 
 mock.module("../../lib/prisma", () => ({ prisma: p }));
+
+// Redis mocké : pas de connexion réseau dans les tests.
+const redisMock = {
+	publish: mock(async () => 1),
+	duplicate: mock(() => ({
+		on: mock(() => {}),
+		subscribe: mock(async () => {}),
+		unsubscribe: mock(async () => {}),
+		disconnect: mock(() => {}),
+	})),
+};
+mock.module("../../lib/redis", () => ({
+	redis: redisMock,
+	redisConsumer: {},
+}));
 
 // Stockage objet mocké : pas d'I/O réseau dans les tests.
 const uploadCampaignCover = mock(async () => "cover-key");
@@ -119,6 +138,15 @@ beforeEach(() => {
 	p.campaignInvite.create.mockResolvedValue({} as unknown);
 	p.campaignInvite.delete.mockResolvedValue({} as unknown);
 	p.file.create.mockResolvedValue({} as unknown);
+	p.message.findMany.mockResolvedValue([] as unknown);
+	p.message.create.mockResolvedValue({
+		id: "55555555-5555-5555-5555-555555555555",
+		campaignId: CID,
+		userId: OWNER,
+		content: "Salut",
+		createdAt: new Date(),
+	} as unknown);
+	redisMock.publish.mockClear();
 	uploadCampaignCover.mockReset();
 	uploadCampaignCover.mockResolvedValue("cover-key");
 	getPresignedCoverUrl.mockReset();
@@ -420,6 +448,75 @@ describe("campaigns sessions", () => {
 			data: Record<string, unknown>;
 		};
 		expect(data.data.startedAt).toBeUndefined();
+	});
+});
+
+describe("campaigns chat", () => {
+	it("GET /:id/messages membre (200)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.message.findMany.mockResolvedValue([
+			{
+				id: "55555555-5555-5555-5555-555555555555",
+				campaignId: CID,
+				userId: OWNER,
+				content: "Salut",
+				createdAt: new Date(),
+			},
+		] as unknown);
+		const r = await call("GET", `/campaigns/${CID}/messages`, {
+			userId: OWNER,
+		});
+		expect(r.status).toBe(200);
+		expect((r.json?.items as unknown[]).length).toBe(1);
+	});
+
+	it("GET /:id/messages sans auth (401)", async () => {
+		const r = await call("GET", `/campaigns/${CID}/messages`);
+		expect(r.status).toBe(401);
+	});
+
+	it("POST /:id/messages membre (201) et publie sur Redis", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		const r = await call("POST", `/campaigns/${CID}/messages`, {
+			userId: OWNER,
+			body: { content: "Bonjour le groupe" },
+		});
+		expect(r.status).toBe(201);
+		expect(p.message.create).toHaveBeenCalledTimes(1);
+		expect(redisMock.publish).toHaveBeenCalledTimes(1);
+	});
+
+	it("POST /:id/messages vide (400)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		const r = await call("POST", `/campaigns/${CID}/messages`, {
+			userId: OWNER,
+			body: { content: "   " },
+		});
+		expect(r.status).toBe(400);
+	});
+
+	it("POST /:id/messages non-membre (403)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignMember.findFirst.mockResolvedValue(null as unknown);
+		const r = await call("POST", `/campaigns/${CID}/messages`, {
+			userId: OTHER,
+			body: { content: "Coucou" },
+		});
+		expect(r.status).toBe(403);
+	});
+
+	it("GET /:id/messages/stream sans auth (401)", async () => {
+		const r = await call("GET", `/campaigns/${CID}/messages/stream`);
+		expect(r.status).toBe(401);
+	});
+
+	it("GET /:id/messages/stream non-membre (403)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignMember.findFirst.mockResolvedValue(null as unknown);
+		const r = await call("GET", `/campaigns/${CID}/messages/stream`, {
+			userId: OTHER,
+		});
+		expect(r.status).toBe(403);
 	});
 });
 
