@@ -461,6 +461,7 @@ describe("campaigns chat", () => {
 				userId: OWNER,
 				content: "Salut",
 				createdAt: new Date(),
+				user: { pseudo: "mj_un" },
 			},
 		] as unknown);
 		const r = await call("GET", `/campaigns/${CID}/messages`, {

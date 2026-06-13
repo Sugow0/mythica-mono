@@ -27,15 +27,24 @@ function parseFields(fields: string[]): Record<string, string> {
  * Traite un event utilisateur reçu du stream.
  */
 async function handleUserEvent(fields: Record<string, string>): Promise<void> {
-	const { type, userId } = fields;
+	const { type, userId, pseudo } = fields;
 
 	if (type === "user.created") {
 		await prisma.user.upsert({
 			where: { id: userId },
-			create: { id: userId },
-			update: {},
+			create: { id: userId, pseudo: pseudo ?? null },
+			update: { pseudo: pseudo ?? null },
 		});
 		logger.info({ userId }, "user.created: miroir créé dans gameplay");
+		return;
+	}
+
+	if (type === "user.updated") {
+		await prisma.user.update({
+			where: { id: userId },
+			data: { pseudo: pseudo ?? null },
+		});
+		logger.info({ userId }, "user.updated: miroir mis à jour dans gameplay");
 		return;
 	}
 

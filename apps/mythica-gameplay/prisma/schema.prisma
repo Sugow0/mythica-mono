@@ -86,6 +86,7 @@ enum FileDomain {
 
 model User {
   id        String   @id @db.Uuid
+  pseudo    String?  @db.VarChar(255)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 

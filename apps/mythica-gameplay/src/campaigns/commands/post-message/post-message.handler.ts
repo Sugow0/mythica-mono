@@ -15,6 +15,7 @@ export type ChatMessage = {
 	userId: string;
 	content: string;
 	createdAt: Date;
+	user: { pseudo: string | null };
 };
 
 export type PostMessageInput = {
@@ -79,6 +80,7 @@ export async function postMessageHandler(
 			userId: input.userId,
 			content,
 		},
+		include: { user: { select: { pseudo: true } } },
 	});
 
 	const message: ChatMessage = {
@@ -87,6 +89,7 @@ export async function postMessageHandler(
 		userId: created.userId,
 		content: created.content,
 		createdAt: created.createdAt,
+		user: { pseudo: created.user?.pseudo ?? null },
 	};
 
 	await redis.publish(chatChannel(input.campaignId), JSON.stringify(message));
