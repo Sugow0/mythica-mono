@@ -7,6 +7,7 @@
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
+	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import PlayIcon from "@lucide/svelte/icons/play";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
@@ -17,10 +18,14 @@
 	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
+	import * as Dialog from "$lib/components/ui/dialog";
 	import * as Empty from "$lib/components/ui/empty";
+	import { Label } from "$lib/components/ui/label";
+	import * as NativeSelect from "$lib/components/ui/native-select";
 	import SessionCalendar from "$lib/components/session-calendar.svelte";
 	import { Input } from "$lib/components/ui/input";
 	import { Skeleton } from "$lib/components/ui/skeleton";
+	import { Textarea } from "$lib/components/ui/textarea";
 	import { ApiError, campaignService } from "$lib/index.js";
 	import type { PageData } from "./$types";
 
@@ -47,6 +52,17 @@
 	let busy = $state(false);
 	let inviteLink = $state<string | null>(null);
 	let inviteCopied = $state(false);
+
+	// Édition des infos de campagne (propriétaire)
+	let editOpen = $state(false);
+	let editName = $state("");
+	let editDescription = $state("");
+	let editVisibility = $state<"PUBLIC" | "PRIVATE">("PRIVATE");
+	let editStatus = $state<"active" | "paused" | "archived">("active");
+	let editError = $state<string | null>(null);
+	const editValid = $derived(
+		editName.trim().length >= 3 && editName.trim().length <= 255
+	);
 
 	const myMembership = $derived(
 		members.find((m) => m.userId === data.user?.id) ?? null
@@ -177,6 +193,39 @@
 		} catch (err) {
 			actionError =
 				err instanceof ApiError ? err.message : "Impossible de quitter.";
+		} finally {
+			busy = false;
+		}
+	}
+
+	function openEdit() {
+		if (!campaign) return;
+		editName = campaign.nom;
+		editDescription = campaign.description ?? "";
+		editVisibility = campaign.isPublic ? "PUBLIC" : "PRIVATE";
+		editStatus = campaign.status as "active" | "paused" | "archived";
+		editError = null;
+		editOpen = true;
+	}
+
+	async function saveEdit() {
+		if (!editValid) return;
+		busy = true;
+		editError = null;
+		try {
+			await campaignService.updateCampaign(campaignId, {
+				nom: editName.trim(),
+				description: editDescription.trim(),
+				isPublic: editVisibility === "PUBLIC",
+				status: editStatus,
+			});
+			editOpen = false;
+			await loadCampaign();
+		} catch (err) {
+			editError =
+				err instanceof ApiError
+					? err.message
+					: "Impossible d'enregistrer les modifications.";
 		} finally {
 			busy = false;
 		}
@@ -375,6 +424,9 @@
 					</Button>
 				{/if}
 				{#if isOwner}
+					<Button onclick={openEdit} disabled={busy} variant="outline">
+						<PencilIcon class="h-4 w-4" />Modifier
+					</Button>
 					<Button
 						onclick={removeCampaign}
 						disabled={busy}
@@ -386,6 +438,97 @@
 				{/if}
 			</div>
 		</div>
+
+		<!-- Dialogue d'édition (propriétaire) -->
+		<Dialog.Root bind:open={editOpen}>
+			<Dialog.Content class="sm:max-w-lg">
+				<Dialog.Header>
+					<Dialog.Title>Modifier la campagne</Dialog.Title>
+					<Dialog.Description>
+						Mettez à jour les informations de votre campagne.
+					</Dialog.Description>
+				</Dialog.Header>
+				<div class="space-y-4 py-2">
+					{#if editError}
+						<p class="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
+							{editError}
+						</p>
+					{/if}
+					<div class="space-y-1.5">
+						<Label for="edit-name">Nom</Label>
+						<Input
+							id="edit-name"
+							bind:value={editName}
+							disabled={busy}
+							maxlength={255}
+						/>
+						{#if !editValid}
+							<p class="text-xs text-muted-foreground">
+								Entre 3 et 255 caractères.
+							</p>
+						{/if}
+					</div>
+					<div class="space-y-1.5">
+						<Label for="edit-description">Description</Label>
+						<Textarea
+							id="edit-description"
+							bind:value={editDescription}
+							disabled={busy}
+							rows={4}
+							class="resize-none"
+						/>
+					</div>
+					<div class="grid grid-cols-2 gap-3">
+						<div class="space-y-1.5">
+							<Label for="edit-visibility">Visibilité</Label>
+							<NativeSelect.Root
+								id="edit-visibility"
+								bind:value={editVisibility}
+								disabled={busy}
+							>
+								<NativeSelect.Option value="PRIVATE">Privée</NativeSelect.Option
+								>
+								<NativeSelect.Option value="PUBLIC"
+									>Publique</NativeSelect.Option
+								>
+							</NativeSelect.Root>
+						</div>
+						<div class="space-y-1.5">
+							<Label for="edit-status">Statut</Label>
+							<NativeSelect.Root
+								id="edit-status"
+								bind:value={editStatus}
+								disabled={busy}
+							>
+								<NativeSelect.Option value="active">Active</NativeSelect.Option>
+								<NativeSelect.Option value="paused"
+									>En pause</NativeSelect.Option
+								>
+								<NativeSelect.Option value="archived"
+									>Archivée</NativeSelect.Option
+								>
+							</NativeSelect.Root>
+						</div>
+					</div>
+				</div>
+				<Dialog.Footer>
+					<Button
+						variant="outline"
+						onclick={() => (editOpen = false)}
+						disabled={busy}
+					>
+						Annuler
+					</Button>
+					<Button
+						onclick={saveEdit}
+						disabled={busy || !editValid}
+						class="bg-red-600 text-white hover:bg-red-700"
+					>
+						Enregistrer
+					</Button>
+				</Dialog.Footer>
+			</Dialog.Content>
+		</Dialog.Root>
 
 		{#if actionError}
 			<p class="mb-4 rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
