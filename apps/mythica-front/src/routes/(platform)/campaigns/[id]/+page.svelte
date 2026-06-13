@@ -4,6 +4,7 @@
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check-big";
 	import ClockIcon from "@lucide/svelte/icons/clock";
 	import GlobeIcon from "@lucide/svelte/icons/globe";
+	import ImageIcon from "@lucide/svelte/icons/image";
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
@@ -229,6 +230,73 @@
 		} catch (err) {
 			actionError =
 				err instanceof ApiError ? err.message : "Action impossible.";
+		} finally {
+			busy = false;
+		}
+	}
+
+	// Couverture (propriétaire)
+	const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
+	const MAX_COVER_SIZE = 10 * 1024 * 1024;
+	let coverBusy = $state(false);
+
+	async function onCoverSelected(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		actionError = null;
+		if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+			actionError = "Format non supporté. Utilisez JPEG, PNG ou WebP.";
+			input.value = "";
+			return;
+		}
+		if (file.size > MAX_COVER_SIZE) {
+			actionError = "Image trop volumineuse (max. 10 Mo).";
+			input.value = "";
+			return;
+		}
+		coverBusy = true;
+		try {
+			await campaignService.uploadCoverImage(campaignId, file);
+			await loadCampaign();
+		} catch (err) {
+			actionError =
+				err instanceof ApiError ? err.message : "Échec de l'upload.";
+		} finally {
+			coverBusy = false;
+			input.value = "";
+		}
+	}
+
+	async function changeMemberRole(
+		userId: string,
+		role: "gm" | "player" | "spectator"
+	) {
+		busy = true;
+		actionError = null;
+		try {
+			await campaignService.setMemberRole(campaignId, userId, role);
+			await loadCampaign();
+		} catch (err) {
+			actionError =
+				err instanceof ApiError
+					? err.message
+					: "Impossible de changer le rôle.";
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function kickMember(userId: string) {
+		if (!confirm("Expulser ce membre de la campagne ?")) return;
+		busy = true;
+		actionError = null;
+		try {
+			await campaignService.kickMember(campaignId, userId);
+			await loadCampaign();
+		} catch (err) {
+			actionError =
+				err instanceof ApiError ? err.message : "Impossible d'expulser.";
 		} finally {
 			busy = false;
 		}
@@ -476,15 +544,47 @@
 			<!-- Colonne principale -->
 			<div class="space-y-6 lg:col-span-2">
 				<!-- Couverture -->
-				{#if campaign.coverUrl}
+				{#if campaign.coverUrl || isOwner}
 					<div
-						class="mb-6 aspect-[3/1] w-full overflow-hidden rounded-2xl border border-border"
+						class="relative mb-6 aspect-[3/1] w-full overflow-hidden rounded-2xl border border-border {campaign.coverUrl
+							? ''
+							: 'bg-muted/30'}"
 					>
-						<img
-							src={campaign.coverUrl}
-							alt={campaign.nom}
-							class="h-full w-full object-cover"
-						/>
+						{#if campaign.coverUrl}
+							<img
+								src={campaign.coverUrl}
+								alt={campaign.nom}
+								class="h-full w-full object-cover"
+							/>
+						{:else}
+							<div
+								class="flex h-full w-full flex-col items-center justify-center gap-2 text-muted-foreground"
+							>
+								<ImageIcon class="h-7 w-7" />
+								<span class="text-sm">Aucune couverture</span>
+							</div>
+						{/if}
+						{#if isOwner}
+							<label
+								class="absolute bottom-3 right-3 cursor-pointer rounded-lg bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition hover:bg-black/80 {coverBusy
+									? 'pointer-events-none opacity-60'
+									: ''}"
+							>
+								<ImageIcon class="mr-1 inline h-3.5 w-3.5" />
+								{coverBusy
+									? "Envoi…"
+									: campaign.coverUrl
+										? "Changer la couverture"
+										: "Ajouter une couverture"}
+								<input
+									type="file"
+									accept="image/jpeg,image/png,image/webp"
+									class="sr-only"
+									disabled={coverBusy}
+									onchange={onCoverSelected}
+								/>
+							</label>
+						{/if}
 					</div>
 				{/if}
 				<!-- En-tete -->
@@ -925,14 +1025,47 @@
 					<Card.Content class="space-y-2">
 						{#each members as member (member.id)}
 							<div
-								class="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 dark:border-border/40"
+								class="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 dark:border-border/40"
 							>
-								<span class="text-sm text-foreground">
+								<span class="min-w-0 truncate text-sm text-foreground">
 									{member.userId === data.user?.id
 										? "Vous"
 										: (member.user?.pseudo ?? member.userId.slice(0, 8))}
 								</span>
-								<Badge variant="secondary">{roleLabel(member.role)}</Badge>
+								{#if isOwner && member.userId !== campaign.ownerId}
+									<div class="flex shrink-0 items-center gap-1.5">
+										<NativeSelect.Root
+											value={member.role}
+											disabled={busy}
+											onchange={(e) =>
+												changeMemberRole(
+													member.userId,
+													e.currentTarget.value as "gm" | "player" | "spectator"
+												)}
+											class="h-8 py-0 text-xs"
+										>
+											<NativeSelect.Option value="gm">MJ</NativeSelect.Option>
+											<NativeSelect.Option value="player"
+												>Joueur</NativeSelect.Option
+											>
+											<NativeSelect.Option value="spectator"
+												>Spectateur</NativeSelect.Option
+											>
+										</NativeSelect.Root>
+										<button
+											type="button"
+											onclick={() => kickMember(member.userId)}
+											disabled={busy}
+											class="rounded p-1.5 text-slate-400 hover:text-red-500"
+											title="Expulser"
+											aria-label="Expulser le membre"
+										>
+											<Trash2Icon class="h-4 w-4" />
+										</button>
+									</div>
+								{:else}
+									<Badge variant="secondary">{roleLabel(member.role)}</Badge>
+								{/if}
 							</div>
 						{:else}
 							<p class="text-sm text-slate-400">Aucun membre.</p>
