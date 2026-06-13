@@ -54,6 +54,13 @@
 	let inviteLink = $state<string | null>(null);
 	let inviteCopied = $state(false);
 
+	// Demandes d'accès
+	type JoinRequest = NonNullable<
+		Awaited<ReturnType<typeof campaignService.getJoinRequests>>
+	>["items"][number];
+	let myJoinRequestStatus = $state<string | null>(null);
+	let pendingRequests = $state<JoinRequest[]>([]);
+
 	// Chat temps réel (SSE)
 	type ChatMessage = {
 		id: string;
@@ -163,6 +170,7 @@
 			const response = await campaignService.getCampaignById(campaignId);
 			campaign = response?.campaign ?? null;
 			members = response?.members ?? [];
+			myJoinRequestStatus = response?.myJoinRequestStatus ?? null;
 			// Les sessions ne sont accessibles qu'aux membres.
 			if (campaign && (response?.members ?? []).length >= 0) {
 				try {
@@ -170,6 +178,15 @@
 					sessions = s?.items ?? [];
 				} catch {
 					sessions = [];
+				}
+			}
+			// Le MJ voit les demandes d'accès en attente.
+			if (isGm) {
+				try {
+					const reqs = await campaignService.getJoinRequests(campaignId);
+					pendingRequests = reqs?.items ?? [];
+				} catch {
+					pendingRequests = [];
 				}
 			}
 		} catch (err) {
@@ -185,15 +202,33 @@
 		}
 	}
 
-	async function join() {
+	async function requestAccess() {
 		busy = true;
 		actionError = null;
 		try {
-			await campaignService.join(campaignId);
+			await campaignService.requestJoin(campaignId);
 			await loadCampaign();
 		} catch (err) {
 			actionError =
-				err instanceof ApiError ? err.message : "Impossible de rejoindre.";
+				err instanceof ApiError
+					? err.message
+					: "Impossible d'envoyer la demande.";
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function respondToRequest(requestId: string, accept: boolean) {
+		busy = true;
+		actionError = null;
+		try {
+			if (accept)
+				await campaignService.acceptJoinRequest(campaignId, requestId);
+			else await campaignService.declineJoinRequest(campaignId, requestId);
+			await loadCampaign();
+		} catch (err) {
+			actionError =
+				err instanceof ApiError ? err.message : "Action impossible.";
 		} finally {
 			busy = false;
 		}
@@ -496,13 +531,19 @@
 							</Button>
 						{/if}
 						{#if data.user && !isMember && campaign.isPublic}
-							<Button
-								onclick={join}
-								disabled={busy}
-								class="bg-red-600 text-white hover:bg-red-700"
-							>
-								<PlusIcon class="h-4 w-4" />Rejoindre
-							</Button>
+							{#if myJoinRequestStatus === "pending"}
+								<Button variant="outline" disabled>
+									<ClockIcon class="h-4 w-4" />Demande envoyée
+								</Button>
+							{:else}
+								<Button
+									onclick={requestAccess}
+									disabled={busy}
+									class="bg-red-600 text-white hover:bg-red-700"
+								>
+									<PlusIcon class="h-4 w-4" />Demander l'accès
+								</Button>
+							{/if}
 						{/if}
 						{#if isMember && !isOwner}
 							<Button onclick={leave} disabled={busy} variant="outline">
@@ -836,6 +877,46 @@
 
 			<!-- Colonne latérale -->
 			<aside class="space-y-6 lg:sticky lg:top-6 lg:self-start">
+				<!-- Demandes d'accès (MJ) -->
+				{#if isGm && pendingRequests.length > 0}
+					<Card.Root class="border-primary/40">
+						<Card.Header>
+							<Card.Title
+								>Demandes en attente ({pendingRequests.length})</Card.Title
+							>
+						</Card.Header>
+						<Card.Content class="space-y-2">
+							{#each pendingRequests as request (request.id)}
+								<div
+									class="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+								>
+									<span class="truncate text-sm text-foreground">
+										{request.user?.pseudo ?? request.userId.slice(0, 8)}
+									</span>
+									<div class="flex shrink-0 gap-1.5">
+										<Button
+											size="sm"
+											onclick={() => respondToRequest(request.id, true)}
+											disabled={busy}
+											class="bg-primary text-primary-foreground hover:bg-primary/90"
+										>
+											Accepter
+										</Button>
+										<Button
+											size="sm"
+											variant="outline"
+											onclick={() => respondToRequest(request.id, false)}
+											disabled={busy}
+										>
+											Refuser
+										</Button>
+									</div>
+								</div>
+							{/each}
+						</Card.Content>
+					</Card.Root>
+				{/if}
+
 				<!-- Membres -->
 				<Card.Root>
 					<Card.Header>

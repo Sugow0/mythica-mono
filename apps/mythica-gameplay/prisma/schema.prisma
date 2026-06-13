@@ -78,6 +78,14 @@ enum FileDomain {
   @@map("file_domain")
 }
 
+enum JoinRequestStatus {
+  pending
+  accepted
+  declined
+
+  @@map("join_request_status")
+}
+
 // ------------------------------------------------------------
 // USER
 // Miroir léger de l'API plateforme.
@@ -96,6 +104,7 @@ model User {
   characterSheets CharacterSheet[]
   files           File[]
   messages        Message[]
+  joinRequests    CampaignJoinRequest[]
 
   @@map("users")
 }
@@ -211,6 +220,7 @@ model Campaign {
   files           File[]                   @relation("CampaignFiles")
   invites         CampaignInvite[]
   messages        Message[]
+  joinRequests    CampaignJoinRequest[]
 
   @@index([deletedAt], name: "idx_campaigns_deleted")
   @@map("campaigns")
@@ -255,6 +265,27 @@ model CampaignInvite {
 
   @@index([campaignId], name: "idx_campaign_invites_campaign")
   @@map("campaign_invites")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN JOIN REQUESTS
+// Demande d'acces a une campagne publique, approuvee par le MJ.
+// ------------------------------------------------------------
+
+model CampaignJoinRequest {
+  id         String            @id @db.Uuid
+  campaignId String            @map("campaign_id") @db.Uuid
+  userId     String            @map("user_id") @db.Uuid
+  status     JoinRequestStatus @default(pending)
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@index([campaignId, status], name: "idx_join_requests_campaign_status")
+  @@map("campaign_join_requests")
 }
 
 // ------------------------------------------------------------

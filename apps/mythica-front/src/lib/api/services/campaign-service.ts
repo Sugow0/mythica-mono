@@ -170,16 +170,48 @@ export class CampaignService extends GameplayApiClient {
 		return `${this.baseUrl}/campaigns/${id}/messages/stream`;
 	}
 
-	// ==================== Membres ====================
+	// ==================== Demandes d'accès ====================
 
-	/** Rejoindre une campagne publique. */
-	async join(id: string) {
+	/** Demander l'accès à une campagne publique (validée par le MJ). */
+	async requestJoin(id: string) {
 		const { data, error } = await this.client.POST("/campaigns/{id}/join", {
 			params: { path: { id } },
 		});
 		if (error) throw error;
 		return data;
 	}
+
+	/** Demandes d'accès en attente (MJ). */
+	async getJoinRequests(id: string) {
+		const { data, error } = await this.client.GET(
+			"/campaigns/{id}/join-requests",
+			{ params: { path: { id } } }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Accepter une demande d'accès (MJ). */
+	async acceptJoinRequest(id: string, requestId: string) {
+		const { data, error } = await this.client.POST(
+			"/campaigns/{id}/join-requests/{requestId}/accept",
+			{ params: { path: { id, requestId } } }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Refuser une demande d'accès (MJ). */
+	async declineJoinRequest(id: string, requestId: string) {
+		const { data, error } = await this.client.POST(
+			"/campaigns/{id}/join-requests/{requestId}/decline",
+			{ params: { path: { id, requestId } } }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	// ==================== Membres ====================
 
 	/** Quitter une campagne. */
 	async leave(id: string) {

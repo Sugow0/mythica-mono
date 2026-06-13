@@ -30,6 +30,13 @@ const p = {
 		findUnique: mock(async () => null as unknown),
 		delete: mock(async () => ({}) as unknown),
 	},
+	campaignJoinRequest: {
+		findUnique: mock(async () => null as unknown),
+		findFirst: mock(async () => null as unknown),
+		findMany: mock(async () => [] as unknown[]),
+		create: mock(async () => ({}) as unknown),
+		update: mock(async () => ({}) as unknown),
+	},
 	file: { create: mock(async () => ({}) as unknown) },
 	message: {
 		create: mock(async () => ({}) as unknown),
@@ -137,6 +144,11 @@ beforeEach(() => {
 	p.session.delete.mockResolvedValue({} as unknown);
 	p.campaignInvite.create.mockResolvedValue({} as unknown);
 	p.campaignInvite.delete.mockResolvedValue({} as unknown);
+	p.campaignJoinRequest.findUnique.mockResolvedValue(null as unknown);
+	p.campaignJoinRequest.findFirst.mockResolvedValue(null as unknown);
+	p.campaignJoinRequest.findMany.mockResolvedValue([] as unknown);
+	p.campaignJoinRequest.create.mockResolvedValue({} as unknown);
+	p.campaignJoinRequest.update.mockResolvedValue({} as unknown);
 	p.file.create.mockResolvedValue({} as unknown);
 	p.message.findMany.mockResolvedValue([] as unknown);
 	p.message.create.mockResolvedValue({
@@ -316,22 +328,92 @@ describe("campaigns CRUD", () => {
 });
 
 describe("campaigns membres", () => {
-	it("POST /:id/join campagne publique (200)", async () => {
+	it("POST /:id/join crée une demande (201)", async () => {
 		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
-		p.campaignMember.findUnique.mockResolvedValue(null as unknown);
+		p.campaignMember.findFirst.mockResolvedValue(null as unknown);
+		p.campaignJoinRequest.findUnique.mockResolvedValue(null as unknown);
 		const r = await call("POST", `/campaigns/${CID}/join`, { userId: OTHER });
-		expect(r.status).toBe(200);
-		expect(p.campaignMember.create).toHaveBeenCalled();
+		expect(r.status).toBe(201);
+		expect(p.campaignJoinRequest.create).toHaveBeenCalled();
+		expect(p.campaignMember.create).not.toHaveBeenCalled();
 	});
 
 	it("POST /:id/join déjà membre (409)", async () => {
 		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
-		p.campaignMember.findUnique.mockResolvedValue({
+		p.campaignMember.findFirst.mockResolvedValue({
 			id: "m1",
 			leftAt: null,
 		} as unknown);
 		const r = await call("POST", `/campaigns/${CID}/join`, { userId: OTHER });
 		expect(r.status).toBe(409);
+	});
+
+	it("POST /:id/join demande déjà en attente (409)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignMember.findFirst.mockResolvedValue(null as unknown);
+		p.campaignJoinRequest.findUnique.mockResolvedValue({
+			id: "r1",
+			status: "pending",
+		} as unknown);
+		const r = await call("POST", `/campaigns/${CID}/join`, { userId: OTHER });
+		expect(r.status).toBe(409);
+	});
+
+	it("GET /:id/join-requests MJ (200)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignJoinRequest.findMany.mockResolvedValue([
+			{
+				id: "11111111-1111-1111-1111-111111111111",
+				campaignId: CID,
+				userId: OTHER,
+				status: "pending",
+				createdAt: new Date(),
+				user: { pseudo: "joueur_un" },
+			},
+		] as unknown);
+		const r = await call("GET", `/campaigns/${CID}/join-requests`, {
+			userId: OWNER,
+		});
+		expect(r.status).toBe(200);
+		expect((r.json?.items as unknown[]).length).toBe(1);
+	});
+
+	it("GET /:id/join-requests non-MJ (403)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignMember.findFirst.mockResolvedValue(null as unknown);
+		const r = await call("GET", `/campaigns/${CID}/join-requests`, {
+			userId: OTHER,
+		});
+		expect(r.status).toBe(403);
+	});
+
+	it("POST accept crée le membre (200)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignJoinRequest.findFirst.mockResolvedValue({
+			id: "r1",
+			userId: OTHER,
+			status: "pending",
+		} as unknown);
+		p.campaignMember.findUnique.mockResolvedValue(null as unknown);
+		const r = await call("POST", `/campaigns/${CID}/join-requests/r1/accept`, {
+			userId: OWNER,
+		});
+		expect(r.status).toBe(200);
+		expect(p.campaignMember.create).toHaveBeenCalled();
+	});
+
+	it("POST decline (200)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignJoinRequest.findFirst.mockResolvedValue({
+			id: "r1",
+			userId: OTHER,
+			status: "pending",
+		} as unknown);
+		const r = await call("POST", `/campaigns/${CID}/join-requests/r1/decline`, {
+			userId: OWNER,
+		});
+		expect(r.status).toBe(200);
+		expect(p.campaignJoinRequest.update).toHaveBeenCalled();
 	});
 
 	it("DELETE /:id/leave (200)", async () => {
