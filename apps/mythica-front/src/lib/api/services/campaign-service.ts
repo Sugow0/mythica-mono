@@ -7,6 +7,7 @@ export interface CreateCampaignData {
 	gameSystemId: string;
 	description?: string;
 	isPublic?: boolean;
+	tags?: string[];
 }
 
 export interface UpdateCampaignData {
@@ -14,6 +15,7 @@ export interface UpdateCampaignData {
 	description?: string;
 	isPublic?: boolean;
 	status?: "active" | "paused" | "archived";
+	tags?: string[];
 }
 
 export type MemberRole = "gm" | "player" | "spectator";

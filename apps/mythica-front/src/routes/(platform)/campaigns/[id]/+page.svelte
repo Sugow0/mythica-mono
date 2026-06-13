@@ -25,6 +25,7 @@
 	import { Label } from "$lib/components/ui/label";
 	import * as NativeSelect from "$lib/components/ui/native-select";
 	import SessionCalendar from "$lib/components/session-calendar.svelte";
+	import TagInput from "$lib/components/tag-input.svelte";
 	import { Input } from "$lib/components/ui/input";
 	import { Skeleton } from "$lib/components/ui/skeleton";
 	import { Textarea } from "$lib/components/ui/textarea";
@@ -83,6 +84,7 @@
 	let editVisibility = $state<"PUBLIC" | "PRIVATE">("PRIVATE");
 	let editStatus = $state<"active" | "paused" | "archived">("active");
 	let editError = $state<string | null>(null);
+	let editTags = $state<string[]>([]);
 	const editValid = $derived(
 		editName.trim().length >= 3 && editName.trim().length <= 255
 	);
@@ -322,6 +324,7 @@
 		editDescription = campaign.description ?? "";
 		editVisibility = campaign.isPublic ? "PUBLIC" : "PRIVATE";
 		editStatus = campaign.status as "active" | "paused" | "archived";
+		editTags = [...(campaign.tags ?? [])];
 		editError = null;
 		editOpen = true;
 	}
@@ -336,6 +339,7 @@
 				description: editDescription.trim(),
 				isPublic: editVisibility === "PUBLIC",
 				status: editStatus,
+				tags: editTags,
 			});
 			editOpen = false;
 			await loadCampaign();
@@ -619,6 +623,13 @@
 								{members.length} membre{members.length > 1 ? "s" : ""}
 							</span>
 						</p>
+						{#if campaign.tags && campaign.tags.length > 0}
+							<div class="mt-3 flex flex-wrap gap-1.5">
+								{#each campaign.tags as tag (tag)}
+									<Badge variant="secondary" class="text-xs">{tag}</Badge>
+								{/each}
+							</div>
+						{/if}
 					</div>
 					<div class="flex shrink-0 gap-2">
 						{#if isGm}
@@ -741,6 +752,10 @@
 										>
 									</NativeSelect.Root>
 								</div>
+							</div>
+							<div class="space-y-1.5">
+								<Label for="edit-tags">Tags</Label>
+								<TagInput id="edit-tags" bind:tags={editTags} disabled={busy} />
 							</div>
 						</div>
 						<Dialog.Footer>
