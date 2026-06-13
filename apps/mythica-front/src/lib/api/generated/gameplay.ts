@@ -1037,6 +1037,7 @@ export interface operations {
                             description: string | null;
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
+                            tags: string[];
                             coverFileId: string | null;
                             coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
@@ -1060,6 +1061,7 @@ export interface operations {
                             description: string | null;
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
+                            tags: string[];
                             coverFileId: string | null;
                             coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
@@ -1083,6 +1085,7 @@ export interface operations {
                             description: string | null;
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
+                            tags: string[];
                             coverFileId: string | null;
                             coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
@@ -1111,6 +1114,7 @@ export interface operations {
                     gameSystemId: string;
                     description?: string;
                     isPublic?: boolean;
+                    tags?: string[];
                 };
                 "multipart/form-data": {
                     nom: string;
@@ -1118,6 +1122,7 @@ export interface operations {
                     gameSystemId: string;
                     description?: string;
                     isPublic?: boolean;
+                    tags?: string[];
                 };
                 "text/plain": {
                     nom: string;
@@ -1125,6 +1130,7 @@ export interface operations {
                     gameSystemId: string;
                     description?: string;
                     isPublic?: boolean;
+                    tags?: string[];
                 };
             };
         };
@@ -1225,6 +1231,7 @@ export interface operations {
                             description: string | null;
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
+                            tags: string[];
                             coverFileId: string | null;
                             coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
@@ -1249,6 +1256,7 @@ export interface operations {
                             description: string | null;
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
+                            tags: string[];
                             coverFileId: string | null;
                             coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
@@ -1273,6 +1281,7 @@ export interface operations {
                             description: string | null;
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
+                            tags: string[];
                             coverFileId: string | null;
                             coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
@@ -1339,6 +1348,7 @@ export interface operations {
                             description: string | null;
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
+                            tags: string[];
                             coverFileId: string | null;
                             coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
@@ -1374,6 +1384,7 @@ export interface operations {
                             description: string | null;
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
+                            tags: string[];
                             coverFileId: string | null;
                             coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
@@ -1409,6 +1420,7 @@ export interface operations {
                             description: string | null;
                             isPublic: boolean;
                             status: "active" | "paused" | "archived";
+                            tags: string[];
                             coverFileId: string | null;
                             coverUrl: string | null;
                             createdAt: Record<string, never> | string | number;
@@ -1595,18 +1607,21 @@ export interface operations {
                     description?: string;
                     isPublic?: boolean;
                     status?: "active" | "paused" | "archived";
+                    tags?: string[];
                 };
                 "multipart/form-data": {
                     nom?: string;
                     description?: string;
                     isPublic?: boolean;
                     status?: "active" | "paused" | "archived";
+                    tags?: string[];
                 };
                 "text/plain": {
                     nom?: string;
                     description?: string;
                     isPublic?: boolean;
                     status?: "active" | "paused" | "archived";
+                    tags?: string[];
                 };
             };
         };

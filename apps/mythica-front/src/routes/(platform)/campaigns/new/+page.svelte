@@ -16,6 +16,7 @@
 		FieldGroup,
 		FieldLabel,
 	} from "$lib/components/ui/field/index.js";
+	import TagInput from "$lib/components/tag-input.svelte";
 	import { Input } from "$lib/components/ui/input";
 	import * as Select from "$lib/components/ui/select";
 	import { Textarea } from "$lib/components/ui/textarea";
@@ -35,6 +36,7 @@
 	let description = $state("");
 	let visibility = $state<"PUBLIC" | "PRIVATE">("PRIVATE");
 	let gameSystemId = $state("");
+	let tags = $state<string[]>([]);
 	let coverFile = $state<File | null>(null);
 	let coverPreview = $state<string | null>(null);
 	let coverError = $state<string | null>(null);
@@ -125,6 +127,7 @@
 				description: description.trim() || undefined,
 				isPublic: visibility === "PUBLIC",
 				gameSystemId,
+				tags: tags.length > 0 ? tags : undefined,
 			});
 
 			const campaignId = response?.id;
@@ -355,6 +358,16 @@
 								Le systeme de regles utilise pour cette campagne.
 							</FieldDescription>
 						{/if}
+					</Field>
+
+					<!-- Tags -->
+					<Field>
+						<FieldLabel for="tags-{id}">Tags</FieldLabel>
+						<TagInput id="tags-{id}" bind:tags disabled={isLoading} />
+						<FieldDescription>
+							Optionnel. Genres et thèmes (ex: medfan, sci-fi, post-apo) — max
+							10.
+						</FieldDescription>
 					</Field>
 
 					<!-- Visibility -->

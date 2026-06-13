@@ -205,6 +205,7 @@ model Campaign {
   description  String?        @db.Text
   isPublic     Boolean        @default(false)
   status       CampaignStatus @default(active)
+  tags         String[]       @default([])
   coverFileId  String?        @map("cover_file_id") @db.Uuid
   createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
   updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz

@@ -324,6 +324,18 @@
 								Aucune description
 							</p>
 						{/if}
+						{#if campaign.tags && campaign.tags.length > 0}
+							<div class="mt-3 flex flex-wrap gap-1.5">
+								{#each campaign.tags.slice(0, 3) as tag (tag)}
+									<Badge variant="secondary" class="text-xs">{tag}</Badge>
+								{/each}
+								{#if campaign.tags.length > 3}
+									<Badge variant="outline" class="text-xs"
+										>+{campaign.tags.length - 3}</Badge
+									>
+								{/if}
+							</div>
+						{/if}
 					</Card.Content>
 
 					<Card.Footer
