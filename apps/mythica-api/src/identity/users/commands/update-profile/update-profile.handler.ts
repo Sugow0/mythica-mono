@@ -1,4 +1,5 @@
 import { prisma } from "../../../../lib/prisma";
+import { publishUserEvent } from "../../../../lib/user-events";
 import { publicUserSelect } from "../../public-user.select";
 import type { GetMeUser } from "../../queries/get-me/get-me.handler";
 import type { UpdateProfileBody } from "./update-profile.dto";
@@ -45,6 +46,11 @@ export async function updateProfileHandler(
 			role: true,
 		},
 	});
+
+	// Propage le nouveau pseudo aux miroirs des autres services.
+	if (data.pseudo !== undefined) {
+		await publishUserEvent("user.updated", userId, { pseudo: data.pseudo });
+	}
 
 	return { success: true, user: user as GetMeUser };
 }

@@ -92,7 +92,7 @@ export async function oauthCallbackHandler(
 					},
 				}),
 			]);
-			await publishUserEvent("user.created", userId);
+			await publishUserEvent("user.created", userId, { pseudo });
 		}
 	}
 

@@ -54,7 +54,7 @@ export async function registerHandler(
 		return { success: false, error: "Erreur lors de la création du compte" };
 	}
 
-	await publishUserEvent("user.created", userId);
+	await publishUserEvent("user.created", userId, { pseudo: command.pseudo });
 	await sendVerificationEmail(command.email, verificationToken, command.pseudo);
 
 	const session = await lucia.createSession(userId, {});
