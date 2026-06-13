@@ -1,10 +1,13 @@
 <script lang="ts">
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import CalendarIcon from "@lucide/svelte/icons/calendar";
+	import CircleCheckIcon from "@lucide/svelte/icons/circle-check-big";
+	import ClockIcon from "@lucide/svelte/icons/clock";
 	import GlobeIcon from "@lucide/svelte/icons/globe";
 	import LinkIcon from "@lucide/svelte/icons/link";
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import LogOutIcon from "@lucide/svelte/icons/log-out";
+	import PlayIcon from "@lucide/svelte/icons/play";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import UsersIcon from "@lucide/svelte/icons/users";
@@ -38,6 +41,7 @@
 	let error = $state<string | null>(null);
 	let actionError = $state<string | null>(null);
 	let newSessionName = $state("");
+	let newSessionDate = $state("");
 	let busy = $state(false);
 	let inviteLink = $state<string | null>(null);
 	let inviteCopied = $state(false);
@@ -48,6 +52,15 @@
 	const isOwner = $derived(campaign?.ownerId === data.user?.id);
 	const isGm = $derived(isOwner || myMembership?.role === "gm");
 	const isMember = $derived(!!myMembership || isOwner);
+
+	// Sessions regroupées par état pour la vue MJ.
+	const activeSessions = $derived(
+		sessions.filter((s) => s.status === "active" || s.status === "paused")
+	);
+	const upcomingSessions = $derived(
+		sessions.filter((s) => s.status === "scheduled")
+	);
+	const pastSessions = $derived(sessions.filter((s) => s.status === "ended"));
 
 	function statusLabel(status: string) {
 		switch (status) {
@@ -68,6 +81,33 @@
 			month: "short",
 			year: "numeric",
 		}).format(new Date(date as string | number));
+	}
+
+	function formatDateTime(
+		date: string | number | Record<string, never> | null | undefined
+	) {
+		if (!date) return null;
+		return new Intl.DateTimeFormat("fr-FR", {
+			day: "numeric",
+			month: "short",
+			hour: "2-digit",
+			minute: "2-digit",
+		}).format(new Date(date as string | number));
+	}
+
+	function sessionStatusLabel(status: string) {
+		switch (status) {
+			case "scheduled":
+				return "Planifiee";
+			case "active":
+				return "En cours";
+			case "paused":
+				return "En pause";
+			case "ended":
+				return "Terminee";
+			default:
+				return status;
+		}
 	}
 
 	function roleLabel(role: string) {
@@ -161,15 +201,42 @@
 		try {
 			await campaignService.createSession(campaignId, {
 				nom: newSessionName.trim(),
+				scheduledAt: newSessionDate
+					? new Date(newSessionDate).toISOString()
+					: undefined,
 			});
 			newSessionName = "";
-			const s = await campaignService.getSessions(campaignId);
-			sessions = s?.items ?? [];
+			newSessionDate = "";
+			await reloadSessions();
 		} catch (err) {
 			actionError =
 				err instanceof ApiError
 					? err.message
 					: "Impossible de creer la session.";
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function reloadSessions() {
+		const s = await campaignService.getSessions(campaignId);
+		sessions = s?.items ?? [];
+	}
+
+	async function setSessionStatus(
+		sessionId: string,
+		status: "active" | "ended"
+	) {
+		busy = true;
+		actionError = null;
+		try {
+			await campaignService.updateSession(campaignId, sessionId, { status });
+			await reloadSessions();
+		} catch (err) {
+			actionError =
+				err instanceof ApiError
+					? err.message
+					: "Impossible de mettre a jour la session.";
 		} finally {
 			busy = false;
 		}
@@ -377,51 +444,145 @@
 
 		<!-- Sessions -->
 		{#if isMember}
-			<Card.Root>
-				<Card.Header
-					><Card.Title>Sessions ({sessions.length})</Card.Title></Card.Header
+			{#snippet sessionRow(
+				session: Session,
+				kind: "active" | "upcoming" | "past"
+			)}
+				<div
+					class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 {kind ===
+					'active'
+						? 'border-primary/40 bg-primary/5'
+						: 'border-slate-100 dark:border-border/40'}"
 				>
-				<Card.Content class="space-y-3">
+					<div class="min-w-0">
+						<div class="flex items-center gap-2">
+							<span class="truncate font-medium text-slate-900 dark:text-white"
+								>{session.nom}</span
+							>
+							<Badge
+								variant={kind === "active" ? "default" : "secondary"}
+								class="shrink-0 text-xs"
+							>
+								{sessionStatusLabel(session.status)}
+							</Badge>
+						</div>
+						{#if formatDateTime(session.scheduledAt ?? session.endedAt ?? session.startedAt)}
+							<span
+								class="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-muted-foreground"
+							>
+								<ClockIcon class="h-3 w-3" />
+								{formatDateTime(
+									session.scheduledAt ?? session.endedAt ?? session.startedAt
+								)}
+							</span>
+						{/if}
+					</div>
 					{#if isGm}
-						<div class="flex gap-2">
+						<div class="flex shrink-0 items-center gap-1.5">
+							{#if kind === "upcoming"}
+								<Button
+									size="sm"
+									onclick={() => setSessionStatus(session.id, "active")}
+									disabled={busy}
+									class="bg-primary text-primary-foreground hover:bg-primary/90"
+								>
+									<PlayIcon class="h-3.5 w-3.5" />Lancer
+								</Button>
+							{:else if kind === "active"}
+								<Button
+									size="sm"
+									variant="outline"
+									onclick={() => setSessionStatus(session.id, "ended")}
+									disabled={busy}
+								>
+									<CircleCheckIcon class="h-3.5 w-3.5" />Terminer
+								</Button>
+							{/if}
+							<button
+								type="button"
+								onclick={() => removeSession(session.id)}
+								class="rounded p-1.5 text-slate-400 hover:text-red-500"
+								title="Supprimer la session"
+								aria-label="Supprimer la session"
+							>
+								<Trash2Icon class="h-4 w-4" />
+							</button>
+						</div>
+					{/if}
+				</div>
+			{/snippet}
+
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Sessions</Card.Title>
+				</Card.Header>
+				<Card.Content class="space-y-5">
+					{#if isGm}
+						<div class="flex flex-col gap-2 sm:flex-row">
 							<Input
-								placeholder="Nom de la nouvelle session..."
+								placeholder="Nom de la session..."
 								bind:value={newSessionName}
 								disabled={busy}
+								class="sm:flex-1"
+							/>
+							<Input
+								type="datetime-local"
+								bind:value={newSessionDate}
+								disabled={busy}
+								class="sm:w-52"
 							/>
 							<Button
 								onclick={createSession}
 								disabled={busy || !newSessionName.trim()}
 								class="bg-red-600 text-white hover:bg-red-700"
 							>
-								<PlusIcon class="h-4 w-4" />Creer
+								<PlusIcon class="h-4 w-4" />Planifier
 							</Button>
 						</div>
 					{/if}
-					{#each sessions as session (session.id)}
-						<div
-							class="flex items-center justify-between rounded-lg border border-slate-100 px-3 py-2 dark:border-border/40"
-						>
-							<div class="flex items-center gap-2">
-								<span class="font-medium text-slate-900 dark:text-white"
-									>{session.nom}</span
-								>
-								<Badge variant="outline">{session.status}</Badge>
-							</div>
-							{#if isGm}
-								<button
-									type="button"
-									onclick={() => removeSession(session.id)}
-									class="rounded p-1 text-slate-400 hover:text-red-500"
-									title="Supprimer la session"
-								>
-									<Trash2Icon class="h-4 w-4" />
-								</button>
-							{/if}
+
+					{#if sessions.length === 0}
+						<p class="text-sm text-slate-400">Aucune session pour le moment.</p>
+					{/if}
+
+					{#if activeSessions.length > 0}
+						<div class="space-y-2">
+							<h3
+								class="text-xs font-semibold uppercase tracking-wide text-primary"
+							>
+								En cours
+							</h3>
+							{#each activeSessions as session (session.id)}
+								{@render sessionRow(session, "active")}
+							{/each}
 						</div>
-					{:else}
-						<p class="text-sm text-slate-400">Aucune session planifiee.</p>
-					{/each}
+					{/if}
+
+					{#if upcomingSessions.length > 0}
+						<div class="space-y-2">
+							<h3
+								class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-muted-foreground"
+							>
+								A venir ({upcomingSessions.length})
+							</h3>
+							{#each upcomingSessions as session (session.id)}
+								{@render sessionRow(session, "upcoming")}
+							{/each}
+						</div>
+					{/if}
+
+					{#if pastSessions.length > 0}
+						<div class="space-y-2">
+							<h3
+								class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-muted-foreground/70"
+							>
+								Passees ({pastSessions.length})
+							</h3>
+							{#each pastSessions as session (session.id)}
+								{@render sessionRow(session, "past")}
+							{/each}
+						</div>
+					{/if}
 				</Card.Content>
 			</Card.Root>
 		{/if}

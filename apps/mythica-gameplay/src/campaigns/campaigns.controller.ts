@@ -832,15 +832,30 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				set.status = 404;
 				return { success: false as const, error: "Session introuvable" };
 			}
+
+			// Horodatage automatique des transitions de statut : lancer une
+			// session renseigne startedAt, la terminer renseigne endedAt.
+			const data: {
+				nom?: string;
+				status?: typeof body.status;
+				scheduledAt?: Date;
+				startedAt?: Date;
+				endedAt?: Date;
+			} = {
+				nom: body.nom,
+				status: body.status,
+				scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : undefined,
+			};
+			if (body.status === "active" && !session.startedAt) {
+				data.startedAt = new Date();
+			}
+			if (body.status === "ended" && !session.endedAt) {
+				data.endedAt = new Date();
+			}
+
 			await prisma.session.update({
 				where: { id: params.sessionId },
-				data: {
-					nom: body.nom,
-					status: body.status,
-					scheduledAt: body.scheduledAt
-						? new Date(body.scheduledAt)
-						: undefined,
-				},
+				data,
 			});
 			return { success: true as const, message: "Session modifiée" };
 		},
