@@ -24,6 +24,34 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Les rapports lcov doivent exister AVANT le scan pour que SonarCloud
+      # mesure la couverture du new code (sinon : 0 %).
+      - name: Installer les dépendances
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: ./.github/actions/bun-install
+
+      - name: Installer Playwright (tests browser front)
+        if: ${{ env.SONAR_TOKEN != '' }}
+        working-directory: apps/mythica-front
+        run: bunx playwright install chromium --with-deps
+
+      - name: Couverture — api
+        if: ${{ env.SONAR_TOKEN != '' }}
+        run: bun run --cwd apps/mythica-api test
+
+      - name: Couverture — gameplay
+        if: ${{ env.SONAR_TOKEN != '' }}
+        run: bun run --cwd apps/mythica-gameplay test
+
+      - name: Couverture — gateway
+        if: ${{ env.SONAR_TOKEN != '' }}
+        run: bun run --cwd apps/mythica-gateway test
+
+      - name: Couverture — front
+        if: ${{ env.SONAR_TOKEN != '' }}
+        working-directory: apps/mythica-front
+        run: bunx vitest run --coverage
+
       # Le scan ne tourne que si le secret SONAR_TOKEN est configuré.
       # SonarCloud gratuit nécessite un repo public ; sur repo privé, voir docs.
       - name: SonarQube Scan

@@ -1,7 +1,9 @@
 # Configuration des tests Bun pour mythica-gameplay.
-# Le seuil de couverture rend le pipeline bloquant : `bun test` échoue si la
-# couverture (lignes + fonctions) des fichiers chargés passe sous 80 %.
+# Seuil bloquant sur la couverture de LIGNES par fichier (≥ 80 %). On ne gate
+# pas sur les fonctions : trop fragile pour les singletons et callbacks de flux
+# (la couverture du new code est contrôlée précisément par SonarCloud).
 [test]
 coverage = true
-coverageThreshold = 0.8
-coverageReporter = ["text"]
+coverageThreshold = { line = 0.8 }
+# lcov : consommé par SonarCloud (apps/mythica-gameplay/coverage/lcov.info).
+coverageReporter = ["text", "lcov"]
