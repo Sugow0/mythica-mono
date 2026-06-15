@@ -99,9 +99,10 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
-  ownedCampaigns  Campaign[]       @relation("CampaignOwner")
+  ownedCampaigns  Campaign[]            @relation("CampaignOwner")
   campaignMembers CampaignMember[]
   characterSheets CharacterSheet[]
+  characters      Character[]
   files           File[]
   messages        Message[]
   joinRequests    CampaignJoinRequest[]
@@ -217,6 +218,7 @@ model Campaign {
   coverFile       File?                    @relation("CampaignCover", fields: [coverFileId], references: [id], onDelete: SetNull)
   members         CampaignMember[]
   characterSheets CampaignCharacterSheet[]
+  characters      Character[]
   sessions        Session[]
   files           File[]                   @relation("CampaignFiles")
   invites         CampaignInvite[]
@@ -383,6 +385,33 @@ model CampaignCharacterSheet {
 
   @@unique([campaignId, characterSheetId])
   @@map("campaign_character_sheets")
+}
+
+// ------------------------------------------------------------
+// CHARACTER
+// Personnage « léger » : les stats sont stockées dans `data` (JSON) selon le
+// système (`system`), et `sheetTemplate` choisit le gabarit d'affichage de la
+// fiche. Approche dénormalisée, indépendante du système CharacterSheet.
+// ------------------------------------------------------------
+
+model Character {
+  id            String   @id @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  campaignId    String?  @map("campaign_id") @db.Uuid
+  system        String   @db.VarChar(100)
+  name          String   @db.VarChar(255)
+  data          Json     @default("{}")
+  sheetTemplate String?  @map("sheet_template") @db.VarChar(100)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([userId], name: "idx_characters_user")
+  @@index([campaignId], name: "idx_characters_campaign")
+  @@map("characters")
 }
 
 // ------------------------------------------------------------
