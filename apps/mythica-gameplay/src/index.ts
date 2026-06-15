@@ -4,6 +4,7 @@ import { Elysia } from "elysia";
 import { authContext } from "./auth/context";
 import { campaignsController } from "./campaigns/campaigns.controller";
 import { sessionsController } from "./campaigns/sessions.controller";
+import { sessionsWs } from "./campaigns/sessions.ws";
 import { env } from "./env";
 import { startUserSync } from "./events/user-sync";
 import { gameSystemsController } from "./game-systems/game-systems.controller";
@@ -39,6 +40,12 @@ const app = new Elysia()
 	.use(sessionsController)
 	.listen(env.PORT);
 
+// Serveur WebSocket dédié (le gateway proxifie ws://…/gameplay/* vers ce port).
+const ws = new Elysia().use(sessionsWs).listen(env.WS_PORT);
+
 logger.info(
 	`Gameplay service running at http://${app.server?.hostname}:${app.server?.port}`,
+);
+logger.info(
+	`Gameplay WS running at ws://${ws.server?.hostname}:${ws.server?.port}`,
 );
