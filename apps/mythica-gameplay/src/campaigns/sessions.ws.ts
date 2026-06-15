@@ -4,6 +4,7 @@ import { logger } from "../logger";
 import { resolveSessionAccess } from "./session-access";
 import { sessionPresence } from "./session-presence-ws";
 import { sessionRooms } from "./session-rooms";
+import { buildSessionSnapshot } from "./session-snapshot";
 
 /**
  * Serveur WebSocket des sessions de jeu.
@@ -33,10 +34,17 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 	async open(ws) {
 		const { id } = ws.data.params;
 		await sessionRooms.joinRoom(id, ws);
-		ws.send(JSON.stringify({ type: "connected", sessionId: id }));
 		// Diffuse PRESENCE_JOIN à la room (sauf reconnexion en délai de grâce).
 		const userId = ws.data.currentUser?.id;
 		if (userId) sessionPresence.connect(id, userId);
+		// Snapshot initial envoyé uniquement au client qui se connecte : il se
+		// synchronise (participants, carte, tour actif, historique chat) sans
+		// requête supplémentaire.
+		const snapshot = await buildSessionSnapshot(
+			id,
+			sessionPresence.participants(id),
+		);
+		ws.send(JSON.stringify(snapshot ?? { type: "connected", sessionId: id }));
 		logger.info({ sessionId: id, userId }, "WS session ouverte");
 	},
 

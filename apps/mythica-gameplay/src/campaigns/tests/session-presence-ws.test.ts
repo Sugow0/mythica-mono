@@ -95,4 +95,11 @@ describe("présence WS", () => {
 		s.fireTimers();
 		expect(s.events).toHaveLength(0);
 	});
+
+	it("liste les participants présents", () => {
+		expect(s.tracker.participants(SID)).toEqual([]);
+		s.tracker.connect(SID, ALICE);
+		s.tracker.connect(SID, BOB);
+		expect(s.tracker.participants(SID).sort()).toEqual([ALICE, BOB].sort());
+	});
 });
