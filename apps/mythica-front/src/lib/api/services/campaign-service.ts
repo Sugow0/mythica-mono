@@ -310,6 +310,14 @@ export class CampaignService extends GameplayApiClient {
 		return `${this.baseUrl}/sessions/${sessionId}/presence/stream`;
 	}
 
+	/** URL du WebSocket temps réel d'une session (à consommer via WebSocket). */
+	sessionSocketUrl(sessionId: string): string {
+		const socketBase = (
+			import.meta.env.VITE_PUBLIC_SOCKET_API_URL ?? "ws://localhost:2150"
+		).replace(/\/+$/, "");
+		return `${socketBase}/gameplay/sessions/${sessionId}/ws`;
+	}
+
 	// ==================== Invitations ====================
 
 	/** Créer un lien d'invitation (MJ/propriétaire). Retourne le token. */
