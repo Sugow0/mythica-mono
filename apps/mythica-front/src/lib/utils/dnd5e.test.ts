@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
 	abilityModifier,
+	adjustHp,
 	DND5E_ABILITIES,
+	DND5E_CHARACTER_STATES,
 	DND5E_SKILLS,
 	formatModifier,
 	proficiencyBonusForLevel,
@@ -89,5 +91,40 @@ describe("rollD20", () => {
 		expect(r.roll).toBeGreaterThanOrEqual(1);
 		expect(r.roll).toBeLessThanOrEqual(20);
 		expect(r.total).toBe(r.roll + 2);
+	});
+});
+
+describe("DND5E_CHARACTER_STATES", () => {
+	it("propose normal, stabilisé, mort", () => {
+		expect(DND5E_CHARACTER_STATES.map((s) => s.key)).toEqual([
+			"normal",
+			"stabilise",
+			"mort",
+		]);
+	});
+});
+
+describe("adjustHp", () => {
+	const base = { current: 20, temp: 0, max: 30 };
+
+	it("soigne sans dépasser le maximum", () => {
+		expect(adjustHp(base, 5)).toEqual({ current: 25, temp: 0 });
+		expect(adjustHp(base, 100)).toEqual({ current: 30, temp: 0 });
+	});
+
+	it("inflige des dégâts (plancher 0)", () => {
+		expect(adjustHp(base, -5)).toEqual({ current: 15, temp: 0 });
+		expect(adjustHp(base, -999)).toEqual({ current: 0, temp: 0 });
+	});
+
+	it("entame d'abord les PV temporaires", () => {
+		const s = { current: 20, temp: 5, max: 30 };
+		expect(adjustHp(s, -3)).toEqual({ current: 20, temp: 2 });
+		expect(adjustHp(s, -8)).toEqual({ current: 17, temp: 0 });
+	});
+
+	it("ne soigne pas les PV temporaires", () => {
+		const s = { current: 20, temp: 5, max: 30 };
+		expect(adjustHp(s, 4)).toEqual({ current: 24, temp: 5 });
 	});
 });

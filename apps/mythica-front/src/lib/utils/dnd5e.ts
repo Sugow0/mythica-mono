@@ -81,3 +81,40 @@ export function rollD20(
 	const roll = Math.floor(rng() * 20) + 1;
 	return { roll, modifier, total: roll + modifier };
 }
+
+export type CharacterState = { key: string; label: string };
+
+/** États possibles d'un personnage (D&D 5e simplifié). */
+export const DND5E_CHARACTER_STATES: CharacterState[] = [
+	{ key: "normal", label: "Normal" },
+	{ key: "stabilise", label: "Stabilisé" },
+	{ key: "mort", label: "Mort" },
+];
+
+export type HpState = { current: number; temp: number; max: number };
+
+/**
+ * Applique une variation de PV. Les dégâts (delta < 0) entament d'abord les PV
+ * temporaires puis les PV courants (plancher 0) ; les soins (delta > 0)
+ * augmentent les PV courants sans dépasser le maximum (les PV temp ne sont pas
+ * soignés). Retourne les nouveaux { current, temp }.
+ */
+export function adjustHp(
+	state: HpState,
+	delta: number
+): { current: number; temp: number } {
+	if (delta >= 0) {
+		return {
+			current: Math.min(state.max, state.current + delta),
+			temp: state.temp,
+		};
+	}
+	let damage = -delta;
+	let temp = state.temp;
+	if (temp > 0) {
+		const absorbed = Math.min(temp, damage);
+		temp -= absorbed;
+		damage -= absorbed;
+	}
+	return { current: Math.max(0, state.current - damage), temp };
+}
