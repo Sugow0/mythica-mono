@@ -4,6 +4,7 @@ apps/*/bun.lock
 .svelte-kit/
 build/
 dist/
+coverage/
 .expo/
 .env
 .env.*

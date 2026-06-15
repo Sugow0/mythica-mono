@@ -1,0 +1,6 @@
+# Configuration des tests Bun pour mythica-gateway.
+# Pas de seuil bloquant (peu de surface testée) ; on émet le rapport lcov
+# consommé par SonarCloud (apps/mythica-gateway/coverage/lcov.info).
+[test]
+coverage = true
+coverageReporter = ["text", "lcov"]

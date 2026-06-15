@@ -32,6 +32,13 @@ export default defineConfig({
 	],
 	test: {
 		expect: { requireAssertions: true },
+		// lcov : consommé par SonarCloud (apps/mythica-front/coverage/lcov.info).
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "lcov"],
+			reportsDirectory: "./coverage",
+			include: ["src/**"],
+		},
 		projects: [
 			{
 				extends: "./vite.config.ts",
