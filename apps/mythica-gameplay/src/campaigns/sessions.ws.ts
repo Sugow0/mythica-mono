@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
 import { logger } from "../logger";
 import { resolveSessionAccess } from "./session-access";
+import { sessionRooms } from "./session-rooms";
 
 /**
  * Serveur WebSocket des sessions de jeu.
@@ -11,9 +12,10 @@ import { resolveSessionAccess } from "./session-access";
  * réservée aux membres de la campagne. Le gateway valide le cookie de session
  * à l'upgrade et propage l'identité : ce service ne fait que la faire respecter.
  *
- * Pour l'instant le handler se limite au setup (handshake + accusé de réception
- * applicatif) ; la gestion des rooms et la diffusion temps réel arrivent dans
- * les tickets suivants.
+ * Chaque socket rejoint la room de sa session (cf. `session-rooms`) : les
+ * messages sont diffusés à tous les participants, y compris sur d'autres
+ * instances via Redis. La sémantique applicative (présence, snapshot…) sera
+ * ajoutée dans les tickets suivants.
  */
 export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 	params: t.Object({ id: t.String() }),
@@ -27,19 +29,24 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 		}
 	},
 
-	open(ws) {
+	async open(ws) {
 		const { id } = ws.data.params;
+		await sessionRooms.joinRoom(id, ws);
 		logger.info({ sessionId: id }, "WS session ouverte");
 		ws.send(JSON.stringify({ type: "connected", sessionId: id }));
 	},
 
-	message(ws, message) {
-		// Écho applicatif minimal : confirme la liaison bidirectionnelle.
-		// La diffusion par room sera ajoutée avec la gestion de session.
-		ws.send(JSON.stringify({ type: "ack", payload: message }));
+	async message(ws, message) {
+		// Diffuse le message à toute la room de la session (toutes instances).
+		await sessionRooms.broadcast(ws.data.params.id, {
+			type: "message",
+			payload: message,
+		});
 	},
 
-	close(ws) {
-		logger.info({ sessionId: ws.data.params.id }, "WS session fermée");
+	async close(ws) {
+		const { id } = ws.data.params;
+		await sessionRooms.leaveRoom(id, ws);
+		logger.info({ sessionId: id }, "WS session fermée");
 	},
 });
