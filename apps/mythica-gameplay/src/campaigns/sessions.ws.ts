@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
 import { logger } from "../logger";
 import { resolveSessionAccess } from "./session-access";
+import { handleCombatCommand, parseCombatCommand } from "./session-combat";
 import { sessionPresence } from "./session-presence-ws";
 import { sessionRooms } from "./session-rooms";
 import { buildSessionSnapshot } from "./session-snapshot";
@@ -48,12 +49,16 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 		logger.info({ sessionId: id, userId }, "WS session ouverte");
 	},
 
-	async message(ws, message) {
-		// Diffuse le message à toute la room de la session (toutes instances).
-		await sessionRooms.broadcast(ws.data.params.id, {
-			type: "message",
-			payload: message,
-		});
+	async message(ws, raw) {
+		// Les trames entrantes sont des commandes de contrôle. Pour l'instant :
+		// le suivi de combat (initiative), réservé au MJ, diffusé à la room.
+		const command = parseCombatCommand(raw);
+		if (!command) return;
+		const userId = ws.data.currentUser?.id;
+		if (!userId) return;
+		const { id } = ws.data.params;
+		const event = await handleCombatCommand(id, userId, command);
+		if (event) await sessionRooms.broadcast(id, event);
 	},
 
 	async close(ws) {
