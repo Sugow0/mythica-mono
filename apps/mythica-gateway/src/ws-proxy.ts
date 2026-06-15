@@ -1,38 +1,38 @@
 import type { ServerWebSocket } from "bun";
+import { resolveUser } from "./auth/session";
 import { env } from "./env";
 import { logger } from "./logger";
+import { buildTargetUrl, buildUpstreamHeaders } from "./ws-routing";
 
-type WsData = { targetUrl: string };
+type WsData = { targetUrl: string; headers: Record<string, string> };
 
 const upstreamSockets = new Map<ServerWebSocket<WsData>, WebSocket>();
 
 export const wsProxy = Bun.serve<WsData>({
 	port: env.WS_PORT,
 
-	fetch(req, server) {
+	async fetch(req, server) {
 		const url = new URL(req.url);
-		let targetBase: string;
-		let prefix: string;
+		const targetUrl = buildTargetUrl(
+			url,
+			env.GAMEPLAY_SOCKET_URL,
+			env.API_SOCKET_URL,
+		);
 
-		if (url.pathname.startsWith("/gameplay")) {
-			targetBase = env.GAMEPLAY_SOCKET_URL.replace(/^http/, "ws");
-			prefix = "/gameplay";
-		} else {
-			targetBase = env.API_SOCKET_URL.replace(/^http/, "ws");
-			prefix = "/api";
-		}
+		// Identité résolue depuis le cookie de session (validé contre Redis) et
+		// propagée au service upstream — même principe anti-spoof que le proxy HTTP.
+		const user = await resolveUser(req);
+		const headers = buildUpstreamHeaders(user);
 
-		const targetPath = url.pathname.slice(prefix.length) || "/";
-		const targetUrl = `${targetBase}${targetPath}${url.search}`;
-
-		const upgraded = server.upgrade(req, { data: { targetUrl } });
+		const upgraded = server.upgrade(req, { data: { targetUrl, headers } });
 		if (!upgraded)
 			return new Response("WebSocket upgrade failed", { status: 400 });
 	},
 
 	websocket: {
 		open(ws) {
-			const upstream = new WebSocket(ws.data.targetUrl);
+			const { targetUrl, headers } = ws.data;
+			const upstream = new WebSocket(targetUrl, { headers });
 			upstreamSockets.set(ws, upstream);
 
 			upstream.onmessage = (event) => {

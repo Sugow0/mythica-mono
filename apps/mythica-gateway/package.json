@@ -4,6 +4,7 @@
 	"scripts": {
 		"dev": "bun --preload ./src/env.ts --watch src/index.ts",
 		"start": "bun --preload ./src/env.ts src/index.ts",
+		"test": "bun test",
 		"lint": "biome check --write",
 		"lint:ci": "biome ci"
 	},
