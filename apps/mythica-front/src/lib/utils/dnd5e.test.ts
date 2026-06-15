@@ -7,8 +7,10 @@ import {
 	DND5E_SKILLS,
 	formatModifier,
 	proficiencyBonusForLevel,
+	groupSpellsByLevel,
 	rollD20,
 	skillBonus,
+	spellLevelLabel,
 	totalWeight,
 } from "./dnd5e";
 
@@ -141,5 +143,32 @@ describe("totalWeight", () => {
 	});
 	it("retourne 0 pour un inventaire vide", () => {
 		expect(totalWeight([])).toBe(0);
+	});
+});
+
+describe("spellLevelLabel", () => {
+	it("nomme les tours de magie et les niveaux", () => {
+		expect(spellLevelLabel(0)).toBe("Tours de magie");
+		expect(spellLevelLabel(3)).toBe("Niveau 3");
+	});
+});
+
+describe("groupSpellsByLevel", () => {
+	it("regroupe par niveau croissant, seulement les niveaux présents", () => {
+		const groups = groupSpellsByLevel([
+			{ id: "1", name: "Boule de feu", level: 3 },
+			{ id: "2", name: "Lumière", level: 0 },
+			{ id: "3", name: "Projectile magique", level: 1 },
+			{ id: "4", name: "Prestidigitation", level: 0 },
+		]);
+		expect(groups.map((g) => g.level)).toEqual([0, 1, 3]);
+		expect(groups[0].label).toBe("Tours de magie");
+		expect(groups[0].spells.map((s) => s.name)).toEqual([
+			"Lumière",
+			"Prestidigitation",
+		]);
+	});
+	it("retourne un tableau vide sans sorts", () => {
+		expect(groupSpellsByLevel([])).toEqual([]);
 	});
 });

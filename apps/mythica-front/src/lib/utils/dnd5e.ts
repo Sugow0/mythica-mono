@@ -136,3 +136,42 @@ export function totalWeight(
 		0
 	);
 }
+
+/** Libellé d'un niveau de sort (0 = tours de magie). */
+export function spellLevelLabel(level: number): string {
+	return level === 0 ? "Tours de magie" : `Niveau ${level}`;
+}
+
+/** Niveaux de sorts D&D 5e (0 = tours de magie, 1 à 9). */
+export const SPELL_LEVELS: number[] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+export type Spell = {
+	id: string;
+	name: string;
+	level: number;
+	range?: string;
+	duration?: string;
+	description?: string;
+};
+
+export type SpellGroup = { level: number; label: string; spells: Spell[] };
+
+/**
+ * Regroupe les sorts par niveau (ordre croissant). Ne retourne que les niveaux
+ * comportant au moins un sort.
+ */
+export function groupSpellsByLevel(spells: Spell[]): SpellGroup[] {
+	const byLevel = new Map<number, Spell[]>();
+	for (const spell of spells) {
+		const list = byLevel.get(spell.level);
+		if (list) list.push(spell);
+		else byLevel.set(spell.level, [spell]);
+	}
+	return [...byLevel.keys()]
+		.sort((a, b) => a - b)
+		.map((level) => ({
+			level,
+			label: spellLevelLabel(level),
+			spells: byLevel.get(level) ?? [],
+		}));
+}
