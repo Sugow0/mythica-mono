@@ -6,6 +6,7 @@ import { campaignsController } from "./campaigns/campaigns.controller";
 import { charactersController } from "./characters/characters.controller";
 import { charactersInternalController } from "./characters/characters-internal.controller";
 import { gameSystemsController } from "./game-systems/game-systems.controller";
+import { healthController } from "./health.controller";
 import { identityController } from "./identity/identity.controller";
 import { logger } from "./logger";
 
@@ -14,6 +15,7 @@ const wsPort = process.env.WS_PORT ? parseInt(process.env.WS_PORT, 10) : 3250;
 
 const app = new Elysia()
 	.use(elysiaLogger({ instance: logger }))
+	.use(healthController)
 	.use(
 		cors({
 			origin: [

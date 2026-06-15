@@ -1,0 +1,7 @@
+# Configuration des tests Bun pour mythica-gameplay.
+# Le seuil de couverture rend le pipeline bloquant : `bun test` échoue si la
+# couverture (lignes + fonctions) des fichiers chargés passe sous 80 %.
+[test]
+coverage = true
+coverageThreshold = 0.8
+coverageReporter = ["text"]

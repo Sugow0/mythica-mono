@@ -6,6 +6,7 @@ on:
     paths:
       - "apps/mythica-api/**"
       - ".github/workflows/api.yml"
+      - ".github/actions/**"
       - "package.json"
       - "bun.lock"
       - "biome.json"
@@ -14,9 +15,14 @@ on:
     paths:
       - "apps/mythica-api/**"
       - ".github/workflows/api.yml"
+      - ".github/actions/**"
       - "package.json"
       - "bun.lock"
       - "biome.json"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run:
@@ -26,15 +32,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-        working-directory: .
+      - uses: ./.github/actions/bun-install
 
       - name: Lint
         run: bun run lint:ci
@@ -42,56 +42,84 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-        working-directory: .
+      - uses: ./.github/actions/bun-install
 
       - name: Generate Prisma client
         run: bunx prisma generate
 
-      - name: Run tests
-        run: bun run test
+      - name: Run tests with coverage
+        run: bun test --coverage 2>&1 | tee coverage.txt
+
+      - name: Publier la couverture dans le résumé de CI
+        if: always()
+        run: |
+          {
+            echo "## 🧪 Couverture de tests — mythica-api"
+            echo ""
+            if [ -s coverage.txt ]; then
+              echo '```'
+              cat coverage.txt
+              echo '```'
+            else
+              echo "Aucun rapport de couverture généré."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Archiver le rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-api
+          path: apps/mythica-api/coverage.txt
+          if-no-files-found: ignore
 
   build:
     runs-on: ubuntu-latest
     needs: [lint, test]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
 
       - name: Build Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
           file: apps/mythica-api/Dockerfile
           push: false
+          load: true
           tags: mythica-api:ci
+
+      - name: Scan Trivy de l'image
+        uses: ./.github/actions/trivy
+        with:
+          scan-type: image
+          scan-ref: mythica-api:ci
+          title: mythica-api
+
+      - name: Archiver le rapport Trivy
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: trivy-api
+          path: trivy-report.txt
+          if-no-files-found: ignore
 
   deploy-staging:
     runs-on: ubuntu-latest
     needs: [build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
+    environment: staging
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-        working-directory: .
+      - uses: ./.github/actions/bun-install
 
       - name: Créer et appliquer la migration depuis le diff schéma↔DB
         run: bunx dotenvx run -f ./config/staging.env -- bunx prisma migrate dev --name auto
@@ -118,16 +146,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-        working-directory: .
+      - uses: ./.github/actions/bun-install
 
       - name: Appliquer les migrations en attente
         run: bunx dotenvx run -f ./config/production.env -- bunx prisma migrate deploy

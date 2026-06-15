@@ -1,0 +1,7 @@
+# Configuration des tests Bun pour mythica-api.
+# Le seuil de couverture rend le pipeline bloquant : `bun test` échoue si la
+# couverture (lignes + fonctions) des fichiers chargés passe sous 70 %.
+[test]
+coverage = true
+coverageThreshold = 0.7
+coverageReporter = ["text"]

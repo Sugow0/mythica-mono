@@ -1,0 +1,502 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ------------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------------
+
+enum PropertyType {
+  text
+  number
+  boolean
+  select
+  multiselect
+  textarea
+  resource
+  list
+  derived
+
+  @@map("property_type")
+}
+
+enum CampaignStatus {
+  active
+  paused
+  archived
+
+  @@map("campaign_status")
+}
+
+enum MemberRole {
+  gm
+  player
+  spectator
+
+  @@map("member_role")
+}
+
+enum SessionStatus {
+  scheduled
+  active
+  paused
+  ended
+
+  @@map("session_status")
+}
+
+enum TokenLayer {
+  background
+  object
+  token
+  gm
+
+  @@map("token_layer")
+}
+
+enum FileDomain {
+  map
+  token
+  music
+  notes
+  report
+  video
+  asset
+  avatar
+  cover
+
+  @@map("file_domain")
+}
+
+enum JoinRequestStatus {
+  pending
+  accepted
+  declined
+
+  @@map("join_request_status")
+}
+
+// ------------------------------------------------------------
+// USER
+// Miroir léger de l'API plateforme.
+// Stocke uniquement l'UUID de référence.
+// ------------------------------------------------------------
+
+model User {
+  id        String   @id @db.Uuid
+  pseudo    String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  ownedCampaigns  Campaign[]       @relation("CampaignOwner")
+  campaignMembers CampaignMember[]
+  characterSheets CharacterSheet[]
+  files           File[]
+  messages        Message[]
+  joinRequests    CampaignJoinRequest[]
+
+  @@map("users")
+}
+
+// ------------------------------------------------------------
+// GAME SYSTEM
+// Exemples : D&D 5e (2014), CoC 7e, PF2e...
+// parent permet le fork/héritage de système.
+// ------------------------------------------------------------
+
+model GameSystem {
+  id             String   @id @db.Uuid
+  nom            String   @db.VarChar(255)
+  version        String   @db.VarChar(50)
+  slug           String   @unique @db.VarChar(100)
+  parentSystemId String?  @map("parent_system_id") @db.Uuid
+  isOfficial     Boolean  @default(false) @map("is_official")
+  description    String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Auto-référence (fork/héritage)
+  parent   GameSystem?  @relation("GameSystemFork", fields: [parentSystemId], references: [id], onDelete: SetNull)
+  children GameSystem[] @relation("GameSystemFork")
+
+  // Relations
+  properties      GameSystemProperty[]
+  campaigns       Campaign[]
+  characterSheets CharacterSheet[]
+
+  @@map("game_systems")
+}
+
+// ------------------------------------------------------------
+// CHARACTER SHEET PROPERTY (définition d'un champ)
+// Champ réutilisable entre systèmes.
+// ------------------------------------------------------------
+
+model CharacterSheetProperty {
+  id           String       @id @db.Uuid
+  key          String       @unique @db.VarChar(100)
+  label        String       @db.VarChar(255)
+  type         PropertyType
+  defaultValue String?      @map("default_value") @db.Text
+  minValue     Decimal?     @map("min_value") @db.Decimal
+  maxValue     Decimal?     @map("max_value") @db.Decimal
+  options      Json?
+  description  String?      @db.Text
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  gameSystems    GameSystemProperty[]
+  sheetValues    CharacterSheetValue[]
+  tokenOverrides SessionTokenOverride[]
+
+  @@index([key], name: "idx_properties_key")
+  @@map("character_sheet_properties")
+}
+
+// ------------------------------------------------------------
+// GAME SYSTEM ↔ PROPERTIES
+// Assemble les propriétés d'un système.
+// overrideLabel / overrideDefault permettent d'adapter
+// une propriété existante sans la recréer.
+// ------------------------------------------------------------
+
+model GameSystemProperty {
+  id              String   @id @db.Uuid
+  gameSystemId    String   @map("game_system_id") @db.Uuid
+  propertyId      String   @map("property_id") @db.Uuid
+  displayOrder    Int      @default(0) @map("display_order")
+  groupName       String?  @map("group_name") @db.VarChar(100)
+  isRequired      Boolean  @default(false) @map("is_required")
+  overrideLabel   String?  @map("override_label") @db.VarChar(255)
+  overrideDefault String?  @map("override_default") @db.Text
+  formula         String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  gameSystem GameSystem             @relation(fields: [gameSystemId], references: [id], onDelete: Cascade)
+  property   CharacterSheetProperty @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+
+  @@unique([gameSystemId, propertyId])
+  @@map("game_system_properties")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN
+// ------------------------------------------------------------
+
+model Campaign {
+  id           String         @id @db.Uuid
+  ownerId      String         @map("owner_id") @db.Uuid
+  gameSystemId String         @map("game_system_id") @db.Uuid
+  nom          String         @db.VarChar(255)
+  description  String?        @db.Text
+  isPublic     Boolean        @default(false)
+  status       CampaignStatus @default(active)
+  tags         String[]       @default([])
+  coverFileId  String?        @map("cover_file_id") @db.Uuid
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime?      @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  owner           User                     @relation("CampaignOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  gameSystem      GameSystem               @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
+  coverFile       File?                    @relation("CampaignCover", fields: [coverFileId], references: [id], onDelete: SetNull)
+  members         CampaignMember[]
+  characterSheets CampaignCharacterSheet[]
+  sessions        Session[]
+  files           File[]                   @relation("CampaignFiles")
+  invites         CampaignInvite[]
+  messages        Message[]
+  joinRequests    CampaignJoinRequest[]
+
+  @@index([deletedAt], name: "idx_campaigns_deleted")
+  @@map("campaigns")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN MESSAGES
+// Messages du chat de campagne (diffusés en temps réel via Redis pub/sub).
+// ------------------------------------------------------------
+
+model Message {
+  id         String   @id @db.Uuid
+  campaignId String   @map("campaign_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  content    String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, createdAt], name: "idx_messages_campaign_created")
+  @@map("campaign_messages")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN INVITES
+// Lien d'invitation à usage partagé, identifié par un token unique
+// et expirant après un délai (7 jours par défaut).
+// ------------------------------------------------------------
+
+model CampaignInvite {
+  id         String   @id @db.Uuid
+  campaignId String   @map("campaign_id") @db.Uuid
+  token      String   @unique @db.VarChar(64)
+  createdBy  String   @map("created_by") @db.Uuid
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId], name: "idx_campaign_invites_campaign")
+  @@map("campaign_invites")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN JOIN REQUESTS
+// Demande d'acces a une campagne publique, approuvee par le MJ.
+// ------------------------------------------------------------
+
+model CampaignJoinRequest {
+  id         String            @id @db.Uuid
+  campaignId String            @map("campaign_id") @db.Uuid
+  userId     String            @map("user_id") @db.Uuid
+  status     JoinRequestStatus @default(pending)
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@index([campaignId, status], name: "idx_join_requests_campaign_status")
+  @@map("campaign_join_requests")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN MEMBERS
+// ------------------------------------------------------------
+
+model CampaignMember {
+  id         String     @id @db.Uuid
+  campaignId String     @map("campaign_id") @db.Uuid
+  userId     String     @map("user_id") @db.Uuid
+  role       MemberRole @default(player)
+  joinedAt   DateTime   @default(now()) @map("joined_at") @db.Timestamptz
+  leftAt     DateTime?  @map("left_at") @db.Timestamptz
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@index([campaignId], name: "idx_campaign_members_campaign")
+  @@index([userId], name: "idx_campaign_members_user")
+  @@map("campaign_members")
+}
+
+// ------------------------------------------------------------
+// CHARACTER SHEET
+// ------------------------------------------------------------
+
+model CharacterSheet {
+  id           String    @id @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  gameSystemId String    @map("game_system_id") @db.Uuid
+  name         String    @db.VarChar(255)
+  avatarFileId String?   @map("avatar_file_id") @db.Uuid
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameSystem GameSystem               @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
+  avatarFile File?                    @relation("CharacterSheetAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  values     CharacterSheetValue[]
+  campaigns  CampaignCharacterSheet[]
+  tokens     SessionToken[]
+
+  @@index([userId], name: "idx_character_sheets_user")
+  @@index([gameSystemId], name: "idx_character_sheets_system")
+  @@map("character_sheets")
+}
+
+// ------------------------------------------------------------
+// CHARACTER SHEET VALUES
+// Valeurs réelles des propriétés d'une fiche.
+// number   → {"v": 12}
+// resource → {"current": 8, "max": 45}
+// list     → {"items": [...]}
+// ------------------------------------------------------------
+
+model CharacterSheetValue {
+  id               String   @id @db.Uuid
+  characterSheetId String   @map("character_sheet_id") @db.Uuid
+  propertyId       String   @map("property_id") @db.Uuid
+  value            Json     @default("{}")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  characterSheet CharacterSheet         @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+  property       CharacterSheetProperty @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+
+  @@unique([characterSheetId, propertyId])
+  @@index([characterSheetId], name: "idx_sheet_values_sheet")
+  @@map("character_sheet_values")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN ↔ CHARACTER SHEETS
+// ------------------------------------------------------------
+
+model CampaignCharacterSheet {
+  id               String   @id @db.Uuid
+  campaignId       String   @map("campaign_id") @db.Uuid
+  characterSheetId String   @map("character_sheet_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  campaign       Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  characterSheet CharacterSheet @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, characterSheetId])
+  @@map("campaign_character_sheets")
+}
+
+// ------------------------------------------------------------
+// SESSION
+// map_state et combat_state : snapshots JSONB temps réel.
+// ------------------------------------------------------------
+
+model Session {
+  id          String        @id @db.Uuid
+  campaignId  String        @map("campaign_id") @db.Uuid
+  nom         String        @db.VarChar(255)
+  status      SessionStatus @default(scheduled)
+  scheduledAt DateTime?     @map("scheduled_at") @db.Timestamptz
+  startedAt   DateTime?     @map("started_at") @db.Timestamptz
+  endedAt     DateTime?     @map("ended_at") @db.Timestamptz
+  mapState    Json          @default("{}") @map("map_state")
+  combatState Json          @default("{}") @map("combat_state")
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  campaign Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  tokens   SessionToken[]
+
+  @@index([campaignId], name: "idx_sessions_campaign")
+  @@index([status], name: "idx_sessions_status")
+  @@map("sessions")
+}
+
+// ------------------------------------------------------------
+// SESSION TOKEN
+// Données visuelles/positionnelles uniquement.
+// Stats et conditions → SessionTokenOverride.
+// ------------------------------------------------------------
+
+model SessionToken {
+  id               String     @id @db.Uuid
+  sessionId        String     @map("session_id") @db.Uuid
+  characterSheetId String?    @map("character_sheet_id") @db.Uuid
+  label            String?    @db.VarChar(255)
+  fileId           String?    @map("file_id") @db.Uuid
+  posX             Decimal    @default(0) @map("pos_x") @db.Decimal
+  posY             Decimal    @default(0) @map("pos_y") @db.Decimal
+  width            Int        @default(1)
+  height           Int        @default(1)
+  isVisible        Boolean    @default(true) @map("is_visible")
+  layer            TokenLayer @default(token)
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  session        Session                @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  characterSheet CharacterSheet?        @relation(fields: [characterSheetId], references: [id], onDelete: SetNull)
+  file           File?                  @relation("TokenFile", fields: [fileId], references: [id], onDelete: SetNull)
+  overrides      SessionTokenOverride[]
+
+  @@index([sessionId], name: "idx_session_tokens_session")
+  @@map("session_tokens")
+}
+
+// ------------------------------------------------------------
+// SESSION TOKEN OVERRIDE
+// État temporaire des propriétés en session.
+// Même format JSONB que CharacterSheetValue.
+// ------------------------------------------------------------
+
+model SessionTokenOverride {
+  id             String   @id @db.Uuid
+  sessionTokenId String   @map("session_token_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  value          Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  sessionToken SessionToken           @relation(fields: [sessionTokenId], references: [id], onDelete: Cascade)
+  property     CharacterSheetProperty @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionTokenId, propertyId])
+  @@index([sessionTokenId], name: "idx_token_overrides_token")
+  @@index([propertyId], name: "idx_token_overrides_property")
+  @@map("session_token_overrides")
+}
+
+// ------------------------------------------------------------
+// FILE
+// Métadonnées légères pour RustFS.
+// URL reconstruite côté code, jamais stockée en DB.
+// ------------------------------------------------------------
+
+model File {
+  id          String     @id @db.Uuid
+  ownerId     String     @map("owner_id") @db.Uuid
+  campaignId  String?    @map("campaign_id") @db.Uuid
+  domain      FileDomain
+  displayName String     @map("display_name") @db.VarChar(255)
+  mimeType    String     @map("mime_type") @db.VarChar(100)
+  sizeBytes   BigInt?    @map("size_bytes")
+  isPublic    Boolean    @default(false) @map("is_public")
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  owner    User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation("CampaignFiles", fields: [campaignId], references: [id], onDelete: Cascade)
+
+  // Relations inverses (utilisé comme référence depuis d'autres tables)
+  campaignCovers   Campaign[]       @relation("CampaignCover")
+  characterAvatars CharacterSheet[] @relation("CharacterSheetAvatar")
+  sessionTokens    SessionToken[]   @relation("TokenFile")
+
+  @@index([ownerId], name: "idx_files_owner")
+  @@index([campaignId, domain], name: "idx_files_campaign_domain")
+  @@index([deletedAt], name: "idx_files_deleted")
+  @@map("files")
+}

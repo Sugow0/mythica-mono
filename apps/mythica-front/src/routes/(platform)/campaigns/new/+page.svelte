@@ -1,8 +1,10 @@
 <script lang="ts">
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import GlobeIcon from "@lucide/svelte/icons/globe";
+	import ImageIcon from "@lucide/svelte/icons/image";
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import SwordsIcon from "@lucide/svelte/icons/swords";
+	import XIcon from "@lucide/svelte/icons/x";
 	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
 	import { Button } from "$lib/components/ui/button";
@@ -14,6 +16,7 @@
 		FieldGroup,
 		FieldLabel,
 	} from "$lib/components/ui/field/index.js";
+	import TagInput from "$lib/components/tag-input.svelte";
 	import { Input } from "$lib/components/ui/input";
 	import * as Select from "$lib/components/ui/select";
 	import { Textarea } from "$lib/components/ui/textarea";
@@ -22,13 +25,21 @@
 
 	type GameSystem = NonNullable<
 		Awaited<ReturnType<typeof gameSystemService.getGameSystems>>
-	>["gameSystems"][number];
+	>["items"][number];
+
+	// Couverture
+	const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
+	const MAX_COVER_SIZE = 10 * 1024 * 1024; // 10 Mo
 
 	// Form state
 	let name = $state("");
 	let description = $state("");
 	let visibility = $state<"PUBLIC" | "PRIVATE">("PRIVATE");
 	let gameSystemId = $state("");
+	let tags = $state<string[]>([]);
+	let coverFile = $state<File | null>(null);
+	let coverPreview = $state<string | null>(null);
+	let coverError = $state<string | null>(null);
 
 	// UI state
 	let isLoading = $state(false);
@@ -42,7 +53,7 @@
 	const nameLength = $derived(name.length);
 	const descriptionLength = $derived(description.length);
 	const selectedGameSystemName = $derived(
-		gameSystems.find((gs) => gs.id === gameSystemId)?.name ?? ""
+		gameSystems.find((gs) => gs.id === gameSystemId)?.nom ?? ""
 	);
 	const isValid = $derived(
 		name.trim().length >= 3 &&
@@ -53,13 +64,40 @@
 	onMount(async () => {
 		try {
 			const response = await gameSystemService.getGameSystems({ limit: 100 });
-			gameSystems = response?.gameSystems ?? [];
+			gameSystems = response?.items ?? [];
 		} catch {
 			error = "Impossible de charger les systemes de jeu.";
 		} finally {
 			isLoadingGameSystems = false;
 		}
 	});
+
+	function onCoverChange(event: Event) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
+		coverError = null;
+		if (!file) return;
+		if (!ALLOWED_COVER_TYPES.includes(file.type)) {
+			coverError = "Format non supporte. Utilisez JPEG, PNG ou WebP.";
+			input.value = "";
+			return;
+		}
+		if (file.size > MAX_COVER_SIZE) {
+			coverError = "Image trop volumineuse (max. 10 Mo).";
+			input.value = "";
+			return;
+		}
+		if (coverPreview) URL.revokeObjectURL(coverPreview);
+		coverFile = file;
+		coverPreview = URL.createObjectURL(file);
+	}
+
+	function removeCover() {
+		if (coverPreview) URL.revokeObjectURL(coverPreview);
+		coverFile = null;
+		coverPreview = null;
+		coverError = null;
+	}
 
 	async function handleSubmit(event: SubmitEvent) {
 		event.preventDefault();
@@ -85,15 +123,25 @@
 
 		try {
 			const response = await campaignService.createCampaign({
-				name: name.trim(),
+				nom: name.trim(),
 				description: description.trim() || undefined,
-				visibility,
+				isPublic: visibility === "PUBLIC",
 				gameSystemId,
+				tags: tags.length > 0 ? tags : undefined,
 			});
 
-			const campaignId = response?.campaignId;
+			const campaignId = response?.id;
 
 			if (campaignId) {
+				// La couverture est optionnelle : un echec d'upload ne doit pas
+				// bloquer la creation de la campagne.
+				if (coverFile) {
+					try {
+						await campaignService.uploadCoverImage(campaignId, coverFile);
+					} catch {
+						// On poursuit : la couverture pourra etre ajoutee plus tard.
+					}
+				}
 				await goto(`/campaigns/${campaignId}`);
 			} else {
 				await goto("/campaigns");
@@ -118,7 +166,7 @@
 	<Button
 		variant="ghost"
 		href="/campaigns"
-		class="mb-6 -ml-2 text-slate-600 hover:text-teal-600 dark:text-muted-foreground"
+		class="mb-6 -ml-2 text-slate-600 hover:text-red-600 dark:text-muted-foreground"
 	>
 		<ArrowLeftIcon class="h-4 w-4" />
 		Retour aux campagnes
@@ -127,7 +175,7 @@
 	<!-- Header -->
 	<div class="mb-8">
 		<div
-			class="mb-3 inline-flex items-center gap-2 rounded-full bg-teal-100 px-4 py-1.5 text-sm font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300"
+			class="mb-3 inline-flex items-center gap-2 rounded-full bg-red-100 px-4 py-1.5 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
 		>
 			<SwordsIcon class="h-4 w-4" />
 			Nouvelle campagne
@@ -154,6 +202,80 @@
 							{error}
 						</div>
 					{/if}
+
+					<!-- Cover image -->
+					<Field>
+						<FieldLabel for="cover-{id}">Image de couverture</FieldLabel>
+						{#if coverPreview}
+							<div
+								class="group relative aspect-video w-full overflow-hidden rounded-xl border border-border"
+							>
+								<img
+									src={coverPreview}
+									alt="Apercu de la couverture"
+									class="h-full w-full object-cover"
+								/>
+								<div
+									class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"
+								></div>
+								<button
+									type="button"
+									onclick={removeCover}
+									disabled={isLoading}
+									aria-label="Retirer l'image"
+									class="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition hover:bg-black/80"
+								>
+									<XIcon class="h-4 w-4" />
+								</button>
+								<label
+									class="absolute bottom-3 left-3 cursor-pointer rounded-lg bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-900 shadow-sm transition hover:bg-white"
+								>
+									Changer l'image
+									<input
+										type="file"
+										accept="image/jpeg,image/png,image/webp"
+										class="sr-only"
+										disabled={isLoading}
+										onchange={onCoverChange}
+									/>
+								</label>
+							</div>
+						{:else}
+							<label
+								for="cover-{id}"
+								class="flex aspect-video w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 text-center transition-colors hover:border-primary/60 hover:bg-primary/5"
+							>
+								<div
+									class="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:text-primary"
+								>
+									<ImageIcon class="h-6 w-6" />
+								</div>
+								<div>
+									<div class="text-sm font-medium text-foreground">
+										Ajouter une image de couverture
+									</div>
+									<div class="mt-0.5 text-xs text-muted-foreground">
+										JPEG, PNG ou WebP · format 16:9 conseille · max 10 Mo
+									</div>
+								</div>
+								<input
+									id="cover-{id}"
+									type="file"
+									accept="image/jpeg,image/png,image/webp"
+									class="sr-only"
+									disabled={isLoading}
+									onchange={onCoverChange}
+								/>
+							</label>
+						{/if}
+						{#if coverError}
+							<FieldError>{coverError}</FieldError>
+						{:else}
+							<FieldDescription>
+								Optionnel. Donnez une identite visuelle a votre campagne.
+							</FieldDescription>
+						{/if}
+					</Field>
 
 					<!-- Name -->
 					<Field>
@@ -223,8 +345,8 @@
 							</Select.Trigger>
 							<Select.Content>
 								{#each gameSystems as gameSystem (gameSystem.id)}
-									<Select.Item value={gameSystem.id} label={gameSystem.name}>
-										{gameSystem.name}
+									<Select.Item value={gameSystem.id} label={gameSystem.nom}>
+										{gameSystem.nom}
 									</Select.Item>
 								{/each}
 							</Select.Content>
@@ -238,6 +360,16 @@
 						{/if}
 					</Field>
 
+					<!-- Tags -->
+					<Field>
+						<FieldLabel for="tags-{id}">Tags</FieldLabel>
+						<TagInput id="tags-{id}" bind:tags disabled={isLoading} />
+						<FieldDescription>
+							Optionnel. Genres et thèmes (ex: medfan, sci-fi, post-apo) — max
+							10.
+						</FieldDescription>
+					</Field>
+
 					<!-- Visibility -->
 					<Field>
 						<FieldLabel>Visibilite</FieldLabel>
@@ -248,18 +380,18 @@
 								disabled={isLoading}
 								class="flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all {visibility ===
 								'PRIVATE'
-									? 'border-teal-500 bg-teal-50/50 shadow-sm dark:border-teal-600 dark:bg-teal-950/30'
-									: 'border-stone-200 bg-white hover:border-stone-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
+									? 'border-red-500 bg-red-50/50 shadow-sm dark:border-red-600 dark:bg-red-950/30'
+									: 'border-slate-200 bg-white hover:border-slate-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
 							>
 								<div
 									class="flex h-12 w-12 items-center justify-center rounded-xl {visibility ===
 									'PRIVATE'
-										? 'bg-teal-100 dark:bg-teal-900/50'
-										: 'bg-stone-100 dark:bg-muted'}"
+										? 'bg-red-100 dark:bg-red-900/50'
+										: 'bg-slate-100 dark:bg-muted'}"
 								>
 									<LockIcon
 										class="h-5 w-5 {visibility === 'PRIVATE'
-											? 'text-teal-600 dark:text-teal-400'
+											? 'text-red-600 dark:text-red-400'
 											: 'text-slate-500 dark:text-muted-foreground'}"
 									/>
 								</div>
@@ -283,18 +415,18 @@
 								disabled={isLoading}
 								class="flex flex-col items-center gap-3 rounded-xl border-2 p-5 transition-all {visibility ===
 								'PUBLIC'
-									? 'border-teal-500 bg-teal-50/50 shadow-sm dark:border-teal-600 dark:bg-teal-950/30'
-									: 'border-stone-200 bg-white hover:border-stone-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
+									? 'border-red-500 bg-red-50/50 shadow-sm dark:border-red-600 dark:bg-red-950/30'
+									: 'border-slate-200 bg-white hover:border-slate-300 dark:border-border dark:bg-card dark:hover:border-border/80'}"
 							>
 								<div
 									class="flex h-12 w-12 items-center justify-center rounded-xl {visibility ===
 									'PUBLIC'
-										? 'bg-teal-100 dark:bg-teal-900/50'
-										: 'bg-stone-100 dark:bg-muted'}"
+										? 'bg-red-100 dark:bg-red-900/50'
+										: 'bg-slate-100 dark:bg-muted'}"
 								>
 									<GlobeIcon
 										class="h-5 w-5 {visibility === 'PUBLIC'
-											? 'text-teal-600 dark:text-teal-400'
+											? 'text-red-600 dark:text-red-400'
 											: 'text-slate-500 dark:text-muted-foreground'}"
 									/>
 								</div>
@@ -326,7 +458,7 @@
 			</Card.Content>
 
 			<Card.Footer
-				class="flex items-center justify-between border-t bg-stone-50/50 dark:bg-muted/20"
+				class="flex items-center justify-between border-t bg-slate-50/50 dark:bg-muted/20"
 			>
 				<Button variant="outline" href="/campaigns" disabled={isLoading}>
 					Annuler
@@ -334,7 +466,7 @@
 				<Button
 					type="submit"
 					disabled={isLoading || !isValid}
-					class="bg-teal-600 text-white shadow-md shadow-teal-600/20 hover:bg-teal-700"
+					class="bg-red-600 text-white shadow-md shadow-red-600/20 hover:bg-red-700"
 				>
 					{#if isLoading}
 						Creation en cours...

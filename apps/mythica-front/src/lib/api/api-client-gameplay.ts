@@ -1,4 +1,3 @@
-import { env } from "$env/dynamic/public";
 import { ApiClient } from "./api-client";
 // TODO: Generate gameplay types with:
 // openapi-typescript <gameplay-api-url>/swagger/json -o ./src/lib/api/generated/gameplay.ts
@@ -24,7 +23,8 @@ export class GameplayApiClient extends ApiClient {
 
 	constructor(baseUrl?: string) {
 		super(
-			baseUrl ?? `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay`
+			baseUrl ??
+				`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay`
 		);
 
 		// Uncomment when gameplay types are generated:

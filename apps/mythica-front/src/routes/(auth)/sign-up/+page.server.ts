@@ -1,5 +1,4 @@
 import { fail } from "@sveltejs/kit";
-import { env } from "$env/dynamic/public";
 import type { Actions } from "./$types";
 
 export const actions: Actions = {
@@ -36,7 +35,7 @@ export const actions: Actions = {
 			});
 		}
 
-		const apiUrl = `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+		const apiUrl = `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 
 		let response: Response;
 		try {

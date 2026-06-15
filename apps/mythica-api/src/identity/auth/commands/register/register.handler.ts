@@ -1,14 +1,9 @@
-import { generateIdFromEntropySize } from "lucia";
 import { lucia } from "../../../../lib/auth";
 import { sendVerificationEmail } from "../../../../lib/email";
+import { hashPassword } from "../../../../lib/password";
 import { prisma } from "../../../../lib/prisma";
+import { publishUserEvent } from "../../../../lib/user-events";
 import type { RegisterCommand } from "./register.command";
-
-const PASSWORD_HASH_OPTIONS = {
-	algorithm: "argon2id" as const,
-	memoryCost: 19_456,
-	timeCost: 2,
-};
 
 const VERIFICATION_EXPIRY_HOURS = 24;
 
@@ -26,11 +21,8 @@ export type RegisterResult =
 export async function registerHandler(
 	command: RegisterCommand,
 ): Promise<RegisterResult> {
-	const passwordHash = await Bun.password.hash(
-		command.password,
-		PASSWORD_HASH_OPTIONS,
-	);
-	const userId = generateIdFromEntropySize(10);
+	const passwordHash = await hashPassword(command.password);
+	const userId = crypto.randomUUID();
 	const verificationToken = generateVerificationToken();
 	const expiresAt = new Date(
 		Date.now() + VERIFICATION_EXPIRY_HOURS * 60 * 60 * 1000,
@@ -62,6 +54,7 @@ export async function registerHandler(
 		return { success: false, error: "Erreur lors de la création du compte" };
 	}
 
+	await publishUserEvent("user.created", userId, { pseudo: command.pseudo });
 	await sendVerificationEmail(command.email, verificationToken, command.pseudo);
 
 	const session = await lucia.createSession(userId, {});

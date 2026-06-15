@@ -1,11 +1,6 @@
+import { hashPassword } from "../../../../lib/password";
 import { prisma } from "../../../../lib/prisma";
 import type { ChangePasswordBody } from "./change-password.dto";
-
-const PASSWORD_HASH_OPTIONS = {
-	algorithm: "argon2id" as const,
-	memoryCost: 19_456,
-	timeCost: 2,
-};
 
 export type ChangePasswordResult =
 	| { success: true }
@@ -61,10 +56,7 @@ export async function changePasswordHandler(
 		return { success: false, error: "Mot de passe actuel incorrect." };
 	}
 
-	const newHash = await Bun.password.hash(
-		body.newPassword,
-		PASSWORD_HASH_OPTIONS,
-	);
+	const newHash = await hashPassword(body.newPassword);
 	await prisma.users.update({
 		where: { id: userId },
 		data: { password: newHash },

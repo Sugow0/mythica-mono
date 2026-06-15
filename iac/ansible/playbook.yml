@@ -1,0 +1,6 @@
+---
+- name: Configurer le reverse proxy Mythica
+  hosts: web
+  become: true
+  roles:
+    - reverse_proxy

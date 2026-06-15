@@ -1,0 +1,22 @@
+# Hooks Git gérés par lefthook (installés via `bun install` → script prepare).
+# Double filet de sécurité : ce qui est vérifié ici l'est aussi en CI.
+
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: "apps/{mythica-api,mythica-gameplay,mythica-gateway}/**/*.{ts,js,json}"
+      run: bunx biome check --no-errors-on-unmatched {staged_files}
+    prettier-front:
+      root: "apps/mythica-front/"
+      glob: "*.{ts,js,svelte,json,css,html}"
+      run: bunx prettier --check {staged_files}
+
+commit-msg:
+  commands:
+    conventional-commits:
+      run: |
+        head -1 {1} | grep -qE '^(feat|fix|docs|style|refactor|test|chore|ci|perf|build)(\([a-z0-9_-]+\))?!?: .+' || {
+          echo "❌ Message non conforme aux Conventional Commits : <type>(<scope>): <description>";
+          exit 1;
+        }

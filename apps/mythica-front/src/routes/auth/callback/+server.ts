@@ -1,5 +1,4 @@
 import { redirect } from "@sveltejs/kit";
-import { env } from "$env/dynamic/public";
 import type { RequestHandler } from "./$types";
 
 function forwardSetCookies(
@@ -50,7 +49,7 @@ function forwardSetCookies(
 }
 
 export const GET: RequestHandler = async ({ request, cookies, fetch }) => {
-	const apiUrl = `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+	const apiUrl = `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 	const cookieHeader = request.headers.get("cookie");
 
 	if (cookieHeader) {

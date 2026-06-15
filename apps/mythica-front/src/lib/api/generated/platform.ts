@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health check du service */
+        get: operations["getHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/identity/oauth/{provider}": {
         parameters: {
             query?: never;
@@ -122,6 +139,46 @@ export interface paths {
          * @description Valide l'adresse email avec le token reçu par email
          */
         post: operations["postIdentityVerify-email"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/identity/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Demander une réinitialisation de mot de passe
+         * @description Envoie un email de réinitialisation si un compte existe (réponse identique sinon, anti-énumération).
+         */
+        post: operations["postIdentityForgot-password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/identity/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Réinitialiser le mot de passe
+         * @description Définit un nouveau mot de passe à partir d'un token valide.
+         */
+        post: operations["postIdentityReset-password"];
         delete?: never;
         options?: never;
         head?: never;
@@ -285,7 +342,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Modifier mon profil
+         * @description Met à jour le pseudo et/ou la bio de l'utilisateur connecté
+         */
+        patch: operations["patchIdentityMe"];
         trace?: never;
     };
     "/identity/me/change-password": {
@@ -1054,6 +1115,23 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getIdentityOauthByProvider: {
         parameters: {
             query?: never;
@@ -1816,6 +1894,173 @@ export interface operations {
             };
         };
     };
+    "postIdentityForgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: email
+                     * @description Adresse email du compte
+                     */
+                    email: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: email
+                     * @description Adresse email du compte
+                     */
+                    email: string;
+                };
+                "text/plain": {
+                    /**
+                     * Format: email
+                     * @description Adresse email du compte
+                     */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "postIdentityReset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Token reçu par email */
+                    token: string;
+                    /** @description Nouveau mot de passe (8 caractères minimum) */
+                    newPassword: string;
+                };
+                "multipart/form-data": {
+                    /** @description Token reçu par email */
+                    token: string;
+                    /** @description Nouveau mot de passe (8 caractères minimum) */
+                    newPassword: string;
+                };
+                "text/plain": {
+                    /** @description Token reçu par email */
+                    token: string;
+                    /** @description Nouveau mot de passe (8 caractères minimum) */
+                    newPassword: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        /** @description Message de confirmation */
+                        message: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
     "postIdentityResend-verification": {
         parameters: {
             query?: never;
@@ -2473,6 +2718,7 @@ export interface operations {
                             lastName: string;
                             pseudo: string;
                             avatar: (string | null) | null;
+                            bio: (string | null) | null;
                             emailVerified: boolean;
                             createdAt: Record<string, never> | string | number;
                             /**
@@ -2493,6 +2739,7 @@ export interface operations {
                             lastName: string;
                             pseudo: string;
                             avatar: (string | null) | null;
+                            bio: (string | null) | null;
                             emailVerified: boolean;
                             createdAt: Record<string, never> | string | number;
                             /**
@@ -2513,6 +2760,7 @@ export interface operations {
                             lastName: string;
                             pseudo: string;
                             avatar: (string | null) | null;
+                            bio: (string | null) | null;
                             emailVerified: boolean;
                             createdAt: Record<string, never> | string | number;
                             /**
@@ -2552,6 +2800,155 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    patchIdentityMe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Nouveau pseudo (unique, 3 à 50 caractères) */
+                    pseudo?: string;
+                    bio?: (string | null) | null;
+                };
+                "multipart/form-data": {
+                    /** @description Nouveau pseudo (unique, 3 à 50 caractères) */
+                    pseudo?: string;
+                    bio?: (string | null) | null;
+                };
+                "text/plain": {
+                    /** @description Nouveau pseudo (unique, 3 à 50 caractères) */
+                    pseudo?: string;
+                    bio?: (string | null) | null;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        user: {
+                            id: string;
+                            firstName: string;
+                            lastName: string;
+                            pseudo: string;
+                            avatar: (string | null) | null;
+                            bio: (string | null) | null;
+                            emailVerified: boolean;
+                            createdAt: Record<string, never> | string | number;
+                            /**
+                             * Format: email
+                             * @description Adresse email de l'utilisateur connecté
+                             */
+                            email: string;
+                            /** @description Rôle global de l'utilisateur */
+                            role: "ADMIN" | "SUPPORT" | "USER";
+                        };
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        user: {
+                            id: string;
+                            firstName: string;
+                            lastName: string;
+                            pseudo: string;
+                            avatar: (string | null) | null;
+                            bio: (string | null) | null;
+                            emailVerified: boolean;
+                            createdAt: Record<string, never> | string | number;
+                            /**
+                             * Format: email
+                             * @description Adresse email de l'utilisateur connecté
+                             */
+                            email: string;
+                            /** @description Rôle global de l'utilisateur */
+                            role: "ADMIN" | "SUPPORT" | "USER";
+                        };
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        user: {
+                            id: string;
+                            firstName: string;
+                            lastName: string;
+                            pseudo: string;
+                            avatar: (string | null) | null;
+                            bio: (string | null) | null;
+                            emailVerified: boolean;
+                            createdAt: Record<string, never> | string | number;
+                            /**
+                             * Format: email
+                             * @description Adresse email de l'utilisateur connecté
+                             */
+                            email: string;
+                            /** @description Rôle global de l'utilisateur */
+                            role: "ADMIN" | "SUPPORT" | "USER";
+                        };
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        /** @description Message d'erreur */
+                        error: string;
+                    };
+                };
+            };
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2833,7 +3230,46 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    avatar?: string;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file?: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    avatar?: string;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file?: string;
+                };
+                "text/plain": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    avatar?: string;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file?: string;
+                };
+            };
+        };
         responses: {
             200: {
                 headers: {

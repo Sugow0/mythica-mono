@@ -1,7 +1,7 @@
 {
 	"name": "@mythica/front",
 	"private": true,
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -16,8 +16,8 @@
 		"format:ci": "prettier --check .",
 		"test": "vitest run",
 		"generate:types": "bun run generate:types:platform && bun run generate:types:gameplay",
-		"generate:types:platform": "openapi-typescript ${PUBLIC_API_URL:-http://localhost:2100}/api/swagger/json -o ./src/lib/api/generated/platform.ts",
-		"generate:types:gameplay": "openapi-typescript ${PUBLIC_API_URL:-http://localhost:2100}/gameplay/swagger/json -o ./src/lib/api/generated/gameplay.ts",
+		"generate:types:platform": "openapi-typescript ${VITE_PUBLIC_API_URL:-http://localhost:2100}/api/swagger/json -o ./src/lib/api/generated/platform.ts",
+		"generate:types:gameplay": "openapi-typescript ${VITE_PUBLIC_API_URL:-http://localhost:2100}/gameplay/swagger/json -o ./src/lib/api/generated/gameplay.ts",
 		"knip": "knip"
 	},
 	"devDependencies": {
@@ -32,7 +32,8 @@
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.1.18",
 		"@types/node": "^25.6.0",
-		"@vitest/browser-playwright": "^4.0.18",
+		"@vitest/browser-playwright": "^4.1.8",
+		"@vitest/coverage-v8": "^4.1.8",
 		"bits-ui": "^2.14.4",
 		"clsx": "^2.1.1",
 		"embla-carousel-svelte": "^8.6.0",
@@ -61,11 +62,11 @@
 		"typescript-eslint": "^8.58.1",
 		"vaul-svelte": "^1.0.0-next.7",
 		"vite": "^7.3.1",
-		"vitest": "^4.0.18",
+		"vitest": "^4.1.8",
 		"vitest-browser-svelte": "^2.0.2"
 	},
 	"dependencies": {
-		"@dotenvx/dotenvx": "^1.61.0",
+		"@dotenvx/dotenvx": "1.64.0",
 		"@inlang/paraglide-js": "^2.12.0",
 		"@threlte/core": "^8.5.5",
 		"lucide": "^0.575.0",

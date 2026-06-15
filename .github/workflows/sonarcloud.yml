@@ -1,0 +1,40 @@
+name: sonarcloud
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sonarcloud:
+    name: Analyse statique SonarCloud
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+
+      # Le scan ne tourne que si le secret SONAR_TOKEN est configuré.
+      # SonarCloud gratuit nécessite un repo public ; sur repo privé, voir docs.
+      - name: SonarQube Scan
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+      - name: SonarCloud non configuré
+        if: ${{ env.SONAR_TOKEN == '' }}
+        run: |
+          echo "::notice::SONAR_TOKEN absent — analyse SonarCloud ignorée."
+          echo "Configurer le secret SONAR_TOKEN et un projet sur sonarcloud.io pour activer le quality gate."

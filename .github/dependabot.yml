@@ -1,0 +1,33 @@
+version: 2
+updates:
+  # Dépendances JavaScript du workspace (Bun / npm)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+
+  # Actions GitHub épinglées en SHA (maintient les pins à jour)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci(deps)"
+
+  # Images de base des Dockerfiles
+  - package-ecosystem: "docker"
+    directories:
+      - "/apps/mythica-api"
+      - "/apps/mythica-gameplay"
+      - "/apps/mythica-gateway"
+      - "/apps/mythica-front"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(docker)"

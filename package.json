@@ -7,16 +7,23 @@
     "packages/*"
   ],
   "scripts": {
+    "prepare": "lefthook install || true",
     "dev": "bun run --filter '*' dev",
     "dev:front": "bun run --cwd apps/mythica-front dev",
     "dev:api": "bun run --cwd apps/mythica-api dev",
     "dev:gateway": "bun run --cwd apps/mythica-gateway dev",
     "dev:gameplay": "bun run --cwd apps/mythica-gameplay dev",
     "lint": "bun run --filter '*' lint",
-    "lint:ci": "bun run --filter '*' lint:ci"
+    "lint:ci": "bun run --filter '*' lint:ci",
+    "db:generate": "bun run --filter '*' db:generate",
+    "db:push": "bun run --filter '*' db:push"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.0",
-    "@changesets/cli": "^2.31.0"
+    "@changesets/cli": "^2.31.0",
+    "lefthook": "^2.1.9"
+  },
+  "overrides": {
+    "shell-quote": "1.8.4"
   }
 }

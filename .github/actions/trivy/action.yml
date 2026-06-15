@@ -1,0 +1,69 @@
+name: "Scan Trivy"
+description: "Scanne une image Docker ou le système de fichiers avec Trivy, publie le rapport dans le résumé CI et échoue en cas de vulnérabilité CRITICAL."
+
+inputs:
+  scan-type:
+    description: "Type de scan Trivy : 'image' ou 'fs'"
+    required: true
+  scan-ref:
+    description: "Référence à scanner (tag d'image pour 'image', chemin pour 'fs')"
+    required: true
+  title:
+    description: "Titre affiché dans le résumé de CI"
+    required: false
+    default: "Trivy"
+
+runs:
+  using: composite
+  steps:
+    - name: Installer Trivy
+      shell: bash
+      env:
+        TRIVY_VERSION: "0.71.0"
+      run: |
+        curl -sfL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" -o /tmp/trivy.tar.gz
+        tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
+        sudo mv /tmp/trivy /usr/local/bin/trivy
+        trivy --version
+
+    - name: Rapport Trivy (HIGH/CRITICAL)
+      shell: bash
+      env:
+        SCAN_TYPE: ${{ inputs.scan-type }}
+        SCAN_REF: ${{ inputs.scan-ref }}
+      run: |
+        trivy "$SCAN_TYPE" \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 0 \
+          --format table \
+          --output trivy-report.txt \
+          "$SCAN_REF"
+
+    - name: Publier le rapport dans le résumé de CI
+      if: always()
+      shell: bash
+      run: |
+        {
+          echo "## 🛡️ ${{ inputs.title }} — rapport Trivy"
+          echo ""
+          if [ -s trivy-report.txt ]; then
+            echo '```'
+            cat trivy-report.txt
+            echo '```'
+          else
+            echo "✅ Aucune vulnérabilité HIGH/CRITICAL détectée."
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Échec si vulnérabilité CRITICAL
+      shell: bash
+      env:
+        SCAN_TYPE: ${{ inputs.scan-type }}
+        SCAN_REF: ${{ inputs.scan-ref }}
+      run: |
+        trivy "$SCAN_TYPE" \
+          --severity CRITICAL \
+          --ignore-unfixed \
+          --exit-code 1 \
+          "$SCAN_REF"

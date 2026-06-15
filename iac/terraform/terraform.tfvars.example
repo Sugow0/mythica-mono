@@ -1,0 +1,6 @@
+# Copier en terraform.tfvars (gitignoré) et renseigner les valeurs.
+postgres_user     = "admin"
+postgres_password = "change-me"
+postgres_db       = "mythica_db"
+postgres_port     = 22000
+redis_port        = 23000

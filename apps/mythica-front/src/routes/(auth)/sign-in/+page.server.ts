@@ -1,5 +1,4 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { env } from "$env/dynamic/public";
 import type { Actions } from "./$types";
 
 function forwardSetCookies(
@@ -59,7 +58,7 @@ export const actions: Actions = {
 			return fail(400, { error: "Email et mot de passe requis.", email });
 		}
 
-		const apiUrl = `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
+		const apiUrl = `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/api`;
 
 		let response: Response;
 		try {

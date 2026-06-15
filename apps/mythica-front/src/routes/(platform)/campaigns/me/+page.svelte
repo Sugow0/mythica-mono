@@ -6,12 +6,11 @@
 	import ShieldIcon from "@lucide/svelte/icons/shield";
 	import SwordsIcon from "@lucide/svelte/icons/swords";
 	import UserIcon from "@lucide/svelte/icons/user";
-	import UsersIcon from "@lucide/svelte/icons/users";
 	import { onMount } from "svelte";
-	import * as Avatar from "$lib/components/ui/avatar";
 	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
+	import * as Empty from "$lib/components/ui/empty";
 	import { Skeleton } from "$lib/components/ui/skeleton";
 	import * as Tabs from "$lib/components/ui/tabs";
 	import { ApiError, campaignService } from "$lib/index.js";
@@ -21,7 +20,7 @@
 
 	type Campaign = NonNullable<
 		Awaited<ReturnType<typeof campaignService.getMyCampaigns>>
-	>["campaigns"][number];
+	>["items"][number];
 
 	// State
 	let allCampaigns = $state<Campaign[]>([]);
@@ -31,10 +30,10 @@
 
 	// Derived: filter campaigns by role
 	let myCampaigns = $derived(
-		allCampaigns.filter((c) => c.creatorId === data.user?.id)
+		allCampaigns.filter((c) => c.ownerId === data.user?.id)
 	);
 	let memberCampaigns = $derived(
-		allCampaigns.filter((c) => c.creatorId !== data.user?.id)
+		allCampaigns.filter((c) => c.ownerId !== data.user?.id)
 	);
 	let displayedCampaigns = $derived(
 		activeTab === "created"
@@ -49,11 +48,8 @@
 		isLoading = true;
 		error = null;
 		try {
-			const response = await campaignService.getMyCampaigns({
-				page: 1,
-				limit: 100,
-			});
-			allCampaigns = response?.campaigns ?? [];
+			const response = await campaignService.getMyCampaigns();
+			allCampaigns = response?.items ?? [];
 		} catch (err) {
 			if (err instanceof ApiError) {
 				error = err.message;
@@ -77,11 +73,11 @@
 	// Status helpers
 	function statusLabel(status: string) {
 		switch (status) {
-			case "ACTIVE":
+			case "active":
 				return "Active";
-			case "DRAFT":
-				return "Brouillon";
-			case "ARCHIVED":
+			case "paused":
+				return "En pause";
+			case "archived":
 				return "Archivee";
 			default:
 				return status;
@@ -90,9 +86,9 @@
 
 	function statusVariant(status: string): "default" | "secondary" | "outline" {
 		switch (status) {
-			case "ACTIVE":
+			case "active":
 				return "default";
-			case "DRAFT":
+			case "paused":
 				return "secondary";
 			default:
 				return "outline";
@@ -100,8 +96,8 @@
 	}
 
 	// Visibility helpers
-	function visibilityLabel(visibility: string) {
-		return visibility === "PRIVATE" ? "Privee" : "Publique";
+	function visibilityLabel(isPublic: boolean) {
+		return isPublic ? "Publique" : "Privee";
 	}
 
 	// Load on mount
@@ -120,9 +116,9 @@
 	{#if !data.user}
 		<div class="flex flex-col items-center justify-center py-20">
 			<div
-				class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-100 dark:bg-teal-950"
+				class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-100 dark:bg-red-950"
 			>
-				<LockIcon class="h-8 w-8 text-teal-600 dark:text-teal-400" />
+				<LockIcon class="h-8 w-8 text-red-600 dark:text-red-400" />
 			</div>
 			<h3 class="text-lg font-semibold text-slate-900 dark:text-white">
 				Connexion requise
@@ -132,7 +128,7 @@
 			</p>
 			<Button
 				href="/sign-in"
-				class="mt-4 bg-teal-600 text-white hover:bg-teal-700"
+				class="mt-4 bg-red-600 text-white hover:bg-red-700"
 			>
 				Se connecter
 			</Button>
@@ -145,7 +141,7 @@
 			>
 				<div>
 					<div
-						class="mb-3 inline-flex items-center gap-2 rounded-full bg-teal-100 px-4 py-1.5 text-sm font-medium text-teal-700 dark:bg-teal-950 dark:text-teal-300"
+						class="mb-3 inline-flex items-center gap-2 rounded-full bg-red-100 px-4 py-1.5 text-sm font-medium text-red-700 dark:bg-red-950 dark:text-red-300"
 					>
 						<UserIcon class="h-4 w-4" />
 						Mon espace
@@ -162,7 +158,7 @@
 
 				<Button
 					href="/campaigns/new"
-					class="group bg-teal-600 text-white shadow-md shadow-teal-600/20 transition-all hover:bg-teal-700 hover:scale-105 hover:shadow-lg"
+					class="group bg-red-600 text-white shadow-md shadow-red-600/20 transition-all hover:bg-red-700 hover:scale-105 hover:shadow-lg"
 				>
 					<PlusIcon class="h-4 w-4" />
 					Creer une campagne
@@ -257,70 +253,72 @@
 
 			<!-- Empty state -->
 		{:else if displayedCampaigns.length === 0}
-			<div class="flex flex-col items-center justify-center py-20">
-				<div
-					class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-100 dark:bg-teal-950"
-				>
-					<SwordsIcon class="h-8 w-8 text-teal-600 dark:text-teal-400" />
-				</div>
-				<h3 class="text-lg font-semibold text-slate-900 dark:text-white">
-					{#if activeTab === "created"}
-						Aucune campagne creee
-					{:else if activeTab === "member"}
-						Aucune campagne rejointe
+			<Empty.Root class="py-20">
+				<Empty.Header>
+					<Empty.Media variant="icon">
+						<SwordsIcon class="h-6 w-6 text-red-600 dark:text-red-400" />
+					</Empty.Media>
+					<Empty.Title>
+						{#if activeTab === "created"}
+							Aucune campagne creee
+						{:else if activeTab === "member"}
+							Aucune campagne rejointe
+						{:else}
+							Aucune campagne
+						{/if}
+					</Empty.Title>
+					<Empty.Description>
+						{#if activeTab === "created"}
+							Vous n'avez pas encore cree de campagne.
+						{:else if activeTab === "member"}
+							Vous n'avez rejoint aucune campagne pour le moment.
+						{:else}
+							Creez votre premiere campagne ou rejoignez-en une !
+						{/if}
+					</Empty.Description>
+				</Empty.Header>
+				<Empty.Content>
+					{#if activeTab !== "member"}
+						<Button
+							href="/campaigns/new"
+							class="bg-red-600 text-white hover:bg-red-700"
+						>
+							<PlusIcon class="h-4 w-4" />
+							Creer une campagne
+						</Button>
 					{:else}
-						Aucune campagne
+						<Button
+							href="/campaigns"
+							class="bg-red-600 text-white hover:bg-red-700"
+						>
+							<SwordsIcon class="h-4 w-4" />
+							Explorer les campagnes
+						</Button>
 					{/if}
-				</h3>
-				<p class="mt-1 text-center text-slate-600 dark:text-muted-foreground">
-					{#if activeTab === "created"}
-						Vous n'avez pas encore cree de campagne.
-					{:else if activeTab === "member"}
-						Vous n'avez rejoint aucune campagne pour le moment.
-					{:else}
-						Creez votre premiere campagne ou rejoignez-en une !
-					{/if}
-				</p>
-				{#if activeTab !== "member"}
-					<Button
-						href="/campaigns/new"
-						class="mt-4 bg-teal-600 text-white hover:bg-teal-700"
-					>
-						<PlusIcon class="h-4 w-4" />
-						Creer une campagne
-					</Button>
-				{:else}
-					<Button
-						href="/campaigns"
-						class="mt-4 bg-teal-600 text-white hover:bg-teal-700"
-					>
-						<SwordsIcon class="h-4 w-4" />
-						Explorer les campagnes
-					</Button>
-				{/if}
-			</div>
+				</Empty.Content>
+			</Empty.Root>
 
 			<!-- Campaign grid -->
 		{:else}
 			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 				{#each displayedCampaigns as campaign (campaign.id)}
 					<Card.Root
-						class="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/5 dark:hover:shadow-teal-500/10"
+						class="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-red-500/5 dark:hover:shadow-red-500/10"
 					>
 						<!-- Campaign image / placeholder -->
 						<div
-							class="relative h-40 w-full overflow-hidden bg-gradient-to-br from-teal-500/20 to-cyan-500/20 dark:from-teal-900/40 dark:to-cyan-900/40"
+							class="relative h-40 w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800/60 dark:to-slate-900/60"
 						>
-							{#if campaign.image}
+							{#if campaign.coverUrl}
 								<img
-									src={campaign.image}
-									alt={campaign.name}
-									class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+									src={campaign.coverUrl}
+									alt={campaign.nom}
+									class="h-full w-full object-cover"
 								/>
 							{:else}
 								<div class="flex h-full w-full items-center justify-center">
 									<SwordsIcon
-										class="h-12 w-12 text-teal-500/40 dark:text-teal-400/30"
+										class="h-12 w-12 text-slate-400/50 dark:text-slate-500/40"
 									/>
 								</div>
 							{/if}
@@ -329,28 +327,28 @@
 								<Badge variant={statusVariant(campaign.status)} class="text-xs">
 									{statusLabel(campaign.status)}
 								</Badge>
-								{#if campaign.visibility === "PRIVATE"}
+								{#if !campaign.isPublic}
 									<Badge
 										variant="outline"
-										class="bg-stone-900/60 text-white border-stone-700 text-xs backdrop-blur-sm"
+										class="bg-slate-900/60 text-white border-slate-700 text-xs backdrop-blur-sm"
 									>
 										<LockIcon class="mr-1 h-3 w-3" />
-										{visibilityLabel(campaign.visibility)}
+										{visibilityLabel(campaign.isPublic)}
 									</Badge>
 								{/if}
 							</div>
 							<!-- Role indicator -->
 							<div class="absolute top-3 left-3">
-								{#if campaign.creatorId === data.user?.id}
+								{#if campaign.ownerId === data.user?.id}
 									<Badge
-										class="bg-amber-500/90 text-white border-amber-600 text-xs backdrop-blur-sm"
+										class="bg-red-500/90 text-white border-red-600 text-xs backdrop-blur-sm"
 									>
 										<CrownIcon class="mr-1 h-3 w-3" />
 										Createur
 									</Badge>
 								{:else}
 									<Badge
-										class="bg-teal-500/90 text-white border-teal-600 text-xs backdrop-blur-sm"
+										class="bg-red-500/90 text-white border-red-600 text-xs backdrop-blur-sm"
 									>
 										<ShieldIcon class="mr-1 h-3 w-3" />
 										Membre
@@ -363,29 +361,8 @@
 							<Card.Title
 								class="text-lg font-bold text-slate-900 dark:text-white line-clamp-1"
 							>
-								{campaign.name}
+								{campaign.nom}
 							</Card.Title>
-							{#if campaign.creator}
-								<div
-									class="flex items-center gap-2 text-sm text-slate-500 dark:text-muted-foreground"
-								>
-									<Avatar.Root class="h-5 w-5">
-										{#if campaign.creator.avatar}
-											<Avatar.Image
-												src={campaign.creator.avatar}
-												alt={campaign.creator.pseudo}
-											/>
-										{/if}
-										<Avatar.Fallback
-											class="bg-gradient-to-br from-teal-500 to-cyan-600 text-[10px] font-bold text-white"
-										>
-											{campaign.creator.pseudo?.slice(0, 2).toUpperCase() ??
-												"??"}
-										</Avatar.Fallback>
-									</Avatar.Root>
-									<span>{campaign.creator.pseudo}</span>
-								</div>
-							{/if}
 						</Card.Header>
 
 						<Card.Content class="pb-2">
@@ -405,15 +382,11 @@
 						</Card.Content>
 
 						<Card.Footer
-							class="flex items-center justify-between border-t border-stone-100 pt-3 dark:border-border/40"
+							class="flex items-center justify-between border-t border-slate-100 pt-3 dark:border-border/40"
 						>
 							<div
 								class="flex items-center gap-4 text-xs text-slate-500 dark:text-muted-foreground"
 							>
-								<span class="flex items-center gap-1">
-									<UsersIcon class="h-3.5 w-3.5" />
-									{campaign._count?.members ?? 0}
-								</span>
 								<span class="flex items-center gap-1">
 									<CalendarIcon class="h-3.5 w-3.5" />
 									{formatDate(campaign.createdAt)}
@@ -423,7 +396,7 @@
 								variant="ghost"
 								size="sm"
 								href="/campaigns/{campaign.id}"
-								class="text-teal-600 hover:text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-950"
+								class="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
 							>
 								Voir
 							</Button>

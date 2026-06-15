@@ -1,6 +1,6 @@
 {
 	"name": "@mythica/api",
-	"version": "1.0.50",
+	"version": "1.1.0",
 	"scripts": {
 		"dev": "bun --preload ./src/env.ts --watch src/index.ts",
 		"start": "bun --preload ./src/env.ts src/index.ts",
@@ -8,7 +8,9 @@
 		"test:watch": "bun test --watch",
 		"test:coverage": "bun test --coverage",
 		"lint": "biome check --write",
-		"lint:ci": "biome ci"
+		"lint:ci": "biome ci",
+		"db:generate": "prisma generate",
+		"db:push": "prisma db push"
 	},
 	"dependencies": {
 		"@bogeychan/elysia-logger": "^0.1.10",

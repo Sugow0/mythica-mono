@@ -20,7 +20,7 @@ jobs:
 
       - name: Extraire le ticket ID et mettre à jour Notion
         run: |
-          BRANCH="${{ github.event.ref }}"
+          BRANCH="$REF"
           TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
           if [ -z "$TICKET" ]; then
             echo "ℹ️  Branche sans ticket ID → aucune action"
@@ -28,6 +28,7 @@ jobs:
           fi
           bun .github/scripts/notion-update-status.ts "$TICKET" "En cours"
         env:
+          REF: ${{ github.event.ref }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_FEATURES_DATABASE_ID: ${{ secrets.NOTION_FEATURES_DATABASE_ID }}
           NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}
@@ -45,7 +46,7 @@ jobs:
 
       - name: Extraire le ticket ID et mettre à jour Notion
         run: |
-          BRANCH="${{ github.event.pull_request.head.ref }}"
+          BRANCH="$HEAD_REF"
           TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
           if [ -z "$TICKET" ]; then
             echo "ℹ️  Branche sans ticket ID → aucune action"
@@ -53,6 +54,7 @@ jobs:
           fi
           bun .github/scripts/notion-update-status.ts "$TICKET" "Review"
         env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_FEATURES_DATABASE_ID: ${{ secrets.NOTION_FEATURES_DATABASE_ID }}
           NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}
@@ -70,7 +72,7 @@ jobs:
 
       - name: Extraire le ticket ID et mettre à jour Notion
         run: |
-          BRANCH="${{ github.event.pull_request.head.ref }}"
+          BRANCH="$HEAD_REF"
           TICKET=$(echo "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1 || true)
           if [ -z "$TICKET" ]; then
             echo "ℹ️  Branche sans ticket ID → aucune action"
@@ -78,6 +80,7 @@ jobs:
           fi
           bun .github/scripts/notion-update-status.ts "$TICKET" "Staging"
         env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_FEATURES_DATABASE_ID: ${{ secrets.NOTION_FEATURES_DATABASE_ID }}
           NOTION_STATUS_PROPERTY: ${{ secrets.NOTION_STATUS_PROPERTY }}

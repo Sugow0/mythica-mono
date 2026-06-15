@@ -1,382 +1,321 @@
-import { env } from "$env/dynamic/public";
-import { ApiClient } from "../api-client";
-import type { paths } from "../generated/platform";
+import { GameplayApiClient } from "../api-client-gameplay";
+import type { paths } from "../generated/gameplay";
+import { ApiError, type ApiErrorResponse } from "../types";
 
-/**
- * Campaign data types
- */
 export interface CreateCampaignData {
-	name: string;
-	description?: string;
-	visibility?: "PUBLIC" | "PRIVATE";
+	nom: string;
 	gameSystemId: string;
+	description?: string;
+	isPublic?: boolean;
+	tags?: string[];
 }
 
 export interface UpdateCampaignData {
-	name?: string;
+	nom?: string;
 	description?: string;
-	visibility?: "PUBLIC" | "PRIVATE";
+	isPublic?: boolean;
+	status?: "active" | "paused" | "archived";
+	tags?: string[];
 }
 
+export type MemberRole = "gm" | "player" | "spectator";
+
 export interface ScheduleSessionData {
-	title: string;
-	description?: string;
-	scheduledAt: string;
-	duration: number;
+	nom: string;
+	scheduledAt?: string;
 }
 
 export interface UpdateSessionData {
-	title?: string;
-	description?: string;
+	nom?: string;
+	status?: "scheduled" | "active" | "paused" | "ended";
 	scheduledAt?: string;
-	duration?: number;
 }
 
 export interface PaginationParams {
 	page?: number;
 	limit?: number;
+	search?: string;
 }
 
 /**
- * Campaign Service
- * Handles all campaign-related API calls including:
- * - Campaign CRUD operations
- * - Membership management (invite, join, leave, kick)
- * - Campaign administration (archive, promote, demote)
- * - Session scheduling and management
+ * Campaign Service — service gameplay.
+ * Gère les campagnes, leurs membres et leurs sessions.
  */
-export class CampaignService extends ApiClient {
+export class CampaignService extends GameplayApiClient {
 	private client;
 
 	constructor(baseUrl?: string) {
-		super(baseUrl ?? `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`);
+		const apiUrl = (
+			import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"
+		).replace(/\/+$/, "");
+		super(baseUrl ?? `${apiUrl}/gameplay`);
 		this.client = this.createClient<paths>();
 	}
 
-	// ============================================
-	// Campaigns - CRUD
-	// ============================================
+	// ==================== Campagnes ====================
 
-	/**
-	 * List public campaigns.
-	 */
+	/** Liste paginée des campagnes publiques. */
 	async getCampaigns(params?: PaginationParams) {
-		const { data: response, error } = await this.client.GET("/campaigns/", {
+		const { data, error } = await this.client.GET("/campaigns/", {
 			params: { query: params },
 		});
-
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Get campaigns the current user is part of.
-	 */
-	async getMyCampaigns(params?: PaginationParams) {
-		const { data: response, error } = await this.client.GET("/campaigns/my", {
-			params: { query: params },
-		});
-
-		if (error) throw error;
-		return response;
-	}
-
-	/**
-	 * Get archived campaigns.
-	 */
-	async getArchivedCampaigns(params?: PaginationParams) {
-		const { data: response, error } = await this.client.GET(
-			"/campaigns/archived",
-			{
-				params: { query: params },
-			}
-		);
-
-		if (error) throw error;
-		return response;
-	}
-
-	/**
-	 * Search campaigns by name.
-	 */
+	/** Recherche de campagnes publiques par nom. */
 	async searchCampaigns(search: string, params?: PaginationParams) {
-		const { data: response, error } = await this.client.GET(
-			"/campaigns/search",
-			{
-				params: { query: { search, ...params } },
-			}
-		);
-
+		const { data, error } = await this.client.GET("/campaigns/", {
+			params: { query: { search, ...params } },
+		});
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Get a campaign by ID.
-	 */
+	/** Campagnes dont l'utilisateur courant est membre ou propriétaire. */
+	async getMyCampaigns() {
+		const { data, error } = await this.client.GET("/campaigns/mine", {});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Détails d'une campagne (avec ses membres). */
 	async getCampaignById(id: string) {
-		const { data: response, error } = await this.client.GET("/campaigns/{id}", {
+		const { data, error } = await this.client.GET("/campaigns/{id}", {
 			params: { path: { id } },
 		});
-
 		if (error) throw error;
-		return response;
+		return data;
+	}
+
+	/** Créer une campagne (l'auteur devient MJ). */
+	async createCampaign(body: CreateCampaignData) {
+		const { data, error } = await this.client.POST("/campaigns/", { body });
+		if (error) throw error;
+		return data;
 	}
 
 	/**
-	 * Create a new campaign.
+	 * Téléverser l'image de couverture d'une campagne (propriétaire).
+	 * Retourne l'identifiant du fichier et une URL présignée d'affichage.
 	 */
-	async createCampaign(data: CreateCampaignData) {
-		const { data: response, error } = await this.client.POST("/campaigns/", {
-			body: data,
+	async uploadCoverImage(campaignId: string, file: File) {
+		const formData = new FormData();
+		formData.set("cover", file);
+		const res = await fetch(`${this.baseUrl}/campaigns/${campaignId}/cover`, {
+			method: "POST",
+			credentials: "include",
+			body: formData,
 		});
-
-		if (error) throw error;
-		return response;
+		if (!res.ok) {
+			let body: ApiErrorResponse | undefined;
+			try {
+				body = await res.clone().json();
+			} catch {
+				// réponse non-JSON
+			}
+			throw new ApiError(
+				body?.error ?? `Echec de l'upload (${res.status})`,
+				res.status,
+				body
+			);
+		}
+		return (await res.json()) as {
+			success: true;
+			fileId: string;
+			coverUrl: string | null;
+		};
 	}
 
-	/**
-	 * Update a campaign.
-	 */
-	async updateCampaign(id: string, data: UpdateCampaignData) {
-		const { data: response, error } = await this.client.PUT("/campaigns/{id}", {
+	/** Modifier une campagne (propriétaire). */
+	async updateCampaign(id: string, body: UpdateCampaignData) {
+		const { data, error } = await this.client.PATCH("/campaigns/{id}", {
 			params: { path: { id } },
-			body: data,
+			body,
 		});
-
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Delete a campaign.
-	 */
+	/** Supprimer une campagne (propriétaire, soft delete). */
 	async deleteCampaign(id: string) {
-		const { data: response, error } = await this.client.DELETE(
-			"/campaigns/{id}",
-			{
-				params: { path: { id } },
-			}
-		);
-
+		const { data, error } = await this.client.DELETE("/campaigns/{id}", {
+			params: { path: { id } },
+		});
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	// ============================================
-	// Campaigns - Membership
-	// ============================================
+	// ==================== Chat ====================
 
-	/**
-	 * Invite a user to a campaign.
-	 */
-	async inviteUser(campaignId: string, userId: string) {
-		const { data: response, error } = await this.client.POST(
-			"/campaigns/{id}/invite",
-			{
-				params: { path: { id: campaignId } },
-				body: { userId },
-			}
-		);
-
+	/** Historique récent du chat d'une campagne (membre). */
+	async getMessages(id: string) {
+		const { data, error } = await this.client.GET("/campaigns/{id}/messages", {
+			params: { path: { id } },
+		});
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Join a public campaign.
-	 */
-	async join(id: string) {
-		const { data: response, error } = await this.client.PUT(
-			"/campaigns/{id}/join",
-			{
-				params: { path: { id } },
-			}
-		);
-
+	/** Envoyer un message dans le chat d'une campagne (membre). */
+	async postMessage(id: string, content: string) {
+		const { data, error } = await this.client.POST("/campaigns/{id}/messages", {
+			params: { path: { id } },
+			body: { content },
+		});
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Leave a campaign.
-	 */
+	/** URL du flux SSE temps réel du chat (à consommer via EventSource). */
+	messagesStreamUrl(id: string): string {
+		return `${this.baseUrl}/campaigns/${id}/messages/stream`;
+	}
+
+	// ==================== Demandes d'accès ====================
+
+	/** Demander l'accès à une campagne publique (validée par le MJ). */
+	async requestJoin(id: string) {
+		const { data, error } = await this.client.POST("/campaigns/{id}/join", {
+			params: { path: { id } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Demandes d'accès en attente (MJ). */
+	async getJoinRequests(id: string) {
+		const { data, error } = await this.client.GET(
+			"/campaigns/{id}/join-requests",
+			{ params: { path: { id } } }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Accepter une demande d'accès (MJ). */
+	async acceptJoinRequest(id: string, requestId: string) {
+		const { data, error } = await this.client.POST(
+			"/campaigns/{id}/join-requests/{requestId}/accept",
+			{ params: { path: { id, requestId } } }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Refuser une demande d'accès (MJ). */
+	async declineJoinRequest(id: string, requestId: string) {
+		const { data, error } = await this.client.POST(
+			"/campaigns/{id}/join-requests/{requestId}/decline",
+			{ params: { path: { id, requestId } } }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	// ==================== Membres ====================
+
+	/** Quitter une campagne. */
 	async leave(id: string) {
-		const { data: response, error } = await this.client.PUT(
-			"/campaigns/{id}/leave",
-			{
-				params: { path: { id } },
-			}
-		);
-
+		const { data, error } = await this.client.DELETE("/campaigns/{id}/leave", {
+			params: { path: { id } },
+		});
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Kick a user from a campaign.
-	 */
-	async kickUser(campaignId: string, userId: string) {
-		const { data: response, error } = await this.client.PUT(
-			"/campaigns/{id}/kick/{userId}",
-			{
-				params: { path: { id: campaignId, userId } },
-			}
+	/** Changer le rôle d'un membre (propriétaire). */
+	async setMemberRole(id: string, userId: string, role: MemberRole) {
+		const { data, error } = await this.client.PUT(
+			"/campaigns/{id}/members/{userId}/role",
+			{ params: { path: { id, userId } }, body: { role } }
 		);
-
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Accept a campaign invitation (for pending invites).
-	 */
-	async acceptInvite(id: string) {
-		const { data: response, error } = await this.client.PUT(
-			"/campaigns/{id}/accept",
-			{
-				params: { path: { id } },
-			}
+	/** Expulser un membre (propriétaire). */
+	async kickMember(id: string, userId: string) {
+		const { data, error } = await this.client.DELETE(
+			"/campaigns/{id}/members/{userId}",
+			{ params: { path: { id, userId } } }
 		);
-
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	// ============================================
-	// Campaigns - Management
-	// ============================================
+	// ==================== Sessions ====================
 
-	/**
-	 * Archive a campaign.
-	 */
-	async archive(id: string) {
-		const { data: response, error } = await this.client.PUT(
-			"/campaigns/{id}/archive",
-			{
-				params: { path: { id } },
-			}
-		);
-
+	/** Liste des sessions d'une campagne (membre). */
+	async getSessions(id: string) {
+		const { data, error } = await this.client.GET("/campaigns/{id}/sessions", {
+			params: { path: { id } },
+		});
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Promote a member to GM.
-	 */
-	async promoteMember(campaignId: string, userId: string) {
-		const { data: response, error } = await this.client.PUT(
-			"/campaigns/{id}/promote/{userId}",
-			{
-				params: { path: { id: campaignId, userId } },
-			}
-		);
-
+	/** Créer une session (MJ/propriétaire). */
+	async createSession(id: string, body: ScheduleSessionData) {
+		const { data, error } = await this.client.POST("/campaigns/{id}/sessions", {
+			params: { path: { id } },
+			body,
+		});
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Demote a GM to member.
-	 */
-	async demoteMember(campaignId: string, userId: string) {
-		const { data: response, error } = await this.client.PUT(
-			"/campaigns/{id}/demote/{userId}",
-			{
-				params: { path: { id: campaignId, userId } },
-			}
+	/** Modifier une session (MJ/propriétaire). */
+	async updateSession(id: string, sessionId: string, body: UpdateSessionData) {
+		const { data, error } = await this.client.PUT(
+			"/campaigns/{id}/sessions/{sessionId}",
+			{ params: { path: { id, sessionId } }, body }
 		);
-
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	// ============================================
-	// Campaigns - Sessions
-	// ============================================
-
-	/**
-	 * Schedule a new session for a campaign.
-	 */
-	async scheduleSession(campaignId: string, data: ScheduleSessionData) {
-		const { data: response, error } = await this.client.POST(
-			"/campaigns/{id}/schedule",
-			{
-				params: { path: { id: campaignId } },
-				body: data,
-			}
+	/** Supprimer une session (MJ/propriétaire). */
+	async deleteSession(id: string, sessionId: string) {
+		const { data, error } = await this.client.DELETE(
+			"/campaigns/{id}/sessions/{sessionId}",
+			{ params: { path: { id, sessionId } } }
 		);
-
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Update a scheduled session.
-	 */
-	async updateSession(
-		campaignId: string,
-		sessionId: string,
-		data: UpdateSessionData
-	) {
-		const { data: response, error } = await this.client.POST(
-			"/campaigns/{id}/schedule/{sessionId}",
-			{
-				params: { path: { id: campaignId, sessionId } },
-				body: data,
-			}
-		);
+	// ==================== Invitations ====================
 
+	/** Créer un lien d'invitation (MJ/propriétaire). Retourne le token. */
+	async createInvite(id: string) {
+		const { data, error } = await this.client.POST("/campaigns/{id}/invites", {
+			params: { path: { id } },
+		});
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Accept a session invitation.
-	 */
-	async acceptSession(campaignId: string, sessionId: string) {
-		const { data: response, error } = await this.client.POST(
-			"/campaigns/{id}/schedule/{sessionId}/accept",
-			{
-				params: { path: { id: campaignId, sessionId } },
-			}
+	/** Prévisualiser une invitation à partir de son token (sans rejoindre). */
+	async getInvite(token: string) {
+		const { data, error } = await this.client.GET(
+			"/campaigns/invites/{token}",
+			{ params: { path: { token } } }
 		);
-
 		if (error) throw error;
-		return response;
+		return data;
 	}
 
-	/**
-	 * Mark a session as completed.
-	 */
-	async completeSession(campaignId: string, sessionId: string) {
-		const { data: response, error } = await this.client.POST(
-			"/campaigns/{id}/schedule/{sessionId}/complete",
-			{
-				params: { path: { id: campaignId, sessionId } },
-			}
+	/** Rejoindre une campagne via un token d'invitation. */
+	async acceptInvite(token: string) {
+		const { data, error } = await this.client.POST(
+			"/campaigns/invites/{token}/accept",
+			{ params: { path: { token } } }
 		);
-
 		if (error) throw error;
-		return response;
-	}
-
-	/**
-	 * Cancel a scheduled session.
-	 */
-	async cancelSession(campaignId: string, sessionId: string) {
-		const { data: response, error } = await this.client.POST(
-			"/campaigns/{id}/schedule/{sessionId}/cancel",
-			{
-				params: { path: { id: campaignId, sessionId } },
-			}
-		);
-
-		if (error) throw error;
-		return response;
+		return data;
 	}
 }
 
-/** Singleton instance of the Campaign Service */
+/** Singleton du service campagnes. */
 export const campaignService = new CampaignService();

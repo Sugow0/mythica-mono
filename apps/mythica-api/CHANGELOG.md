@@ -1,0 +1,25 @@
+# @mythica/api
+
+## 1.1.0
+
+### Minor Changes
+
+- 725d7de: [FEAT-1] FEAT-1
+
+  _Généré automatiquement le 2026-04-20T19:39:35.876Z_
+
+- d215a26: [FEAT-19] [CAMPAIGN] Modèle DB Campagne et CampaignMember (Prisma)
+
+  _Généré automatiquement le 2026-04-28T07:53:22.900Z_
+
+- ca1b3dc: [FEAT-16] [AUTH] Page de profil utilisateur (avatar, pseudo, bio)
+
+  _Généré automatiquement le 2026-06-12T11:09:54.566Z_
+
+- a0eb1fa: [FEAT-18] [AUTH] Page de réinitialisation de mot de passe
+
+  _Généré automatiquement le 2026-06-12T12:08:04.236Z_
+
+- 3e332bd: [CAMPAIGN] Pseudos : miroir utilisateur enrichi + affichage (membres, chat)
+
+  _Généré automatiquement le 2026-06-13T15:31:25.005Z_

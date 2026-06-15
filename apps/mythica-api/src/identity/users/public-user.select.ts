@@ -10,6 +10,7 @@ export const publicUserSelect = {
 	lastName: true,
 	pseudo: true,
 	avatar: true,
+	bio: true,
 	emailVerified: true,
 	createdAt: true,
 } as const;

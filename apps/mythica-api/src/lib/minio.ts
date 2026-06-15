@@ -1,6 +1,11 @@
 import * as Minio from "minio";
 
-const endpoint = process.env.MINIO_ENDPOINT ?? "http://localhost:34000";
+// Stockage objet S3-compatible (RustFS). On lit en priorité les variables
+// RUSTFS_*, avec repli sur MINIO_* pour rétrocompatibilité.
+const endpoint =
+	process.env.RUSTFS_ENDPOINT ??
+	process.env.MINIO_ENDPOINT ??
+	"http://localhost:24000";
 const url = new URL(endpoint);
 const useSSL = url.protocol === "https:";
 const port = url.port ? Number.parseInt(url.port, 10) : useSSL ? 443 : 80;
@@ -9,11 +14,16 @@ export const minioClient = new Minio.Client({
 	endPoint: url.hostname,
 	port,
 	useSSL,
-	accessKey: process.env.MINIO_USER_ROOT ?? "admin",
-	secretKey: process.env.MINIO_PASSWORD_ROOT ?? "password123!",
+	accessKey:
+		process.env.RUSTFS_USER_ROOT ?? process.env.MINIO_USER_ROOT ?? "admin",
+	secretKey:
+		process.env.RUSTFS_PASSWORD_ROOT ??
+		process.env.MINIO_PASSWORD_ROOT ??
+		"password123!",
 });
 
-export const BUCKET_USERS = process.env.MINIO_BUCKET_USERS ?? "users";
+export const BUCKET_USERS =
+	process.env.RUSTFS_BUCKET_USERS ?? process.env.MINIO_BUCKET_USERS ?? "users";
 
 /** Vérifie que le bucket existe et le crée si besoin. */
 export async function ensureBucket(bucket: string): Promise<void> {

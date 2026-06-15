@@ -1,0 +1,13 @@
+# Configuration gitleaks — étend les règles par défaut et exclut les fichiers
+# dont les « secrets » sont chiffrés par dotenvx (donc sûrs à committer).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fichiers exclus du scan de secrets"
+paths = [
+  '''bun\.lock''',
+  '''.*\.env$''',
+  '''.*\.env\.[^/]+$''',
+  '''.*/config/.*\.env$''',
+]

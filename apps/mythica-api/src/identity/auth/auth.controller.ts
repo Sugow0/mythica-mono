@@ -1,6 +1,11 @@
 import { Elysia, t } from "elysia";
 import { ErrorResponse, SuccessMessageResponse } from "../../lib/schemas";
 import { getSessionFromRequest } from "../../lib/session";
+import {
+	type ForgotPasswordBody,
+	forgotPasswordRouteSchema,
+} from "./commands/forgot-password/forgot-password.dto";
+import { forgotPasswordHandler } from "./commands/forgot-password/forgot-password.handler";
 import { type LoginBody, loginRouteSchema } from "./commands/login/login.dto";
 import { loginHandler } from "./commands/login/login.handler";
 import { login2FaHandler } from "./commands/login/login-2fa.handler";
@@ -11,6 +16,11 @@ import {
 } from "./commands/register/register.dto";
 import { registerHandler } from "./commands/register/register.handler";
 import { resendVerificationHandler } from "./commands/resend-verification/resend-verification.handler";
+import {
+	type ResetPasswordBody,
+	resetPasswordRouteSchema,
+} from "./commands/reset-password/reset-password.dto";
+import { resetPasswordHandler } from "./commands/reset-password/reset-password.handler";
 import { confirmTwoFaHandler } from "./commands/two-fa/confirm-two-fa.handler";
 import { disableTwoFaHandler } from "./commands/two-fa/disable-two-fa.handler";
 import { setupTwoFaHandler } from "./commands/two-fa/setup-two-fa.handler";
@@ -75,6 +85,31 @@ export const authController = new Elysia()
 				description: "Valide l'adresse email avec le token reçu par email",
 			},
 		},
+	)
+	.post(
+		"/forgot-password",
+		async ({ body }) => {
+			await forgotPasswordHandler(body as ForgotPasswordBody);
+			// Réponse volontairement identique que le compte existe ou non.
+			return {
+				success: true as const,
+				message:
+					"Si un compte correspond, un email de réinitialisation a été envoyé.",
+			};
+		},
+		forgotPasswordRouteSchema,
+	)
+	.post(
+		"/reset-password",
+		async ({ body, set }) => {
+			const result = await resetPasswordHandler(body as ResetPasswordBody);
+			if (!result.success) {
+				set.status = 400;
+				return { success: false as const, error: result.error };
+			}
+			return { success: true as const, message: "Mot de passe réinitialisé." };
+		},
+		resetPasswordRouteSchema,
 	)
 	.post(
 		"/resend-verification",

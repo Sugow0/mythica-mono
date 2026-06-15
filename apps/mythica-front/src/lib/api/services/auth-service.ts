@@ -1,4 +1,3 @@
-import { env } from "$env/dynamic/public";
 import { ApiClient } from "../api-client";
 import type { paths } from "../generated/platform";
 
@@ -48,7 +47,10 @@ export class AuthService extends ApiClient {
 	private client;
 
 	constructor(baseUrl?: string) {
-		super(baseUrl ?? `${env.PUBLIC_API_URL ?? "http://localhost:2100"}/api`);
+		super(
+			baseUrl ??
+				`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/api`
+		);
 		this.client = this.createClient<paths>();
 	}
 
@@ -95,6 +97,37 @@ export class AuthService extends ApiClient {
 			"/identity/resend-verification",
 			{
 				body: { email },
+			}
+		);
+
+		if (error) throw error;
+		return response;
+	}
+
+	/**
+	 * Request a password reset link by email.
+	 * Always resolves (same response whether the account exists or not).
+	 */
+	async forgotPassword(email: string) {
+		const { data: response, error } = await this.client.POST(
+			"/identity/forgot-password",
+			{
+				body: { email },
+			}
+		);
+
+		if (error) throw error;
+		return response;
+	}
+
+	/**
+	 * Reset the password using a token received by email.
+	 */
+	async resetPassword(token: string, newPassword: string) {
+		const { data: response, error } = await this.client.POST(
+			"/identity/reset-password",
+			{
+				body: { token, newPassword },
 			}
 		);
 
