@@ -93,7 +93,13 @@ export function createPresenceTracker(opts: PresenceTrackerOptions) {
 		return sessions.get(sessionId)?.has(userId) ?? false;
 	}
 
-	return { connect, disconnect, isPresent };
+	/** Identifiants des utilisateurs présents dans la session. */
+	function participants(sessionId: string): string[] {
+		const users = sessions.get(sessionId);
+		return users ? [...users.keys()] : [];
+	}
+
+	return { connect, disconnect, isPresent, participants };
 }
 
 /** Tracker de présence partagé, diffusant via les rooms WebSocket. */
