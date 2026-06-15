@@ -285,6 +285,31 @@ export class CampaignService extends GameplayApiClient {
 		return data;
 	}
 
+	// ==================== Salle d'attente (lobby) ====================
+
+	/** Détail d'une session par son id (membre de la campagne). */
+	async getSession(sessionId: string) {
+		const { data, error } = await this.client.GET("/sessions/{id}", {
+			params: { path: { id: sessionId } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Lancer une session depuis la salle d'attente (MJ/propriétaire). */
+	async launchSession(sessionId: string) {
+		const { data, error } = await this.client.POST("/sessions/{id}/launch", {
+			params: { path: { id: sessionId } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** URL du flux SSE de présence d'une session (à consommer via EventSource). */
+	presenceStreamUrl(sessionId: string): string {
+		return `${this.baseUrl}/sessions/${sessionId}/presence/stream`;
+	}
+
 	// ==================== Invitations ====================
 
 	/** Créer un lien d'invitation (MJ/propriétaire). Retourne le token. */
