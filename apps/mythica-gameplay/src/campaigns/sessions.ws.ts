@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
 import { logger } from "../logger";
 import { resolveSessionAccess } from "./session-access";
+import { sessionPresence } from "./session-presence-ws";
 import { sessionRooms } from "./session-rooms";
 
 /**
@@ -32,8 +33,11 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 	async open(ws) {
 		const { id } = ws.data.params;
 		await sessionRooms.joinRoom(id, ws);
-		logger.info({ sessionId: id }, "WS session ouverte");
 		ws.send(JSON.stringify({ type: "connected", sessionId: id }));
+		// Diffuse PRESENCE_JOIN à la room (sauf reconnexion en délai de grâce).
+		const userId = ws.data.currentUser?.id;
+		if (userId) sessionPresence.connect(id, userId);
+		logger.info({ sessionId: id, userId }, "WS session ouverte");
 	},
 
 	async message(ws, message) {
@@ -47,6 +51,9 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 	async close(ws) {
 		const { id } = ws.data.params;
 		await sessionRooms.leaveRoom(id, ws);
-		logger.info({ sessionId: id }, "WS session fermée");
+		// Démarre le délai de grâce avant d'émettre PRESENCE_LEAVE.
+		const userId = ws.data.currentUser?.id;
+		if (userId) sessionPresence.disconnect(id, userId);
+		logger.info({ sessionId: id, userId }, "WS session fermée");
 	},
 });
