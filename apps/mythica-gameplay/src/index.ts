@@ -3,6 +3,7 @@ import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { authContext } from "./auth/context";
 import { campaignsController } from "./campaigns/campaigns.controller";
+import { sessionsController } from "./campaigns/sessions.controller";
 import { env } from "./env";
 import { startUserSync } from "./events/user-sync";
 import { gameSystemsController } from "./game-systems/game-systems.controller";
@@ -26,6 +27,7 @@ const app = new Elysia()
 				tags: [
 					{ name: "GameSystems", description: "Systèmes de jeu" },
 					{ name: "Campaigns", description: "Campagnes, membres et sessions" },
+					{ name: "Sessions", description: "Sessions de jeu et présence" },
 				],
 			},
 		}),
@@ -34,6 +36,7 @@ const app = new Elysia()
 	.get("/", () => "Hello Elysia")
 	.use(gameSystemsController)
 	.use(campaignsController)
+	.use(sessionsController)
 	.listen(env.PORT);
 
 logger.info(
