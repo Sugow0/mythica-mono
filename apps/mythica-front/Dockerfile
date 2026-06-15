@@ -17,7 +17,7 @@ COPY apps/mythica-front/package.json ./package.json
 COPY apps/mythica-front/bun.lock ./bun.lock
 RUN bun install --frozen-lockfile --production
 
-FROM node:22-alpine AS runner
+FROM node:26-alpine AS runner
 WORKDIR /app
 COPY --from=builder /app/apps/mythica-front/build ./build
 COPY --from=prod-deps /app/node_modules ./node_modules

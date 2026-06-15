@@ -19,7 +19,7 @@
     "db:push": "bun run --filter '*' db:push"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.0",
+    "@biomejs/biome": "2.5.0",
     "@changesets/cli": "^2.31.0",
     "lefthook": "^2.1.9"
   },

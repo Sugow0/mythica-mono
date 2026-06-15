@@ -3,6 +3,7 @@
 	import CalendarIcon from "@lucide/svelte/icons/calendar";
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check-big";
 	import ClockIcon from "@lucide/svelte/icons/clock";
+	import DoorOpenIcon from "@lucide/svelte/icons/door-open";
 	import GlobeIcon from "@lucide/svelte/icons/globe";
 	import ImageIcon from "@lucide/svelte/icons/image";
 	import LinkIcon from "@lucide/svelte/icons/link";
@@ -851,8 +852,17 @@
 									</span>
 								{/if}
 							</div>
-							{#if isGm}
-								<div class="flex shrink-0 items-center gap-1.5">
+							<div class="flex shrink-0 items-center gap-1.5">
+								{#if kind !== "past"}
+									<Button
+										size="sm"
+										variant="outline"
+										href={`/sessions/${session.id}/lobby`}
+									>
+										<DoorOpenIcon class="h-3.5 w-3.5" />Salle d'attente
+									</Button>
+								{/if}
+								{#if isGm}
 									{#if kind === "upcoming"}
 										<Button
 											size="sm"
@@ -881,8 +891,8 @@
 									>
 										<Trash2Icon class="h-4 w-4" />
 									</button>
-								</div>
-							{/if}
+								{/if}
+							</div>
 						</div>
 					{/snippet}
 
