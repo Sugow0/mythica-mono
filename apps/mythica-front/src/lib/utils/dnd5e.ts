@@ -118,3 +118,21 @@ export function adjustHp(
 	}
 	return { current: Math.max(0, state.current - damage), temp };
 }
+
+export type InventoryItem = {
+	id: string;
+	name: string;
+	quantity: number;
+	weight: number;
+	equipped: boolean;
+};
+
+/** Charge totale portée : somme des (quantité × poids unitaire). */
+export function totalWeight(
+	items: { quantity: number; weight: number }[]
+): number {
+	return items.reduce(
+		(sum, item) => sum + (item.quantity || 0) * (item.weight || 0),
+		0
+	);
+}

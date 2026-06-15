@@ -9,6 +9,7 @@ import {
 	proficiencyBonusForLevel,
 	rollD20,
 	skillBonus,
+	totalWeight,
 } from "./dnd5e";
 
 describe("DND5E_ABILITIES", () => {
@@ -126,5 +127,19 @@ describe("adjustHp", () => {
 	it("ne soigne pas les PV temporaires", () => {
 		const s = { current: 20, temp: 5, max: 30 };
 		expect(adjustHp(s, 4)).toEqual({ current: 24, temp: 5 });
+	});
+});
+
+describe("totalWeight", () => {
+	it("somme les quantités × poids", () => {
+		expect(
+			totalWeight([
+				{ quantity: 2, weight: 3 },
+				{ quantity: 1, weight: 0.5 },
+			])
+		).toBe(6.5);
+	});
+	it("retourne 0 pour un inventaire vide", () => {
+		expect(totalWeight([])).toBe(0);
 	});
 });
