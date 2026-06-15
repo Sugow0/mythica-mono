@@ -12,6 +12,25 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+    # Majors bloqués : ces montées cassent le toolchain et exigent une
+    # adaptation manuelle du code (à faire dans une PR dédiée, pas en auto).
+    ignore:
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@lucide/svelte"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "bits-ui"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
 
   # Actions GitHub épinglées en SHA (maintient les pins à jour)
   - package-ecosystem: "github-actions"
