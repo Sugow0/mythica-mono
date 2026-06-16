@@ -1,5 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
+import { DND5E_CHARACTER_SHEET_PROPERTIES } from "../src/game-systems/dnd5e-properties";
 import { OFFICIAL_GAME_SYSTEMS } from "../src/game-systems/official-systems";
 
 const connectionString = process.env.DATABASE_URL;
@@ -40,6 +41,31 @@ async function main() {
 			},
 		});
 		console.log(`✔ game system seedé : ${s.slug}`);
+	}
+
+	// Catalogue des propriétés de fiche D&D 5e (indépendant d'un système ;
+	// le mapping système ↔ propriété est traité dans FEAT-160).
+	for (const p of DND5E_CHARACTER_SHEET_PROPERTIES) {
+		await prisma.characterSheetProperty.upsert({
+			where: { key: p.key },
+			create: {
+				id: p.id,
+				key: p.key,
+				label: p.label,
+				type: p.type,
+				defaultValue: p.defaultValue ?? null,
+				options: p.options ?? undefined,
+				description: p.description ?? null,
+			},
+			update: {
+				label: p.label,
+				type: p.type,
+				defaultValue: p.defaultValue ?? null,
+				options: p.options ?? undefined,
+				description: p.description ?? null,
+			},
+		});
+		console.log(`✔ propriété de fiche seedée : ${p.key}`);
 	}
 }
 
