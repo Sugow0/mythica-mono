@@ -14,6 +14,7 @@ const p = {
 	campaignMember: {
 		findFirst: mock(async () => null as unknown),
 		findUnique: mock(async () => null as unknown),
+		count: mock(async () => 0 as unknown),
 		create: mock(async () => ({}) as unknown),
 		update: mock(async () => ({}) as unknown),
 	},
@@ -41,6 +42,13 @@ const p = {
 	message: {
 		create: mock(async () => ({}) as unknown),
 		findMany: mock(async () => [] as unknown[]),
+	},
+	campaignCharacterSheet: {
+		findFirst: mock(async () => null as unknown),
+		findMany: mock(async () => [] as unknown[]),
+		create: mock(async () => ({}) as unknown),
+		delete: mock(async () => ({}) as unknown),
+		deleteMany: mock(async () => ({ count: 0 }) as unknown),
 	},
 	$transaction: mock(async (ops: Promise<unknown>[]) => Promise.all(ops)),
 };
@@ -133,12 +141,20 @@ beforeEach(() => {
 	p.campaign.findMany.mockResolvedValue([] as unknown);
 	p.campaign.count.mockResolvedValue(0 as unknown);
 	p.session.findMany.mockResolvedValue([] as unknown);
+	p.campaignCharacterSheet.findFirst.mockResolvedValue(null as unknown);
+	p.campaignCharacterSheet.findMany.mockResolvedValue([] as unknown);
+	p.campaignCharacterSheet.create.mockResolvedValue({} as unknown);
+	p.campaignCharacterSheet.delete.mockResolvedValue({} as unknown);
+	p.campaignCharacterSheet.deleteMany.mockResolvedValue({
+		count: 0,
+	} as unknown);
 	p.$transaction.mockImplementation(async (ops: Promise<unknown>[]) =>
 		Promise.all(ops),
 	);
 	p.campaign.create.mockResolvedValue(activeCampaign() as unknown);
 	p.campaignMember.create.mockResolvedValue({} as unknown);
 	p.campaignMember.update.mockResolvedValue({} as unknown);
+	p.campaignMember.count.mockResolvedValue(2 as unknown);
 	p.campaign.update.mockResolvedValue(activeCampaign() as unknown);
 	p.session.create.mockResolvedValue({ id: "s1" } as unknown);
 	p.session.update.mockResolvedValue({} as unknown);
@@ -712,5 +728,130 @@ describe("campaigns invitations", () => {
 		expect((r.json?.campaign as Record<string, unknown>)?.coverUrl).toBe(
 			"https://cdn.test/x/cover",
 		);
+	});
+});
+
+// ==================== FEAT-172 : détails enrichis ====================
+
+describe("campaigns détails enrichis (FEAT-172)", () => {
+	it("GET /:id d'un membre expose sessions et characterSheets", async () => {
+		p.campaign.findFirst.mockResolvedValue(
+			activeCampaign({
+				isPublic: false,
+				members: [
+					{
+						id: "dddddddd-dddd-dddd-dddd-dddddddddddd",
+						campaignId: CID,
+						userId: OWNER,
+						role: "gm",
+						joinedAt: new Date(),
+						leftAt: null,
+						user: { pseudo: "mj" },
+					},
+				],
+			}),
+		);
+		p.session.findMany.mockResolvedValue([
+			{
+				id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+				nom: "Séance 1",
+				status: "scheduled",
+				scheduledAt: new Date("2026-02-01"),
+			},
+		] as unknown);
+		p.campaignCharacterSheet.findMany.mockResolvedValue([
+			{
+				id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+				characterSheetId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+				characterSheet: { userId: OWNER, name: "Aragorn" },
+			},
+		] as unknown);
+		const r = await call("GET", `/campaigns/${CID}`, { userId: OWNER });
+		expect(r.status).toBe(200);
+		const sessions = r.json?.sessions as Record<string, unknown>[];
+		const sheets = r.json?.characterSheets as Record<string, unknown>[];
+		expect(Array.isArray(sessions)).toBe(true);
+		expect(sessions.length).toBe(1);
+		expect(sessions[0].status).toBe("scheduled");
+		expect(Array.isArray(sheets)).toBe(true);
+		expect(sheets.length).toBe(1);
+		expect(sheets[0].name).toBe("Aragorn");
+		expect(sheets[0].userId).toBe(OWNER);
+	});
+});
+
+// ==================== FEAT-176 : dernier MJ ====================
+
+describe("campaigns rétrogradation dernier MJ (FEAT-176)", () => {
+	it("PUT role : rétrograder le seul gm restant (409)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		// Le membre ciblé est gm.
+		p.campaignMember.findFirst.mockResolvedValue({
+			id: "m1",
+			role: "gm",
+		} as unknown);
+		// Un seul gm actif dans la campagne.
+		p.campaignMember.count.mockResolvedValue(1 as unknown);
+		const r = await call("PUT", `/campaigns/${CID}/members/${OTHER}/role`, {
+			userId: OWNER,
+			body: { role: "player" },
+		});
+		expect(r.status).toBe(409);
+		expect(r.json?.error).toBe(
+			"Impossible de rétrograder le dernier MJ de la campagne",
+		);
+		expect(p.campaignMember.update).not.toHaveBeenCalled();
+	});
+
+	it("PUT role : rétrograder un gm alors qu'il en reste un autre (200)", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignMember.findFirst.mockResolvedValue({
+			id: "m1",
+			role: "gm",
+		} as unknown);
+		// Deux gm actifs.
+		p.campaignMember.count.mockResolvedValue(2 as unknown);
+		const r = await call("PUT", `/campaigns/${CID}/members/${OTHER}/role`, {
+			userId: OWNER,
+			body: { role: "player" },
+		});
+		expect(r.status).toBe(200);
+		expect(p.campaignMember.update).toHaveBeenCalled();
+	});
+});
+
+// ==================== FEAT-177 : nettoyage fiches au retrait ====================
+
+describe("campaigns retrait membre nettoie les fiches (FEAT-177)", () => {
+	it("DELETE /:id/members/:userId supprime les CampaignCharacterSheet du membre", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignMember.findFirst.mockResolvedValue({ id: "m1" } as unknown);
+		const r = await call("DELETE", `/campaigns/${CID}/members/${OTHER}`, {
+			userId: OWNER,
+		});
+		expect(r.status).toBe(200);
+		expect(p.campaignCharacterSheet.deleteMany).toHaveBeenCalled();
+		const arg = p.campaignCharacterSheet.deleteMany.mock.calls[0]?.[0] as {
+			where: Record<string, unknown>;
+		};
+		expect(arg.where.campaignId).toBe(CID);
+		expect(arg.where.characterSheet).toEqual({ userId: OTHER });
+		// La fiche elle-même n'est pas supprimée.
+		expect(p.campaignCharacterSheet.delete).not.toHaveBeenCalled();
+	});
+
+	it("DELETE /:id/leave supprime les CampaignCharacterSheet du membre", async () => {
+		p.campaign.findFirst.mockResolvedValue(activeCampaign() as unknown);
+		p.campaignMember.findFirst.mockResolvedValue({ id: "m1" } as unknown);
+		const r = await call("DELETE", `/campaigns/${CID}/leave`, {
+			userId: OTHER,
+		});
+		expect(r.status).toBe(200);
+		expect(p.campaignCharacterSheet.deleteMany).toHaveBeenCalled();
+		const arg = p.campaignCharacterSheet.deleteMany.mock.calls[0]?.[0] as {
+			where: Record<string, unknown>;
+		};
+		expect(arg.where.campaignId).toBe(CID);
+		expect(arg.where.characterSheet).toEqual({ userId: OTHER });
 	});
 });

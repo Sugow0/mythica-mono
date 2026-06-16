@@ -380,11 +380,34 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				myJoinRequestStatus = req?.status ?? null;
 			}
 
+			// Sessions et fiches liées de la campagne (FEAT-172).
+			const [sessionRows, sheetRows] = await Promise.all([
+				prisma.session.findMany({
+					where: { campaignId: params.id },
+					orderBy: { createdAt: "desc" },
+					select: { id: true, nom: true, status: true, scheduledAt: true },
+				}),
+				prisma.campaignCharacterSheet.findMany({
+					where: { campaignId: params.id },
+					include: {
+						characterSheet: { select: { userId: true, name: true } },
+					},
+				}),
+			]);
+			const characterSheets = sheetRows.map((row) => ({
+				id: row.id,
+				characterSheetId: row.characterSheetId,
+				userId: row.characterSheet.userId,
+				name: row.characterSheet.name,
+			}));
+
 			const { members, ...rest } = campaign;
 			return {
 				success: true as const,
 				campaign: { ...rest, coverUrl: await coverUrlFor(rest) },
 				members,
+				sessions: sessionRows,
+				characterSheets,
 				myJoinRequestStatus,
 			};
 		},
@@ -395,6 +418,15 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 					success: t.Literal(true),
 					campaign: CampaignSchema,
 					members: t.Array(MemberSchema),
+					sessions: t.Array(
+						t.Object({
+							id: t.String({ format: "uuid" }),
+							nom: t.String(),
+							status: SessionStatus,
+							scheduledAt: t.Union([t.Date(), t.Null()]),
+						}),
+					),
+					characterSheets: t.Array(CampaignCharacterSheetSchema),
 					myJoinRequestStatus: t.Union([JoinRequestStatus, t.Null()]),
 				}),
 				403: ErrorResponse,
@@ -856,10 +888,19 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				set.status = 404;
 				return { success: false as const, error: "Vous n'êtes pas membre" };
 			}
-			await prisma.campaignMember.update({
-				where: { id: member.id },
-				data: { leftAt: new Date() },
-			});
+			// Départ du membre + nettoyage de ses fiches liées (FEAT-177).
+			await prisma.$transaction([
+				prisma.campaignMember.update({
+					where: { id: member.id },
+					data: { leftAt: new Date() },
+				}),
+				prisma.campaignCharacterSheet.deleteMany({
+					where: {
+						campaignId: params.id,
+						characterSheet: { userId: currentUser.id },
+					},
+				}),
+			]);
 			return { success: true as const, message: "Campagne quittée" };
 		},
 		{
@@ -899,6 +940,23 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				set.status = 404;
 				return { success: false as const, error: "Membre introuvable" };
 			}
+
+			// On ne peut pas rétrograder le dernier MJ actif de la campagne
+			// (FEAT-176). Si le membre ciblé est gm, qu'on lui retire ce rôle et
+			// qu'il est le seul gm restant, on refuse.
+			if (member.role === "gm" && body.role !== "gm") {
+				const gmCount = await prisma.campaignMember.count({
+					where: { campaignId: params.id, role: "gm", leftAt: null },
+				});
+				if (gmCount <= 1) {
+					set.status = 409;
+					return {
+						success: false as const,
+						error: "Impossible de rétrograder le dernier MJ de la campagne",
+					};
+				}
+			}
+
 			await prisma.campaignMember.update({
 				where: { id: member.id },
 				data: { role: body.role },
@@ -913,6 +971,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				401: ErrorResponse,
 				403: ErrorResponse,
 				404: ErrorResponse,
+				409: ErrorResponse,
 			},
 			detail: { tags: ["Campaigns"], summary: "Changer le rôle d'un membre" },
 		},
@@ -950,10 +1009,19 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				set.status = 404;
 				return { success: false as const, error: "Membre introuvable" };
 			}
-			await prisma.campaignMember.update({
-				where: { id: member.id },
-				data: { leftAt: new Date() },
-			});
+			// Retrait du membre + nettoyage de ses fiches liées (FEAT-177).
+			await prisma.$transaction([
+				prisma.campaignMember.update({
+					where: { id: member.id },
+					data: { leftAt: new Date() },
+				}),
+				prisma.campaignCharacterSheet.deleteMany({
+					where: {
+						campaignId: params.id,
+						characterSheet: { userId: params.userId },
+					},
+				}),
+			]);
 			return { success: true as const, message: "Membre expulsé" };
 		},
 		{
