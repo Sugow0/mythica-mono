@@ -9,6 +9,7 @@
 		"test:coverage": "bun test --coverage",
 		"db:generate": "prisma generate",
 		"db:push": "prisma db push",
+		"db:seed": "prisma db seed",
 		"lint": "biome check --write",
 		"lint:ci": "biome ci"
 	},
