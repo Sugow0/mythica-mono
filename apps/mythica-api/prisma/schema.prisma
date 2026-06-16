@@ -20,7 +20,7 @@ enum RoleEnum {
 }
 
 model Users {
-  id                      String                    @id @default(uuid())
+  id                      String                    @id @default(uuid(7))
   firstName               String
   lastName                String
   pseudo                  String                    @unique
@@ -43,7 +43,7 @@ model Users {
 }
 
 model EmailVerificationTokens {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid(7))
   userId    String
   token     String   @unique
   expiresAt DateTime
@@ -55,7 +55,7 @@ model EmailVerificationTokens {
 }
 
 model PasswordResetTokens {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid(7))
   userId    String
   token     String   @unique
   expiresAt DateTime
@@ -68,7 +68,7 @@ model PasswordResetTokens {
 }
 
 model OAuthAccounts {
-  id             String @id @default(uuid())
+  id             String @id @default(uuid(7))
   providerId     String // "google" | "discord" | "apple"
   providerUserId String
   userId         String

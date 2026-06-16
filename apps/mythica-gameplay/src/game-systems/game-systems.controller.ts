@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { authContext, isAdmin } from "../auth/context";
 import { ErrorResponse, SuccessMessageResponse } from "../lib/http";
+import { newId } from "../lib/id";
 import { prisma } from "../lib/prisma";
 
 /** Représentation publique d'un système de jeu. */
@@ -144,7 +145,7 @@ export const gameSystemsController = new Elysia({ prefix: "/game-systems" })
 			try {
 				const created = await prisma.gameSystem.create({
 					data: {
-						id: crypto.randomUUID(),
+						id: newId(),
 						nom: body.nom,
 						version: body.version,
 						slug: body.slug,

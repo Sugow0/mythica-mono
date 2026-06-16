@@ -2,6 +2,7 @@ import {
 	getPresignedCoverUrl,
 	uploadCampaignCover,
 } from "../../../lib/cover-storage";
+import { newId } from "../../../lib/id";
 import { prisma } from "../../../lib/prisma";
 
 const ALLOWED_COVER_MIME_TYPES = [
@@ -70,7 +71,7 @@ export async function uploadCoverHandler(
 
 	await uploadCampaignCover(campaignId, data, contentType);
 
-	const fileId = crypto.randomUUID();
+	const fileId = newId();
 	await prisma.$transaction([
 		prisma.file.create({
 			data: {

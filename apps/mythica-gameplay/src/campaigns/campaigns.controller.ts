@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
 import { getPresignedCoverUrl } from "../lib/cover-storage";
 import { ErrorResponse, SuccessMessageResponse } from "../lib/http";
+import { newId } from "../lib/id";
 import { prisma } from "../lib/prisma";
 import { redis } from "../lib/redis";
 import {
@@ -409,7 +410,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				return { success: false as const, error: "Système de jeu introuvable" };
 			}
 
-			const campaignId = crypto.randomUUID();
+			const campaignId = newId();
 			await prisma.$transaction([
 				prisma.campaign.create({
 					data: {
@@ -424,7 +425,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				}),
 				prisma.campaignMember.create({
 					data: {
-						id: crypto.randomUUID(),
+						id: newId(),
 						campaignId,
 						userId: currentUser.id,
 						role: "gm",
@@ -636,7 +637,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 			} else {
 				await prisma.campaignJoinRequest.create({
 					data: {
-						id: crypto.randomUUID(),
+						id: newId(),
 						campaignId: params.id,
 						userId: currentUser.id,
 					},
@@ -748,7 +749,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 						})
 					: prisma.campaignMember.create({
 							data: {
-								id: crypto.randomUUID(),
+								id: newId(),
 								campaignId: params.id,
 								userId: request.userId,
 								role: "player",
@@ -1020,7 +1021,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 
 			const created = await prisma.session.create({
 				data: {
-					id: crypto.randomUUID(),
+					id: newId(),
 					campaignId: params.id,
 					nom: body.nom,
 					scheduledAt: body.scheduledAt ? new Date(body.scheduledAt) : null,
@@ -1303,7 +1304,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 			);
 			await prisma.campaignInvite.create({
 				data: {
-					id: crypto.randomUUID(),
+					id: newId(),
 					campaignId: params.id,
 					token,
 					createdBy: currentUser.id,
@@ -1415,7 +1416,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 			} else {
 				await prisma.campaignMember.create({
 					data: {
-						id: crypto.randomUUID(),
+						id: newId(),
 						campaignId,
 						userId: currentUser.id,
 						role: "player",
