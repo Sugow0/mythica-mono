@@ -5,6 +5,7 @@ import { authContext } from "./auth/context";
 import { campaignsController } from "./campaigns/campaigns.controller";
 import { sessionsController } from "./campaigns/sessions.controller";
 import { sessionsWs } from "./campaigns/sessions.ws";
+import { characterSheetsController } from "./character-sheets/character-sheets.controller";
 import { env } from "./env";
 import { startUserSync } from "./events/user-sync";
 import { characterSheetPropertiesController } from "./game-systems/character-sheet-properties.controller";
@@ -32,6 +33,10 @@ const app = new Elysia()
 						name: "CharacterSheetProperties",
 						description: "Propriétés de fiches de personnage",
 					},
+					{
+						name: "CharacterSheets",
+						description: "Fiches de personnage",
+					},
 					{ name: "Campaigns", description: "Campagnes, membres et sessions" },
 					{ name: "Sessions", description: "Sessions de jeu et présence" },
 				],
@@ -42,6 +47,7 @@ const app = new Elysia()
 	.get("/", () => "Hello Elysia")
 	.use(gameSystemsController)
 	.use(characterSheetPropertiesController)
+	.use(characterSheetsController)
 	.use(campaignsController)
 	.use(sessionsController)
 	.listen(env.PORT);
