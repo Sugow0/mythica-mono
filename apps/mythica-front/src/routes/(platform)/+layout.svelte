@@ -68,8 +68,8 @@
 					<!-- Campagnes -->
 					<NavigationMenu.Item>
 						<NavigationMenu.Trigger>Campagnes</NavigationMenu.Trigger>
-						<NavigationMenu.Content>
-							<ul class="grid w-[260px] gap-1 p-2">
+						<NavigationMenu.Content class="p-2">
+							<ul class="grid w-[260px] gap-1">
 								{@render menuItem(
 									"/campaigns",
 									CompassIcon,
@@ -95,8 +95,8 @@
 					<!-- Personnages -->
 					<NavigationMenu.Item>
 						<NavigationMenu.Trigger>Personnages</NavigationMenu.Trigger>
-						<NavigationMenu.Content>
-							<ul class="grid w-[260px] gap-1 p-2">
+						<NavigationMenu.Content class="p-2">
+							<ul class="grid w-[260px] gap-1">
 								{@render menuItem(
 									"/characters",
 									UsersIcon,
