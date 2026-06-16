@@ -1,3 +1,4 @@
+import { newId } from "../../../lib/id";
 import { prisma } from "../../../lib/prisma";
 import { redis } from "../../../lib/redis";
 
@@ -75,7 +76,7 @@ export async function postMessageHandler(
 
 	const created = await prisma.message.create({
 		data: {
-			id: crypto.randomUUID(),
+			id: newId(),
 			campaignId: input.campaignId,
 			userId: input.userId,
 			content,

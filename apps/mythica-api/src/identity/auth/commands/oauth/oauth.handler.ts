@@ -1,5 +1,6 @@
 import { generateIdFromEntropySize } from "lucia";
 import { lucia } from "../../../../lib/auth";
+import { newId } from "../../../../lib/id";
 import { prisma } from "../../../../lib/prisma";
 import { publishUserEvent } from "../../../../lib/user-events";
 import type { OAuthProfile, OAuthProviderId } from "./oauth.types";
@@ -70,7 +71,7 @@ export async function oauthCallbackHandler(
 				}
 			}
 
-			userId = crypto.randomUUID();
+			userId = newId();
 			userRole = "USER";
 			await prisma.$transaction([
 				prisma.users.create({
