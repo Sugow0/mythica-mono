@@ -28,6 +28,34 @@ const CreateGameSystemBody = t.Object({
 
 const UpdateGameSystemBody = t.Partial(CreateGameSystemBody);
 
+/** Type des propriétés de fiche (enum PropertyType). */
+const PropertyTypeSchema = t.Union([
+	t.Literal("text"),
+	t.Literal("number"),
+	t.Literal("boolean"),
+	t.Literal("select"),
+	t.Literal("multiselect"),
+	t.Literal("textarea"),
+	t.Literal("resource"),
+	t.Literal("list"),
+	t.Literal("derived"),
+]);
+
+/** Entrée de fiche type : mapping fusionné avec le détail de la propriété. */
+const GameSystemPropertySchema = t.Object({
+	propertyId: t.String(),
+	key: t.String(),
+	label: t.String(),
+	type: PropertyTypeSchema,
+	options: t.Union([t.Unknown(), t.Null()]),
+	defaultValue: t.Union([t.String(), t.Null()]),
+	description: t.Union([t.String(), t.Null()]),
+	groupName: t.Union([t.String(), t.Null()]),
+	displayOrder: t.Integer(),
+	isRequired: t.Boolean(),
+	formula: t.Union([t.String(), t.Null()]),
+});
+
 const ListQuery = t.Object({
 	page: t.Optional(t.Numeric({ minimum: 1 })),
 	limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
@@ -120,6 +148,59 @@ export const gameSystemsController = new Elysia({ prefix: "/game-systems" })
 			detail: {
 				tags: ["GameSystems"],
 				summary: "Détails d'un système de jeu",
+			},
+		},
+	)
+
+	/** GET /game-systems/:id/properties - Fiche type d'un système */
+	.get(
+		"/:id/properties",
+		async ({ set, params }) => {
+			const gameSystem = await prisma.gameSystem.findUnique({
+				where: { id: params.id },
+			});
+			if (!gameSystem) {
+				set.status = 404;
+				return {
+					success: false as const,
+					error: "Système de jeu introuvable",
+				};
+			}
+
+			const mappings = await prisma.gameSystemProperty.findMany({
+				where: { gameSystemId: params.id },
+				include: { property: true },
+				orderBy: { displayOrder: "asc" },
+			});
+
+			const properties = mappings.map((m) => ({
+				propertyId: m.propertyId,
+				key: m.property.key,
+				label: m.overrideLabel ?? m.property.label,
+				type: m.property.type,
+				options: m.property.options ?? null,
+				defaultValue: m.overrideDefault ?? m.property.defaultValue,
+				description: m.property.description,
+				groupName: m.groupName,
+				displayOrder: m.displayOrder,
+				isRequired: m.isRequired,
+				formula: m.formula,
+			}));
+
+			return { success: true as const, properties };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			response: {
+				200: t.Object({
+					success: t.Literal(true),
+					properties: t.Array(GameSystemPropertySchema),
+				}),
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["GameSystems"],
+				summary: "Fiche type d'un système de jeu",
 			},
 		},
 	)
