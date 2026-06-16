@@ -17,11 +17,21 @@ export type OfficialGameSystem = {
 
 export const OFFICIAL_GAME_SYSTEMS: OfficialGameSystem[] = [
 	{
+		id: "a0000000-0000-4000-8000-000000000005",
+		nom: "Donjons & Dragons 5e",
+		version: "5e",
+		slug: "dnd5e",
+		parentSlug: null,
+		isOfficial: true,
+		description:
+			"Système D&D 5e générique : parent commun des éditions 2014 et 2024.",
+	},
+	{
 		id: "a0000000-0000-4000-8000-000000000001",
 		nom: "Donjons & Dragons 5e (2014)",
 		version: "2014",
 		slug: "dnd5e-2014",
-		parentSlug: null,
+		parentSlug: "dnd5e",
 		isOfficial: true,
 		description: "Système D&D 5e, édition 2014 (SRD).",
 	},
@@ -30,9 +40,9 @@ export const OFFICIAL_GAME_SYSTEMS: OfficialGameSystem[] = [
 		nom: "Donjons & Dragons 5e (2024)",
 		version: "2024",
 		slug: "dnd5e-2024",
-		parentSlug: "dnd5e-2014",
+		parentSlug: "dnd5e",
 		isOfficial: true,
-		description: "Système D&D 5e, édition 2024 (hérite de 2014).",
+		description: "Système D&D 5e, édition 2024.",
 	},
 	{
 		id: "a0000000-0000-4000-8000-000000000003",
