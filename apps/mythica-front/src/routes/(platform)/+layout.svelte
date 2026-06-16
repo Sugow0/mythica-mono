@@ -1,12 +1,42 @@
 <script lang="ts">
+	import CompassIcon from "@lucide/svelte/icons/compass";
+	import PlusIcon from "@lucide/svelte/icons/plus";
+	import SwordsIcon from "@lucide/svelte/icons/swords";
+	import UserPlusIcon from "@lucide/svelte/icons/user-plus";
+	import UsersIcon from "@lucide/svelte/icons/users";
+	import type { Component } from "svelte";
 	import type { Snippet } from "svelte";
 	import NavbarUser from "$lib/components/navbar-user.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import * as NavigationMenu from "$lib/components/ui/navigation-menu";
+	import { navigationMenuTriggerStyle } from "$lib/components/ui/navigation-menu/navigation-menu-trigger.svelte";
 	import type { LayoutData } from "./$types";
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
+
+	type IconComponent = Component<{ class?: string }>;
 </script>
+
+{#snippet menuItem(
+	href: string,
+	Icon: IconComponent,
+	title: string,
+	desc: string
+)}
+	<li>
+		<NavigationMenu.Link {href} class="flex-row items-center gap-3">
+			<span
+				class="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-md"
+			>
+				<Icon class="h-4 w-4" />
+			</span>
+			<span class="flex flex-col">
+				<span class="font-medium">{title}</span>
+				<span class="text-muted-foreground text-xs">{desc}</span>
+			</span>
+		</NavigationMenu.Link>
+	</li>
+{/snippet}
 
 <div class="min-h-screen bg-slate-50 text-foreground dark:bg-background">
 	<!-- Navbar -->
@@ -35,42 +65,72 @@
 			<!-- Navigation -->
 			<NavigationMenu.Root class="hidden md:flex">
 				<NavigationMenu.List class="flex gap-1">
-					<!-- Campagnes dropdown -->
+					<!-- Campagnes -->
 					<NavigationMenu.Item>
 						<NavigationMenu.Trigger>Campagnes</NavigationMenu.Trigger>
 						<NavigationMenu.Content>
-							<ul class="grid w-[240px] gap-1 p-2">
-								<li>
-									<NavigationMenu.Link href="/campaigns">
-										<div class="font-medium">Explorer</div>
-										<div class="text-muted-foreground">Campagnes publiques</div>
-									</NavigationMenu.Link>
-								</li>
-								<li>
-									<NavigationMenu.Link href="/campaigns/me">
-										<div class="font-medium">Mes campagnes</div>
-										<div class="text-muted-foreground">
-											Vos campagnes personnelles
-										</div>
-									</NavigationMenu.Link>
-								</li>
+							<ul class="grid w-[260px] gap-1 p-2">
+								{@render menuItem(
+									"/campaigns",
+									CompassIcon,
+									"Explorer",
+									"Campagnes publiques"
+								)}
+								{@render menuItem(
+									"/campaigns/me",
+									SwordsIcon,
+									"Mes campagnes",
+									"Vos campagnes personnelles"
+								)}
+								{@render menuItem(
+									"/campaigns/new",
+									PlusIcon,
+									"Créer une campagne",
+									"Démarrer une nouvelle aventure"
+								)}
 							</ul>
 						</NavigationMenu.Content>
 					</NavigationMenu.Item>
 
-					<!-- Fiches de personnage -->
+					<!-- Personnages -->
 					<NavigationMenu.Item>
-						<NavigationMenu.Link href="/characters">Fiches</NavigationMenu.Link>
+						<NavigationMenu.Trigger>Personnages</NavigationMenu.Trigger>
+						<NavigationMenu.Content>
+							<ul class="grid w-[260px] gap-1 p-2">
+								{@render menuItem(
+									"/characters",
+									UsersIcon,
+									"Mes personnages",
+									"Vos fiches de personnage"
+								)}
+								{@render menuItem(
+									"/characters/new",
+									UserPlusIcon,
+									"Créer un nouveau personnage",
+									"Nouvelle fiche standalone"
+								)}
+							</ul>
+						</NavigationMenu.Content>
 					</NavigationMenu.Item>
 
 					<!-- Forum -->
 					<NavigationMenu.Item>
-						<NavigationMenu.Link href="/forum">Forum</NavigationMenu.Link>
+						<NavigationMenu.Link
+							href="/forum"
+							class={navigationMenuTriggerStyle()}
+						>
+							Forum
+						</NavigationMenu.Link>
 					</NavigationMenu.Item>
 
 					<!-- Boutique -->
 					<NavigationMenu.Item>
-						<NavigationMenu.Link href="/shop">Boutique</NavigationMenu.Link>
+						<NavigationMenu.Link
+							href="/shop"
+							class={navigationMenuTriggerStyle()}
+						>
+							Boutique
+						</NavigationMenu.Link>
 					</NavigationMenu.Item>
 				</NavigationMenu.List>
 			</NavigationMenu.Root>
