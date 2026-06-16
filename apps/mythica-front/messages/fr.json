@@ -112,5 +112,28 @@
 	"admin_btn_delete": "Supprimer",
 
 	"admin_form_name_label": "Nom",
-	"admin_form_description_label": "Description"
+	"admin_form_description_label": "Description",
+
+	"nav_characters": "Fiches",
+	"nav_my_characters": "Mes fiches",
+	"nav_my_characters_desc": "Vos personnages",
+	"characters_title": "Mes fiches de personnage",
+	"characters_subtitle": "Créez et gérez vos personnages.",
+	"characters_create": "Créer une fiche",
+	"characters_empty_title": "Aucune fiche pour l'instant",
+	"characters_empty_desc": "Créez votre première fiche de personnage pour commencer.",
+	"characters_load_error": "Impossible de charger vos fiches.",
+	"character_new_title": "Nouvelle fiche de personnage",
+	"character_new_system_label": "Système de jeu",
+	"character_new_identity_label": "Identité",
+	"character_name_label": "Nom du personnage",
+	"character_name_placeholder": "Ex. Aragorn",
+	"character_create_submit": "Créer la fiche",
+	"character_create_error": "Impossible de créer la fiche.",
+	"character_back": "Retour",
+	"character_load_error": "Impossible de charger la fiche.",
+	"character_not_found": "Fiche introuvable.",
+	"character_save_saved": "Sauvegardé",
+	"character_save_saving": "Sauvegarde…",
+	"character_save_error": "Erreur de sauvegarde"
 }

@@ -58,6 +58,11 @@
 						</NavigationMenu.Content>
 					</NavigationMenu.Item>
 
+					<!-- Fiches de personnage -->
+					<NavigationMenu.Item>
+						<NavigationMenu.Link href="/characters">Fiches</NavigationMenu.Link>
+					</NavigationMenu.Item>
+
 					<!-- Forum -->
 					<NavigationMenu.Item>
 						<NavigationMenu.Link href="/forum">Forum</NavigationMenu.Link>
