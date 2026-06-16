@@ -17,6 +17,11 @@ import {
 	type GameSystemPropertyMapping,
 } from "../src/game-systems/dnd5e-system-properties";
 import { OFFICIAL_GAME_SYSTEMS } from "../src/game-systems/official-systems";
+import { PF2E_CHARACTER_SHEET_PROPERTIES } from "../src/game-systems/pf2e-properties";
+import {
+	PF2E_PROPERTY_MAPPINGS,
+	PF2E_SYSTEM_SLUG,
+} from "../src/game-systems/pf2e-system-properties";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required");
@@ -129,6 +134,7 @@ async function main() {
 		...DND5E_CHARACTER_SHEET_PROPERTIES,
 		...DND5E_2024_EXTRA_PROPERTIES,
 		...COC_CHARACTER_SHEET_PROPERTIES,
+		...PF2E_CHARACTER_SHEET_PROPERTIES,
 	];
 	for (const p of properties) {
 		await prisma.characterSheetProperty.upsert({
@@ -161,6 +167,7 @@ async function main() {
 		DND5E_2024_PROPERTY_MAPPINGS,
 	);
 	await seedSystemMappings(COC_SYSTEM_SLUG, COC_PROPERTY_MAPPINGS);
+	await seedSystemMappings(PF2E_SYSTEM_SLUG, PF2E_PROPERTY_MAPPINGS);
 }
 
 main()
