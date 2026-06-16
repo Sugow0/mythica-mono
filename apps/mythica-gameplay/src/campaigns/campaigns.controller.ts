@@ -187,6 +187,17 @@ async function coverUrlFor(c: {
 	return getPresignedCoverUrl(c.id).catch(() => null);
 }
 
+/** Code d'erreur Prisma pour violation de contrainte d'unicité. */
+const PRISMA_UNIQUE_VIOLATION = "P2002";
+
+/** Schéma d'une fiche liée à une campagne (vue allégée). */
+const CampaignCharacterSheetSchema = t.Object({
+	id: t.String({ format: "uuid" }),
+	characterSheetId: t.String({ format: "uuid" }),
+	userId: t.String({ format: "uuid" }),
+	name: t.String(),
+});
+
 /** Durée de validité d'un lien d'invitation. */
 const INVITE_EXPIRY_DAYS = 7;
 
@@ -1276,6 +1287,206 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 			},
 		});
 	})
+
+	// ==================== FICHES DE PERSONNAGE ====================
+
+	/** POST /campaigns/:id/character-sheets/:sheetId - Importer une fiche (FEAT-178) */
+	.post(
+		"/:id/character-sheets/:sheetId",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const campaign = await findActiveCampaign(params.id);
+			if (!campaign) {
+				set.status = 404;
+				return { success: false as const, error: "Campagne introuvable" };
+			}
+			if (campaign.status === "archived") {
+				set.status = 409;
+				return { success: false as const, error: "Campagne archivée" };
+			}
+
+			// (1) La fiche doit exister et appartenir à l'utilisateur courant.
+			const sheet = await prisma.characterSheet.findFirst({
+				where: { id: params.sheetId, deletedAt: null },
+			});
+			if (!sheet) {
+				set.status = 404;
+				return { success: false as const, error: "Fiche introuvable" };
+			}
+			if (sheet.userId !== currentUser.id) {
+				set.status = 403;
+				return { success: false as const, error: "Fiche non possédée" };
+			}
+
+			// (2) L'utilisateur doit être membre actif de la campagne.
+			const role = await memberRole(params.id, currentUser.id);
+			if (campaign.ownerId !== currentUser.id && !role) {
+				set.status = 403;
+				return { success: false as const, error: "Accès refusé" };
+			}
+
+			// (3) Compatibilité système : identique, ou lien parent/enfant dans
+			// l'un ou l'autre sens (fork).
+			if (sheet.gameSystemId !== campaign.gameSystemId) {
+				const [sheetSystem, campaignSystem] = await Promise.all([
+					prisma.gameSystem.findUnique({
+						where: { id: sheet.gameSystemId },
+						select: { parentSystemId: true },
+					}),
+					prisma.gameSystem.findUnique({
+						where: { id: campaign.gameSystemId },
+						select: { parentSystemId: true },
+					}),
+				]);
+				const compatible =
+					sheetSystem?.parentSystemId === campaign.gameSystemId ||
+					campaignSystem?.parentSystemId === sheet.gameSystemId;
+				if (!compatible) {
+					set.status = 409;
+					return {
+						success: false as const,
+						error:
+							"La fiche n'est pas compatible avec le système de la campagne",
+					};
+				}
+			}
+
+			try {
+				const created = await prisma.campaignCharacterSheet.create({
+					data: {
+						id: newId(),
+						campaignId: params.id,
+						characterSheetId: params.sheetId,
+					},
+				});
+				set.status = 201;
+				return { success: true as const, id: created.id };
+			} catch (err) {
+				if ((err as { code?: string }).code === PRISMA_UNIQUE_VIOLATION) {
+					set.status = 409;
+					return {
+						success: false as const,
+						error: "Fiche déjà liée à la campagne",
+					};
+				}
+				throw err;
+			}
+		},
+		{
+			params: t.Object({ id: t.String(), sheetId: t.String() }),
+			response: {
+				201: t.Object({ success: t.Literal(true), id: t.String() }),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+				409: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Importer une fiche" },
+		},
+	)
+
+	/** GET /campaigns/:id/character-sheets - Fiches liées (FEAT-179) */
+	.get(
+		"/:id/character-sheets",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const campaign = await findActiveCampaign(params.id);
+			if (!campaign) {
+				set.status = 404;
+				return { success: false as const, error: "Campagne introuvable" };
+			}
+			const role = await memberRole(params.id, currentUser.id);
+			const isGm = campaign.ownerId === currentUser.id || role === "gm";
+			if (campaign.ownerId !== currentUser.id && !role) {
+				set.status = 403;
+				return { success: false as const, error: "Accès refusé" };
+			}
+
+			// Le MJ voit toutes les fiches ; un joueur ne voit que les siennes.
+			const rows = await prisma.campaignCharacterSheet.findMany({
+				where: {
+					campaignId: params.id,
+					...(isGm ? {} : { characterSheet: { userId: currentUser.id } }),
+				},
+				include: {
+					characterSheet: { select: { userId: true, name: true } },
+				},
+			});
+
+			const sheets = rows.map((row) => ({
+				id: row.id,
+				characterSheetId: row.characterSheetId,
+				userId: row.characterSheet.userId,
+				name: row.characterSheet.name,
+			}));
+			return { success: true as const, sheets };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			response: {
+				200: t.Object({
+					success: t.Literal(true),
+					sheets: t.Array(CampaignCharacterSheetSchema),
+				}),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Fiches liées à la campagne" },
+		},
+	)
+
+	/** DELETE /campaigns/:id/character-sheets/:sheetId - Retirer une fiche (FEAT-180) */
+	.delete(
+		"/:id/character-sheets/:sheetId",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const campaign = await findActiveCampaign(params.id);
+			if (!campaign) {
+				set.status = 404;
+				return { success: false as const, error: "Campagne introuvable" };
+			}
+			const role = await memberRole(params.id, currentUser.id);
+			const isGm = campaign.ownerId === currentUser.id || role === "gm";
+
+			const link = await prisma.campaignCharacterSheet.findFirst({
+				where: { campaignId: params.id, characterSheetId: params.sheetId },
+				include: { characterSheet: { select: { userId: true } } },
+			});
+			if (!link) {
+				set.status = 404;
+				return { success: false as const, error: "Fiche non liée" };
+			}
+
+			// Réservé au propriétaire de la fiche ou au MJ.
+			if (!isGm && link.characterSheet.userId !== currentUser.id) {
+				set.status = 403;
+				return { success: false as const, error: "Accès refusé" };
+			}
+
+			await prisma.campaignCharacterSheet.delete({ where: { id: link.id } });
+			return { success: true as const, message: "Fiche retirée" };
+		},
+		{
+			params: t.Object({ id: t.String(), sheetId: t.String() }),
+			response: {
+				200: SuccessMessageResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Campaigns"], summary: "Retirer une fiche" },
+		},
+	)
 
 	// ==================== INVITATIONS ====================
 
