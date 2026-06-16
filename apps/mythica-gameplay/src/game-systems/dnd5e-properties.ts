@@ -7,9 +7,10 @@
  * (`game_system_properties`, formules dérivées comprises) est traité ailleurs
  * (FEAT-160) et n'entre pas dans le périmètre de ce fichier.
  *
- * Les `id` sont des UUID **fixes** pour garantir l'idempotence du seed, et les
- * `key` réutilisent les clés des constantes front (`dnd5e.ts`) afin de garder
- * une cohérence inter-services.
+ * La `key` (unique) est la clé naturelle : le seed est idempotent par `key` et
+ * l'`id` (UUID v7) est généré à la création, jamais codé en dur. Les clés
+ * réutilisent celles des constantes front (`dnd5e.ts`) pour garder une
+ * cohérence inter-services.
  */
 
 /** Valeurs autorisées pour `type`, alignées sur l'enum Prisma `PropertyType`. */
@@ -25,7 +26,6 @@ export type PropertyType =
 	| "derived";
 
 export type CharacterSheetPropertyData = {
-	id: string;
 	key: string;
 	label: string;
 	type: PropertyType;
@@ -37,7 +37,6 @@ export type CharacterSheetPropertyData = {
 /** Les 6 caractéristiques de base (number, score par défaut 10). */
 const ABILITIES: CharacterSheetPropertyData[] = [
 	{
-		id: "b0000000-0000-4000-8000-000000000001",
 		key: "force",
 		label: "Force",
 		type: "number",
@@ -45,7 +44,6 @@ const ABILITIES: CharacterSheetPropertyData[] = [
 		description: "Caractéristique de Force.",
 	},
 	{
-		id: "b0000000-0000-4000-8000-000000000002",
 		key: "dexterite",
 		label: "Dextérité",
 		type: "number",
@@ -53,7 +51,6 @@ const ABILITIES: CharacterSheetPropertyData[] = [
 		description: "Caractéristique de Dextérité.",
 	},
 	{
-		id: "b0000000-0000-4000-8000-000000000003",
 		key: "constitution",
 		label: "Constitution",
 		type: "number",
@@ -61,7 +58,6 @@ const ABILITIES: CharacterSheetPropertyData[] = [
 		description: "Caractéristique de Constitution.",
 	},
 	{
-		id: "b0000000-0000-4000-8000-000000000004",
 		key: "intelligence",
 		label: "Intelligence",
 		type: "number",
@@ -69,7 +65,6 @@ const ABILITIES: CharacterSheetPropertyData[] = [
 		description: "Caractéristique d'Intelligence.",
 	},
 	{
-		id: "b0000000-0000-4000-8000-000000000005",
 		key: "sagesse",
 		label: "Sagesse",
 		type: "number",
@@ -77,7 +72,6 @@ const ABILITIES: CharacterSheetPropertyData[] = [
 		description: "Caractéristique de Sagesse.",
 	},
 	{
-		id: "b0000000-0000-4000-8000-000000000006",
 		key: "charisme",
 		label: "Charisme",
 		type: "number",
@@ -89,7 +83,6 @@ const ABILITIES: CharacterSheetPropertyData[] = [
 /** Statistiques de combat / progression (number). */
 const STATS: CharacterSheetPropertyData[] = [
 	{
-		id: "b0000000-0000-4000-8000-000000000010",
 		key: "niveau",
 		label: "Niveau",
 		type: "number",
@@ -97,7 +90,6 @@ const STATS: CharacterSheetPropertyData[] = [
 		description: "Niveau du personnage.",
 	},
 	{
-		id: "b0000000-0000-4000-8000-000000000011",
 		key: "ca",
 		label: "Classe d'armure",
 		type: "number",
@@ -105,7 +97,6 @@ const STATS: CharacterSheetPropertyData[] = [
 		description: "Classe d'armure (CA).",
 	},
 	{
-		id: "b0000000-0000-4000-8000-000000000012",
 		key: "vitesse",
 		label: "Vitesse",
 		type: "number",
@@ -117,14 +108,12 @@ const STATS: CharacterSheetPropertyData[] = [
 /** Ressources consommables / régénérables (PV, dés de vie, emplacements). */
 const RESOURCES: CharacterSheetPropertyData[] = [
 	{
-		id: "b0000000-0000-4000-8000-000000000020",
 		key: "hp",
 		label: "Points de vie",
 		type: "resource",
 		description: "Points de vie (courants / maximum / temporaires).",
 	},
 	{
-		id: "b0000000-0000-4000-8000-000000000021",
 		key: "des_de_vie",
 		label: "Dés de vie",
 		type: "resource",
@@ -133,7 +122,6 @@ const RESOURCES: CharacterSheetPropertyData[] = [
 	...Array.from({ length: 9 }, (_, i) => {
 		const level = i + 1;
 		return {
-			id: `b0000000-0000-4000-8000-0000000000${String(30 + level).padStart(2, "0")}`,
 			key: `spell_slots_${level}`,
 			label: `Emplacements de sorts (niveau ${level})`,
 			type: "resource" as const,
@@ -162,8 +150,7 @@ const SKILLS: CharacterSheetPropertyData[] = [
 	{ key: "representation", label: "Représentation" },
 	{ key: "survie", label: "Survie" },
 	{ key: "tromperie", label: "Tromperie" },
-].map((skill, i) => ({
-	id: `b0000000-0000-4000-8000-0000000001${String(i + 1).padStart(2, "0")}`,
+].map((skill) => ({
 	key: skill.key,
 	label: skill.label,
 	type: "boolean" as const,
@@ -174,7 +161,6 @@ const SKILLS: CharacterSheetPropertyData[] = [
 /** Divers : inspiration (boolean) et initiative (dérivée). */
 const MISC: CharacterSheetPropertyData[] = [
 	{
-		id: "b0000000-0000-4000-8000-000000000200",
 		key: "inspiration",
 		label: "Inspiration",
 		type: "boolean",
@@ -182,7 +168,6 @@ const MISC: CharacterSheetPropertyData[] = [
 		description: "Inspiration héroïque (D&D 5e).",
 	},
 	{
-		id: "b0000000-0000-4000-8000-000000000201",
 		key: "initiative",
 		label: "Initiative",
 		type: "derived",
@@ -192,8 +177,9 @@ const MISC: CharacterSheetPropertyData[] = [
 ];
 
 /**
- * Catalogue complet des propriétés de fiche D&D 5e, données pures et stables
- * (idempotence du seed via `id`/`key` fixes).
+ * Catalogue complet des propriétés de fiche D&D 5e, données pures et stables.
+ * L'idempotence du seed repose sur la `key` (unique) ; aucun `id` n'est codé en
+ * dur — il est généré en UUID v7 à l'insertion.
  */
 export const DND5E_CHARACTER_SHEET_PROPERTIES: CharacterSheetPropertyData[] = [
 	...ABILITIES,

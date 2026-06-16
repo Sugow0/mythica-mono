@@ -58,11 +58,6 @@ describe("DND5E_CHARACTER_SHEET_PROPERTIES", () => {
 		expect(keys.size).toBe(DND5E_CHARACTER_SHEET_PROPERTIES.length);
 	});
 
-	it("a des id uniques", () => {
-		const ids = new Set(DND5E_CHARACTER_SHEET_PROPERTIES.map((p) => p.id));
-		expect(ids.size).toBe(DND5E_CHARACTER_SHEET_PROPERTIES.length);
-	});
-
 	it("n'utilise que des types valides de l'enum PropertyType", () => {
 		for (const p of DND5E_CHARACTER_SHEET_PROPERTIES) {
 			expect(VALID_TYPES).toContain(p.type);

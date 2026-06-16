@@ -51,11 +51,12 @@ async function main() {
 
 	// Catalogue des propriétés de fiche D&D 5e (indépendant d'un système ;
 	// le mapping système ↔ propriété est traité dans FEAT-160).
+	// Idempotence par `key` ; l'id (UUID v7) n'est généré qu'à la création.
 	for (const p of DND5E_CHARACTER_SHEET_PROPERTIES) {
 		await prisma.characterSheetProperty.upsert({
 			where: { key: p.key },
 			create: {
-				id: p.id,
+				id: Bun.randomUUIDv7(),
 				key: p.key,
 				label: p.label,
 				type: p.type,
