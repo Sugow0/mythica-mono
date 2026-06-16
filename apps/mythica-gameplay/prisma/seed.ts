@@ -1,5 +1,10 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
+import { COC_CHARACTER_SHEET_PROPERTIES } from "../src/game-systems/coc-properties";
+import {
+	COC_PROPERTY_MAPPINGS,
+	COC_SYSTEM_SLUG,
+} from "../src/game-systems/coc-system-properties";
 import { DND5E_2024_EXTRA_PROPERTIES } from "../src/game-systems/dnd5e-2024-properties";
 import {
 	DND5E_2024_PROPERTY_MAPPINGS,
@@ -123,6 +128,7 @@ async function main() {
 	const properties = [
 		...DND5E_CHARACTER_SHEET_PROPERTIES,
 		...DND5E_2024_EXTRA_PROPERTIES,
+		...COC_CHARACTER_SHEET_PROPERTIES,
 	];
 	for (const p of properties) {
 		await prisma.characterSheetProperty.upsert({
@@ -154,6 +160,7 @@ async function main() {
 		DND5E_2024_SYSTEM_SLUG,
 		DND5E_2024_PROPERTY_MAPPINGS,
 	);
+	await seedSystemMappings(COC_SYSTEM_SLUG, COC_PROPERTY_MAPPINGS);
 }
 
 main()
