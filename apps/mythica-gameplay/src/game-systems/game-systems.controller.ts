@@ -205,9 +205,17 @@ export const gameSystemsController = new Elysia({ prefix: "/game-systems" })
 		},
 	)
 
-	// ==================== MUTATIONS (admin) ====================
+	// ==================== MUTATIONS ====================
 
-	/** POST /game-systems - Créer un système de jeu (admin) */
+	/**
+	 * POST /game-systems - Créer un système de jeu.
+	 *
+	 * Ouvert à tout utilisateur authentifié : un MJ peut créer un système
+	 * custom, éventuellement en forkant un système parent (les propriétés du
+	 * parent sont alors copiées comme point de départ). Seuls les admins
+	 * peuvent créer un système officiel ; pour les non-admins, `isOfficial`
+	 * est forcé à `false`.
+	 */
 	.post(
 		"/",
 		async ({ set, currentUser, body }) => {
@@ -215,28 +223,68 @@ export const gameSystemsController = new Elysia({ prefix: "/game-systems" })
 				set.status = 401;
 				return { success: false as const, error: "Non authentifié" };
 			}
-			if (!isAdmin(currentUser)) {
-				set.status = 403;
-				return {
-					success: false as const,
-					error: "Accès réservé aux administrateurs",
-				};
+
+			// Un non-admin ne peut jamais créer un système officiel.
+			const isOfficial = isAdmin(currentUser)
+				? (body.isOfficial ?? false)
+				: false;
+
+			// Validation du parent (fork) avant toute écriture.
+			if (body.parentSystemId) {
+				const parent = await prisma.gameSystem.findUnique({
+					where: { id: body.parentSystemId },
+					select: { id: true },
+				});
+				if (!parent) {
+					set.status = 404;
+					return {
+						success: false as const,
+						error: "Système parent introuvable",
+					};
+				}
 			}
 
+			const newSystemId = newId();
+
 			try {
-				const created = await prisma.gameSystem.create({
-					data: {
-						id: newId(),
-						nom: body.nom,
-						version: body.version,
-						slug: body.slug,
-						description: body.description ?? null,
-						parentSystemId: body.parentSystemId ?? null,
-						isOfficial: body.isOfficial ?? false,
-					},
+				await prisma.$transaction(async (tx) => {
+					await tx.gameSystem.create({
+						data: {
+							id: newSystemId,
+							nom: body.nom,
+							version: body.version,
+							slug: body.slug,
+							description: body.description ?? null,
+							parentSystemId: body.parentSystemId ?? null,
+							isOfficial,
+						},
+					});
+
+					// Fork : on copie les propriétés du parent comme point de départ.
+					if (body.parentSystemId) {
+						const parentProps = await tx.gameSystemProperty.findMany({
+							where: { gameSystemId: body.parentSystemId },
+						});
+						if (parentProps.length > 0) {
+							await tx.gameSystemProperty.createMany({
+								data: parentProps.map((prop) => ({
+									id: newId(),
+									gameSystemId: newSystemId,
+									propertyId: prop.propertyId,
+									displayOrder: prop.displayOrder,
+									groupName: prop.groupName,
+									isRequired: prop.isRequired,
+									overrideLabel: prop.overrideLabel,
+									overrideDefault: prop.overrideDefault,
+									formula: prop.formula,
+								})),
+							});
+						}
+					}
 				});
+
 				set.status = 201;
-				return { success: true as const, id: created.id };
+				return { success: true as const, id: newSystemId };
 			} catch (err) {
 				if (prismaErrorCode(err) === PRISMA_UNIQUE_VIOLATION) {
 					set.status = 409;
@@ -250,7 +298,7 @@ export const gameSystemsController = new Elysia({ prefix: "/game-systems" })
 			response: {
 				201: t.Object({ success: t.Literal(true), id: t.String() }),
 				401: ErrorResponse,
-				403: ErrorResponse,
+				404: ErrorResponse,
 				409: ErrorResponse,
 			},
 			detail: {
