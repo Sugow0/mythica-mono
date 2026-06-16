@@ -12,11 +12,9 @@ describe("OFFICIAL_GAME_SYSTEMS", () => {
 		]);
 	});
 
-	it("a des slugs et des id uniques", () => {
+	it("a des slugs uniques (clé naturelle du seed)", () => {
 		const slugs = new Set(OFFICIAL_GAME_SYSTEMS.map((s) => s.slug));
-		const ids = new Set(OFFICIAL_GAME_SYSTEMS.map((s) => s.id));
 		expect(slugs.size).toBe(OFFICIAL_GAME_SYSTEMS.length);
-		expect(ids.size).toBe(OFFICIAL_GAME_SYSTEMS.length);
 	});
 
 	it("ne référence que des parentSlug existants", () => {

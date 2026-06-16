@@ -11,20 +11,26 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-	const idBySlug = new Map(OFFICIAL_GAME_SYSTEMS.map((s) => [s.slug, s.id]));
 	// Insérer les systèmes parents avant leurs enfants (FK parentSystemId).
 	const ordered = [...OFFICIAL_GAME_SYSTEMS].sort(
 		(a, b) => Number(a.parentSlug !== null) - Number(b.parentSlug !== null),
 	);
 
 	for (const s of ordered) {
-		const parentSystemId = s.parentSlug
-			? (idBySlug.get(s.parentSlug) ?? null)
-			: null;
+		// Idempotence par `slug` ; l'id (UUID v7) n'est généré qu'à la création.
+		// Le parent est déjà inséré (ordre ci-dessus) : on récupère son id réel.
+		let parentSystemId: string | null = null;
+		if (s.parentSlug) {
+			const parent = await prisma.gameSystem.findUnique({
+				where: { slug: s.parentSlug },
+				select: { id: true },
+			});
+			parentSystemId = parent?.id ?? null;
+		}
 		await prisma.gameSystem.upsert({
 			where: { slug: s.slug },
 			create: {
-				id: s.id,
+				id: Bun.randomUUIDv7(),
 				nom: s.nom,
 				version: s.version,
 				slug: s.slug,
