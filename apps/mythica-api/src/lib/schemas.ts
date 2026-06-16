@@ -82,16 +82,6 @@ export const RoleUserEnum = t.Union(
 	{ description: "Rôle global de l'utilisateur" },
 );
 
-export const CharacterTypeEnum = t.Union(
-	[t.Literal("PLAYER"), t.Literal("NPC")],
-	{ description: "Type de personnage" },
-);
-
-/** Données libres de la fiche (JSONB) */
-export const CharacterDataSchema = t.Record(t.String(), t.Unknown(), {
-	description: "Données libres de la fiche de personnage (JSONB)",
-});
-
 // ==================== SCHÉMAS DE RÉPONSE ====================
 
 /** Réponse d'erreur standard */
@@ -251,46 +241,6 @@ export const CampaignSessionSchema = t.Object({
 });
 
 export type CampaignSessionType = Static<typeof CampaignSessionSchema>;
-
-/** Fiche de personnage dans les listes */
-export const CharacterListItemSchema = t.Object({
-	id: t.String(),
-	name: t.String(),
-	type: CharacterTypeEnum,
-	isActive: t.Boolean(),
-	userId: t.Nullable(t.String()),
-	campaignId: t.Nullable(t.String()),
-	user: t.Nullable(MinimalUserSchema),
-	createdAt: t.Date(),
-	updatedAt: t.Date(),
-});
-
-export type CharacterListItemType = Static<typeof CharacterListItemSchema>;
-
-/** Fiche de personnage complète */
-export const PublicCharacterSchema = t.Object({
-	id: t.String(),
-	name: t.String(),
-	type: CharacterTypeEnum,
-	isActive: t.Boolean(),
-	data: t.Unknown({ description: "Données JSONB de la fiche" }),
-	userId: t.Nullable(t.String()),
-	campaignId: t.Nullable(t.String()),
-	user: t.Nullable(MinimalUserSchema),
-	createdAt: t.Date(),
-	updatedAt: t.Date(),
-});
-
-export type PublicCharacterType = Static<typeof PublicCharacterSchema>;
-
-/** Réponse liste de fiches paginée */
-export const CharacterListResponse = t.Object({
-	success: t.Literal(true),
-	characters: t.Array(CharacterListItemSchema),
-	pagination: PaginationMeta,
-});
-
-export type CharacterListResponseType = Static<typeof CharacterListResponse>;
 
 // ==================== RÉPONSES PAGINÉES ====================
 
