@@ -11,6 +11,13 @@
 	"nav_about": "Acerca de",
 	"nav_sign_in": "Iniciar sesión",
 	"nav_get_started": "Empezar",
+	"nav_create_campaign": "Crear una campaña",
+	"nav_create_campaign_desc": "Comienza una nueva aventura",
+	"nav_characters_menu": "Personajes",
+	"nav_create_character": "Crear un personaje",
+	"nav_create_character_desc": "Nueva ficha independiente",
+	"nav_forum": "Foro",
+	"nav_shop": "Tienda",
 
 	"hero_badge": "Nuevo: MJ IA disponible en beta",
 	"hero_title_line1": "El juego de rol",

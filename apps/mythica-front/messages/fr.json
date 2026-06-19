@@ -11,6 +11,13 @@
 	"nav_about": "À propos",
 	"nav_sign_in": "Connexion",
 	"nav_get_started": "Commencer",
+	"nav_create_campaign": "Créer une campagne",
+	"nav_create_campaign_desc": "Démarrer une nouvelle aventure",
+	"nav_characters_menu": "Personnages",
+	"nav_create_character": "Créer un personnage",
+	"nav_create_character_desc": "Nouvelle fiche standalone",
+	"nav_forum": "Forum",
+	"nav_shop": "Boutique",
 
 	"hero_badge": "Nouveau : MJ AI disponible en bêta",
 	"hero_title_line1": "Le jeu de rôle",

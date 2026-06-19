@@ -11,6 +11,13 @@
 	"nav_about": "About",
 	"nav_sign_in": "Sign in",
 	"nav_get_started": "Get started",
+	"nav_create_campaign": "Create a campaign",
+	"nav_create_campaign_desc": "Start a new adventure",
+	"nav_characters_menu": "Characters",
+	"nav_create_character": "Create a character",
+	"nav_create_character_desc": "New standalone sheet",
+	"nav_forum": "Forum",
+	"nav_shop": "Shop",
 
 	"hero_badge": "New: AI GM available in beta",
 	"hero_title_line1": "Tabletop RPG",

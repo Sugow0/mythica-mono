@@ -1,13 +1,37 @@
 <script lang="ts">
-	import LanguageSwitcher from "$lib/components/language-switcher.svelte";
-	import NavbarUser from "$lib/components/navbar-user.svelte";
+	import CompassIcon from "@lucide/svelte/icons/compass";
+	import SwordsIcon from "@lucide/svelte/icons/swords";
+	import Navbar, { type NavItem } from "$lib/components/navbar.svelte";
 	import * as Avatar from "$lib/components/ui/avatar";
 	import { Button } from "$lib/components/ui/button";
-	import * as NavigationMenu from "$lib/components/ui/navigation-menu";
 	import * as m from "$lib/paraglide/messages.js";
 	import type { PageData } from "./$types";
 
 	let { data }: { data: PageData } = $props();
+
+	const navItems: NavItem[] = [
+		{
+			kind: "menu",
+			label: m.nav_campaigns,
+			items: [
+				{
+					href: "/campaigns",
+					label: m.nav_explore,
+					desc: m.nav_explore_desc,
+					icon: CompassIcon,
+				},
+				{
+					href: "/campaigns/me",
+					label: m.nav_my_campaigns,
+					desc: m.nav_my_campaigns_desc,
+					icon: SwordsIcon,
+				},
+			],
+		},
+		{ kind: "link", href: "#features", label: m.nav_features },
+		{ kind: "link", href: "#pricing", label: m.nav_pricing },
+		{ kind: "link", href: "#about", label: m.nav_about },
+	];
 
 	const featureKeys = [
 		{
@@ -58,118 +82,7 @@
 	class="min-h-screen bg-slate-50 text-foreground overflow-x-hidden dark:bg-background"
 >
 	<!-- Navbar -->
-	<nav
-		class="fixed top-0 left-0 right-0 z-50 border-b border-slate-200/60 bg-slate-50/90 backdrop-blur-xl dark:border-border/40 dark:bg-background/80"
-	>
-		<div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-			<!-- Logo -->
-			<a
-				href="/"
-				class="flex items-center gap-2.5 transition-transform hover:scale-105"
-			>
-				<svg aria-hidden="true" class="h-8 w-8" viewBox="0 0 40 40" fill="none">
-					<rect width="40" height="40" rx="10" class="fill-red-600" />
-					<path
-						d="M12 28V12h4l4 10 4-10h4v16h-3.5v-10l-3.5 8h-2l-3.5-8v10H12z"
-						class="fill-white"
-					/>
-				</svg>
-				<span
-					class="text-xl font-bold tracking-tight text-slate-900 dark:text-white"
-					>Mythica</span
-				>
-			</a>
-
-			<!-- Navigation -->
-			<NavigationMenu.Root class="hidden md:flex">
-				<NavigationMenu.List class="flex gap-1">
-					<NavigationMenu.Item>
-						<NavigationMenu.Trigger
-							class="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-red-600 dark:text-muted-foreground bg-transparent hover:bg-transparent data-[state=open]:bg-transparent"
-						>
-							{m.nav_campaigns()}
-						</NavigationMenu.Trigger>
-						<NavigationMenu.Content class="min-w-[200px]">
-							<ul class="grid gap-1 p-2">
-								<li>
-									<NavigationMenu.Link
-										href="/campaigns"
-										class="block rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-muted-foreground dark:hover:bg-red-950 dark:hover:text-red-400"
-									>
-										{m.nav_explore()}
-										<span
-											class="block text-xs font-normal text-slate-400 dark:text-muted-foreground/70"
-											>{m.nav_explore_desc()}</span
-										>
-									</NavigationMenu.Link>
-								</li>
-								<li>
-									<NavigationMenu.Link
-										href="/campaigns/me"
-										class="block rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-muted-foreground dark:hover:bg-red-950 dark:hover:text-red-400"
-									>
-										{m.nav_my_campaigns()}
-										<span
-											class="block text-xs font-normal text-slate-400 dark:text-muted-foreground/70"
-											>{m.nav_my_campaigns_desc()}</span
-										>
-									</NavigationMenu.Link>
-								</li>
-							</ul>
-						</NavigationMenu.Content>
-					</NavigationMenu.Item>
-					<NavigationMenu.Item>
-						<NavigationMenu.Link
-							href="#features"
-							class="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-red-600 dark:text-muted-foreground"
-						>
-							{m.nav_features()}
-						</NavigationMenu.Link>
-					</NavigationMenu.Item>
-					<NavigationMenu.Item>
-						<NavigationMenu.Link
-							href="#pricing"
-							class="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-red-600 dark:text-muted-foreground"
-						>
-							{m.nav_pricing()}
-						</NavigationMenu.Link>
-					</NavigationMenu.Item>
-					<NavigationMenu.Item>
-						<NavigationMenu.Link
-							href="#about"
-							class="px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:text-red-600 dark:text-muted-foreground"
-						>
-							{m.nav_about()}
-						</NavigationMenu.Link>
-					</NavigationMenu.Item>
-				</NavigationMenu.List>
-			</NavigationMenu.Root>
-
-			<!-- Actions -->
-			<div class="flex items-center gap-3">
-				<LanguageSwitcher />
-				{#if data.user}
-					<NavbarUser user={data.user} />
-				{:else}
-					<Button
-						variant="ghost"
-						size="sm"
-						href="/sign-in"
-						class="font-medium text-slate-600 hover:text-red-600"
-					>
-						{m.nav_sign_in()}
-					</Button>
-					<Button
-						size="sm"
-						href="/sign-up"
-						class="bg-red-600 text-white shadow-md shadow-red-600/20 transition-all hover:bg-red-700 hover:scale-105 hover:shadow-lg"
-					>
-						{m.nav_get_started()}
-					</Button>
-				{/if}
-			</div>
-		</div>
-	</nav>
+	<Navbar user={data.user} items={navItems} />
 
 	<!-- Hero Section -->
 	<section
