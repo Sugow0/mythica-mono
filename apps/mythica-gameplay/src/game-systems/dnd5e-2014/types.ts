@@ -14,6 +14,7 @@
 export type Dnd5eCollectionKey =
 	| "race"
 	| "classe"
+	| "sous-classe"
 	| "background"
 	| "sort"
 	| "equipement";
@@ -107,6 +108,27 @@ export type BackgroundData = {
 	feature: NamedTrait;
 	startingGold: number;
 	startingEquipment: string[];
+};
+
+/** Une aptitude de sous-classe, obtenue à un niveau donné. */
+export type SubclassFeature = {
+	level: number;
+	name: string;
+	description: string;
+};
+
+/** `data` d'une sous-classe (collection "sous-classe"). */
+export type SubclassData = {
+	/** Slug de la classe parente. */
+	parentClass: string;
+	/** Niveau de classe auquel la sous-classe est choisie. */
+	acquisitionLevel: number;
+	/** Aptitudes de la sous-classe, par niveau. */
+	features: SubclassFeature[];
+	/** Sorts toujours préparés (domaines, serments...) : slugs. */
+	alwaysPrepared?: string[];
+	/** Lanceur conféré par la sous-classe (tiers-lanceur : chevalier occulte...). */
+	spellcasting?: SpellcastingData;
 };
 
 /** `data` d'un sort. */

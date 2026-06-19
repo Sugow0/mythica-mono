@@ -9,6 +9,7 @@ import { DND5E_CLASSES } from "./classes";
 import { DND5E_EQUIPMENT } from "./equipment";
 import { DND5E_RACES } from "./races";
 import { DND5E_SPELLS } from "./spells";
+import { DND5E_SUBCLASSES } from "./subclasses";
 import type { SystemContentSeed } from "./types";
 
 export {
@@ -25,6 +26,7 @@ export const DND5E_2014_SLUG = "dnd5e-2014";
 export const DND5E_CONTENT: SystemContentSeed[] = [
 	...DND5E_RACES,
 	...DND5E_CLASSES,
+	...DND5E_SUBCLASSES,
 	...DND5E_BACKGROUNDS,
 	...DND5E_SPELLS,
 	...DND5E_EQUIPMENT,

@@ -122,6 +122,10 @@ const BuildBody = t.Object({
 		}),
 		{ minItems: 1, maxItems: 3 },
 	),
+	/** Sous-classes choisies, rattachées à leur classe. */
+	subclasses: t.Optional(
+		t.Array(t.Object({ classSlug: t.String(), slug: t.String() })),
+	),
 	backgroundSlug: t.String(),
 	abilityMethod: t.Union([
 		t.Literal("standard_array"),
@@ -701,11 +705,24 @@ export const characterSheetsController = new Elysia({
 				valueByKey.maitrises_langues = profLines.join("\n");
 			}
 
-			// Capacités & traits (traits raciaux + aptitude d'historique).
+			// Capacités & traits (traits raciaux + aptitude d'historique +
+			// aptitudes de sous-classe obtenues au niveau actuel).
 			const feats = [
 				...(raceExtra.traits ?? []).map((t) => t.name).filter(Boolean),
 				...(bgExtra.feature?.name ? [bgExtra.feature.name] : []),
 			];
+			for (const sc of body.subclasses ?? []) {
+				const item = getContent("sous-classe", sc.slug);
+				if (!item) continue;
+				const lvl =
+					body.classes.find((c) => c.slug === sc.classSlug)?.level ?? 0;
+				const data = item.data as {
+					features?: { level: number; name: string }[];
+				};
+				for (const f of data.features ?? []) {
+					if (f.level <= lvl) feats.push(`${item.name} : ${f.name}`);
+				}
+			}
 			if (feats.length) valueByKey.capacites_traits = feats.join(", ");
 
 			const valueEntries = Object.entries(valueByKey).filter(([key]) =>
@@ -760,6 +777,18 @@ export const characterSheetsController = new Elysia({
 							contentId: sp.id,
 							// classe d'origine + rôle (cantrip / sort / grimoire) en multiclasse.
 							extra: { classSlug: s.classSlug, role: s.role },
+						});
+					}
+				}
+				for (const sc of body.subclasses ?? []) {
+					const item = getContent("sous-classe", sc.slug);
+					if (item) {
+						selections.push({
+							id: newId(),
+							characterSheetId: sheet.id,
+							collectionKey: "sous-classe",
+							contentId: item.id,
+							extra: { classSlug: sc.classSlug },
 						});
 					}
 				}
