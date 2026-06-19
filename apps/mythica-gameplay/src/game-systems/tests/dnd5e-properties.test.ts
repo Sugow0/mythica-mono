@@ -125,10 +125,9 @@ describe("DND5E_CHARACTER_SHEET_PROPERTIES", () => {
 	});
 
 	it("seede le nombre total attendu de propriétés", () => {
-		// 6 abilities + 3 stats + (hp, des_de_vie, 9 slots) + 18 skills + 2 misc + 6 lore
-		expect(DND5E_CHARACTER_SHEET_PROPERTIES.length).toBe(
-			6 + 3 + 11 + 18 + 2 + 6,
-		);
+		// 46 de base + 29 ajoutées (sauvegardes, dérivées, identité, maîtrises,
+		// monnaie, physique, lore additionnel).
+		expect(DND5E_CHARACTER_SHEET_PROPERTIES.length).toBe(46 + 29);
 	});
 
 	it("respecte la longueur max de clé du schéma (VarChar(100))", () => {

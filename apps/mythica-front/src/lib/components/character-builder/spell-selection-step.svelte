@@ -1,8 +1,5 @@
 <script lang="ts">
-	import type {
-		CharacterBuilder,
-		SpellcastingClassInfo,
-	} from "$lib/character-builder/builder.svelte";
+	import type { CharacterBuilder } from "$lib/character-builder/builder.svelte";
 	import type { ContentItem } from "$lib/api/services/character-service";
 	import { Badge } from "$lib/components/ui/badge";
 	import * as Card from "$lib/components/ui/card";

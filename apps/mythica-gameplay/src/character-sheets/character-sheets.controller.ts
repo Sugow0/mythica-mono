@@ -664,6 +664,50 @@ export const characterSheetsController = new Elysia({
 			for (const [key, text] of Object.entries(body.lore ?? {})) {
 				valueByKey[key] = text;
 			}
+
+			// Jets de sauvegarde : maîtrises de la classe principale (le
+			// multiclassage n'accorde pas de nouvelles maîtrises de sauvegarde).
+			const primaryRef =
+				classRefs.find((r) => r.input.isPrimary) ?? classRefs[0];
+			const primaryData = (primaryRef?.content?.data ?? {}) as {
+				savingThrows?: string[];
+				toolProficiencies?: string[];
+			};
+			for (const ab of primaryData.savingThrows ?? []) {
+				valueByKey[`sauvegarde_${ab}`] = true;
+			}
+
+			// Or de départ → pièces d'or.
+			if (body.gold != null) valueByKey.pieces_or = body.gold;
+
+			// Autres maîtrises & langues (race + classe principale + historique).
+			const raceExtra = race.data as {
+				languages?: string[];
+				traits?: { name?: string }[];
+			};
+			const bgExtra = background.data as {
+				toolProficiencies?: string[];
+				feature?: { name?: string };
+			};
+			const langs = raceExtra.languages ?? [];
+			const tools = [
+				...(primaryData.toolProficiencies ?? []),
+				...(bgExtra.toolProficiencies ?? []),
+			];
+			const profLines: string[] = [];
+			if (langs.length) profLines.push(`Langues : ${langs.join(", ")}`);
+			if (tools.length) profLines.push(`Outils : ${tools.join(", ")}`);
+			if (profLines.length) {
+				valueByKey.maitrises_langues = profLines.join("\n");
+			}
+
+			// Capacités & traits (traits raciaux + aptitude d'historique).
+			const feats = [
+				...(raceExtra.traits ?? []).map((t) => t.name).filter(Boolean),
+				...(bgExtra.feature?.name ? [bgExtra.feature.name] : []),
+			];
+			if (feats.length) valueByKey.capacites_traits = feats.join(", ");
+
 			const valueEntries = Object.entries(valueByKey).filter(([key]) =>
 				propIdByKey.has(key),
 			);

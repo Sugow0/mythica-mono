@@ -330,10 +330,10 @@ export class CharacterBuilder {
 		try {
 			// Sorts rattachés à leur classe + rôle. On n'envoie que les classes
 			// encore retenues (évite les sorts orphelins après un changement).
-			const classSlugs = new Set(this.classes.map((c) => c.slug));
+			const classSlugs = this.classes.map((c) => c.slug);
 			const spells: { slug: string; classSlug: string; role: SpellRole }[] = [];
 			for (const [classSlug, sel] of Object.entries(this.spellSelections)) {
-				if (!classSlugs.has(classSlug)) continue;
+				if (!classSlugs.includes(classSlug)) continue;
 				for (const slug of sel.cantrips ?? [])
 					spells.push({ slug, classSlug, role: "cantrip" });
 				for (const slug of sel.spellbook ?? [])

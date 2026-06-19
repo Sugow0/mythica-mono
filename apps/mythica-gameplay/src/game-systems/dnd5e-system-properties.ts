@@ -320,4 +320,192 @@ export const DND5E_PROPERTY_MAPPINGS: GameSystemPropertyMapping[] = [
 		groupName: "Lore",
 		isRequired: false,
 	},
+
+	// — Sauvegardes (6) —
+	{
+		propertyKey: "sauvegarde_force",
+		displayOrder: 46,
+		groupName: "Sauvegardes",
+		isRequired: false,
+	},
+	{
+		propertyKey: "sauvegarde_dexterite",
+		displayOrder: 47,
+		groupName: "Sauvegardes",
+		isRequired: false,
+	},
+	{
+		propertyKey: "sauvegarde_constitution",
+		displayOrder: 48,
+		groupName: "Sauvegardes",
+		isRequired: false,
+	},
+	{
+		propertyKey: "sauvegarde_intelligence",
+		displayOrder: 49,
+		groupName: "Sauvegardes",
+		isRequired: false,
+	},
+	{
+		propertyKey: "sauvegarde_sagesse",
+		displayOrder: 50,
+		groupName: "Sauvegardes",
+		isRequired: false,
+	},
+	{
+		propertyKey: "sauvegarde_charisme",
+		displayOrder: 51,
+		groupName: "Sauvegardes",
+		isRequired: false,
+	},
+
+	// — Combat (dérivées + champs) —
+	{
+		propertyKey: "bonus_maitrise",
+		displayOrder: 52,
+		groupName: "Combat",
+		isRequired: false,
+	},
+	{
+		propertyKey: "perception_passive",
+		displayOrder: 53,
+		groupName: "Combat",
+		isRequired: false,
+	},
+	{
+		propertyKey: "pv_temporaires",
+		displayOrder: 54,
+		groupName: "Combat",
+		isRequired: false,
+	},
+	{
+		propertyKey: "attaques",
+		displayOrder: 55,
+		groupName: "Combat",
+		isRequired: false,
+	},
+
+	// — Sorts (dérivées d'incantation) —
+	{
+		propertyKey: "dd_sorts",
+		displayOrder: 56,
+		groupName: "Sorts",
+		isRequired: false,
+	},
+	{
+		propertyKey: "bonus_attaque_sort",
+		displayOrder: 57,
+		groupName: "Sorts",
+		isRequired: false,
+	},
+
+	// — Identité —
+	{
+		propertyKey: "alignement",
+		displayOrder: 58,
+		groupName: "Identité",
+		isRequired: false,
+	},
+	{
+		propertyKey: "experience",
+		displayOrder: 59,
+		groupName: "Identité",
+		isRequired: false,
+	},
+
+	// — Maîtrises —
+	{
+		propertyKey: "maitrises_langues",
+		displayOrder: 60,
+		groupName: "Maîtrises",
+		isRequired: false,
+	},
+
+	// — Trésor (monnaie) —
+	{
+		propertyKey: "pieces_cuivre",
+		displayOrder: 61,
+		groupName: "Trésor",
+		isRequired: false,
+	},
+	{
+		propertyKey: "pieces_argent",
+		displayOrder: 62,
+		groupName: "Trésor",
+		isRequired: false,
+	},
+	{
+		propertyKey: "pieces_electrum",
+		displayOrder: 63,
+		groupName: "Trésor",
+		isRequired: false,
+	},
+	{
+		propertyKey: "pieces_or",
+		displayOrder: 64,
+		groupName: "Trésor",
+		isRequired: false,
+	},
+	{
+		propertyKey: "pieces_platine",
+		displayOrder: 65,
+		groupName: "Trésor",
+		isRequired: false,
+	},
+
+	// — Lore (physique + additionnel) —
+	{
+		propertyKey: "age",
+		displayOrder: 66,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "taille",
+		displayOrder: 67,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "poids",
+		displayOrder: 68,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "yeux",
+		displayOrder: 69,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "peau",
+		displayOrder: 70,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "cheveux",
+		displayOrder: 71,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "allies_organisations",
+		displayOrder: 72,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "capacites_traits",
+		displayOrder: 73,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "tresor",
+		displayOrder: 74,
+		groupName: "Lore",
+		isRequired: false,
+	},
 ];
