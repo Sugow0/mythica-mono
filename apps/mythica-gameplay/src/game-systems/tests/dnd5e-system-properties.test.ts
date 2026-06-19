@@ -11,6 +11,7 @@ const ALLOWED_GROUPS = [
 	"Compétences",
 	"Sorts",
 	"Ressources",
+	"Lore",
 ] as const;
 
 const REQUIRED_KEYS = [
@@ -30,8 +31,8 @@ describe("DND5E_PROPERTY_MAPPINGS", () => {
 		expect(DND5E_SYSTEM_SLUG).toBe("dnd5e-2014");
 	});
 
-	it("contient exactement 40 mappings", () => {
-		expect(DND5E_PROPERTY_MAPPINGS).toHaveLength(40);
+	it("contient exactement 46 mappings", () => {
+		expect(DND5E_PROPERTY_MAPPINGS).toHaveLength(46);
 	});
 
 	it("couvre exactement les keys du catalogue (aucune orpheline)", () => {
@@ -54,7 +55,7 @@ describe("DND5E_PROPERTY_MAPPINGS", () => {
 		expect(new Set(orders).size).toBe(orders.length);
 	});
 
-	it("n'utilise que les 5 groupes autorisés", () => {
+	it("n'utilise que les 6 groupes autorisés", () => {
 		for (const m of DND5E_PROPERTY_MAPPINGS) {
 			expect(ALLOWED_GROUPS).toContain(
 				m.groupName as (typeof ALLOWED_GROUPS)[number],
@@ -62,7 +63,7 @@ describe("DND5E_PROPERTY_MAPPINGS", () => {
 		}
 	});
 
-	it("respecte la répartition 6/5/18/9/2 par groupe", () => {
+	it("respecte la répartition 6/5/18/9/2/6 par groupe", () => {
 		const count = (group: string) =>
 			DND5E_PROPERTY_MAPPINGS.filter((m) => m.groupName === group).length;
 		expect(count("Caractéristiques")).toBe(6);
@@ -70,6 +71,7 @@ describe("DND5E_PROPERTY_MAPPINGS", () => {
 		expect(count("Compétences")).toBe(18);
 		expect(count("Sorts")).toBe(9);
 		expect(count("Ressources")).toBe(2);
+		expect(count("Lore")).toBe(6);
 	});
 
 	it("marque isRequired uniquement pour les 9 keys attendues", () => {

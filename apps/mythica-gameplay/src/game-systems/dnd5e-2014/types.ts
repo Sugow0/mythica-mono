@@ -1,0 +1,108 @@
+/**
+ * Types du module de contenu D&D 5e (2014).
+ *
+ * Chaque entrée devient une ligne `SystemContent` : le `slug` (unique par
+ * système+collection) est la clé naturelle, l'`id` (UUID v7) est généré au seed.
+ * Le champ `data` porte les attributs propres à la collection ; il sera validé à
+ * l'écriture par un schéma TypeBox (FEAT-190, phase 2c).
+ *
+ * Volume : sous-ensemble curé pour faire tourner la verticale ; le contenu PHB
+ * complet sera ingéré ensuite (PDF FR/EN) sans changer l'architecture.
+ */
+
+/** Clés de collection utilisées par D&D 5e. */
+export type Dnd5eCollectionKey =
+	| "race"
+	| "classe"
+	| "background"
+	| "sort"
+	| "equipement";
+
+/** Une entrée de contenu générique, prête à seeder. */
+export type SystemContentSeed = {
+	collectionKey: Dnd5eCollectionKey;
+	slug: string;
+	name: string;
+	description?: string;
+	sortOrder?: number;
+	data: Record<string, unknown>;
+};
+
+/** Bonus de caractéristiques (clés alignées sur les propriétés de fiche). */
+export type AbilityBonusMap = Partial<
+	Record<
+		| "force"
+		| "dexterite"
+		| "constitution"
+		| "intelligence"
+		| "sagesse"
+		| "charisme",
+		number
+	>
+>;
+
+/** Trait nommé (raciaux, de classe, de background). */
+export type NamedTrait = { name: string; description: string };
+
+/** `data` d'une race. */
+export type RaceData = {
+	size: "P" | "M" | "G";
+	/** Vitesse de base en mètres (cohérent avec la propriété `vitesse`). */
+	speed: number;
+	abilityBonuses: AbilityBonusMap;
+	languages: string[];
+	/** Maîtrises de compétences accordées (clés de propriété de compétence). */
+	skillProficiencies?: string[];
+	traits: NamedTrait[];
+};
+
+/** Catégorie de lanceur (aligné sur character-engine). */
+export type CasterType = "none" | "full" | "half" | "third" | "warlock";
+
+/** `data` d'une classe. */
+export type ClassData = {
+	hitDie: number;
+	primaryAbility: string[];
+	savingThrows: string[];
+	armorProficiencies: string[];
+	weaponProficiencies: string[];
+	toolProficiencies: string[];
+	/** Choix de compétences de classe à la création. */
+	skillChoices: { count: number; from: string[] };
+	casterType: CasterType;
+	spellcastingAbility?: string;
+	/** Prérequis de caractéristiques pour multiclasser vers/depuis cette classe. */
+	multiclassPrereq?: AbilityBonusMap;
+	startingEquipment: string[];
+};
+
+/** `data` d'un background. */
+export type BackgroundData = {
+	skillProficiencies: string[];
+	toolProficiencies: string[];
+	/** Nombre de langues supplémentaires au choix. */
+	languages: number;
+	feature: NamedTrait;
+	startingGold: number;
+	startingEquipment: string[];
+};
+
+/** `data` d'un sort. */
+export type SpellData = {
+	level: number;
+	school: string;
+	castingTime: string;
+	range: string;
+	components: string;
+	duration: string;
+	/** Slugs des classes pouvant apprendre ce sort. */
+	classes: string[];
+};
+
+/** `data` d'un objet d'équipement. */
+export type EquipmentData = {
+	category: "arme" | "armure" | "bouclier" | "objet";
+	costGp: number;
+	weight: number;
+	properties?: Record<string, unknown>;
+};

@@ -282,4 +282,42 @@ export const DND5E_PROPERTY_MAPPINGS: GameSystemPropertyMapping[] = [
 		groupName: "Ressources",
 		isRequired: false,
 	},
+
+	// — Lore (6) — texte libre, renseigné à la création —
+	{
+		propertyKey: "apparence",
+		displayOrder: 40,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "biographie",
+		displayOrder: 41,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "personnalite",
+		displayOrder: 42,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "liens",
+		displayOrder: 43,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "ideaux",
+		displayOrder: 44,
+		groupName: "Lore",
+		isRequired: false,
+	},
+	{
+		propertyKey: "defauts",
+		displayOrder: 45,
+		groupName: "Lore",
+		isRequired: false,
+	},
 ];

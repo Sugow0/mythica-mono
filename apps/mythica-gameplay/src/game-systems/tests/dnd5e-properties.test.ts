@@ -111,9 +111,24 @@ describe("DND5E_CHARACTER_SHEET_PROPERTIES", () => {
 		expect(byKey.get("initiative")?.type).toBe("derived");
 	});
 
+	it("contient les 6 champs de lore (textarea)", () => {
+		for (const key of [
+			"apparence",
+			"biographie",
+			"personnalite",
+			"liens",
+			"ideaux",
+			"defauts",
+		]) {
+			expect(byKey.get(key)?.type).toBe("textarea");
+		}
+	});
+
 	it("seede le nombre total attendu de propriétés", () => {
-		// 6 abilities + 3 stats + (hp, des_de_vie, 9 slots) + 18 skills + 2 misc
-		expect(DND5E_CHARACTER_SHEET_PROPERTIES.length).toBe(6 + 3 + 11 + 18 + 2);
+		// 6 abilities + 3 stats + (hp, des_de_vie, 9 slots) + 18 skills + 2 misc + 6 lore
+		expect(DND5E_CHARACTER_SHEET_PROPERTIES.length).toBe(
+			6 + 3 + 11 + 18 + 2 + 6,
+		);
 	});
 
 	it("respecte la longueur max de clé du schéma (VarChar(100))", () => {

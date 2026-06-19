@@ -5,6 +5,13 @@ import {
 	COC_PROPERTY_MAPPINGS,
 	COC_SYSTEM_SLUG,
 } from "../src/game-systems/coc-system-properties";
+import {
+	type CreationStepSeed,
+	DND5E_2014_SLUG,
+	DND5E_CONTENT,
+	DND5E_CREATION_FLOW,
+	type SystemContentSeed,
+} from "../src/game-systems/dnd5e-2014";
 import { DND5E_2024_EXTRA_PROPERTIES } from "../src/game-systems/dnd5e-2024-properties";
 import {
 	DND5E_2024_PROPERTY_MAPPINGS,
@@ -88,6 +95,100 @@ async function seedSystemMappings(
 	}
 }
 
+/**
+ * Seede le contenu d'un système (races, classes, sorts...) dans `system_content`.
+ * Idempotence par le couple naturel (gameSystemId, collectionKey, slug) ; l'id
+ * (UUID v7) n'est généré qu'à la création.
+ */
+async function seedSystemContent(
+	slug: string,
+	content: SystemContentSeed[],
+): Promise<void> {
+	const gameSystem = await prisma.gameSystem.findUnique({
+		where: { slug },
+		select: { id: true },
+	});
+	if (!gameSystem) {
+		throw new Error(
+			`Système introuvable pour le contenu : slug="${slug}". Seede d'abord les systèmes.`,
+		);
+	}
+	const gameSystemId = gameSystem.id;
+
+	for (const c of content) {
+		await prisma.systemContent.upsert({
+			where: {
+				gameSystemId_collectionKey_slug: {
+					gameSystemId,
+					collectionKey: c.collectionKey,
+					slug: c.slug,
+				},
+			},
+			create: {
+				id: Bun.randomUUIDv7(),
+				gameSystemId,
+				collectionKey: c.collectionKey,
+				slug: c.slug,
+				name: c.name,
+				description: c.description ?? null,
+				data: c.data,
+				sortOrder: c.sortOrder ?? 0,
+			},
+			update: {
+				name: c.name,
+				description: c.description ?? null,
+				data: c.data,
+				sortOrder: c.sortOrder ?? 0,
+			},
+		});
+	}
+	console.log(`✔ contenu seedé : ${slug} (${content.length} entrées)`);
+}
+
+/**
+ * Seede le parcours de création d'un système dans `game_system_creation_steps`.
+ * Idempotence par (gameSystemId, stepKey).
+ */
+async function seedCreationFlow(
+	slug: string,
+	steps: CreationStepSeed[],
+): Promise<void> {
+	const gameSystem = await prisma.gameSystem.findUnique({
+		where: { slug },
+		select: { id: true },
+	});
+	if (!gameSystem) {
+		throw new Error(
+			`Système introuvable pour le flow : slug="${slug}". Seede d'abord les systèmes.`,
+		);
+	}
+	const gameSystemId = gameSystem.id;
+
+	for (const s of steps) {
+		await prisma.gameSystemCreationStep.upsert({
+			where: {
+				gameSystemId_stepKey: { gameSystemId, stepKey: s.stepKey },
+			},
+			create: {
+				id: Bun.randomUUIDv7(),
+				gameSystemId,
+				stepKey: s.stepKey,
+				order: s.order,
+				kind: s.kind,
+				config: s.config,
+				condition: s.condition ?? null,
+			},
+			update: {
+				order: s.order,
+				kind: s.kind,
+				config: s.config,
+				condition: s.condition ?? null,
+			},
+		});
+	}
+	console.log(`✔ flow de création seedé : ${slug} (${steps.length} étapes)`);
+}
+
 async function main() {
 	// Insérer les systèmes parents avant leurs enfants (FK parentSystemId).
 	const ordered = [...OFFICIAL_GAME_SYSTEMS].sort(
@@ -168,6 +269,11 @@ async function main() {
 	);
 	await seedSystemMappings(COC_SYSTEM_SLUG, COC_PROPERTY_MAPPINGS);
 	await seedSystemMappings(PF2E_SYSTEM_SLUG, PF2E_PROPERTY_MAPPINGS);
+
+	// Contenu D&D 5e 2014 (races, classes, backgrounds, sorts, équipement) et
+	// parcours de création data-driven.
+	await seedSystemContent(DND5E_2014_SLUG, DND5E_CONTENT);
+	await seedCreationFlow(DND5E_2014_SLUG, DND5E_CREATION_FLOW);
 }
 
 main()

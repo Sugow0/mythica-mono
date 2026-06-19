@@ -176,6 +176,46 @@ const MISC: CharacterSheetPropertyData[] = [
 	},
 ];
 
+/** Champs de lore (texte libre) renseignés à la dernière étape de création. */
+const LORE: CharacterSheetPropertyData[] = [
+	{
+		key: "apparence",
+		label: "Apparence",
+		type: "textarea",
+		description: "Description physique du personnage (token, traits, allure).",
+	},
+	{
+		key: "biographie",
+		label: "Histoire",
+		type: "textarea",
+		description: "Passé et histoire personnelle du personnage.",
+	},
+	{
+		key: "personnalite",
+		label: "Traits de personnalité",
+		type: "textarea",
+		description: "Traits de caractère marquants du personnage.",
+	},
+	{
+		key: "liens",
+		label: "Liens",
+		type: "textarea",
+		description: "Relations et attaches du personnage.",
+	},
+	{
+		key: "ideaux",
+		label: "Idéaux",
+		type: "textarea",
+		description: "Principes et idéaux qui guident le personnage.",
+	},
+	{
+		key: "defauts",
+		label: "Défauts",
+		type: "textarea",
+		description: "Faiblesses et défauts du personnage.",
+	},
+];
+
 /**
  * Catalogue complet des propriétés de fiche D&D 5e, données pures et stables.
  * L'idempotence du seed repose sur la `key` (unique) ; aucun `id` n'est codé en
@@ -187,4 +227,5 @@ export const DND5E_CHARACTER_SHEET_PROPERTIES: CharacterSheetPropertyData[] = [
 	...RESOURCES,
 	...SKILLS,
 	...MISC,
+	...LORE,
 ];
