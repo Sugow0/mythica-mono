@@ -1,8 +1,8 @@
 # Configuration des tests Bun pour mythica-api.
 # Le seuil de couverture rend le pipeline bloquant : `bun test` échoue si la
-# couverture (lignes + fonctions) des fichiers chargés passe sous 70 %.
+# couverture (lignes + fonctions) des fichiers chargés passe sous 80 %.
 [test]
 coverage = true
-coverageThreshold = 0.7
+coverageThreshold = 0.8
 # lcov : consommé par SonarCloud (apps/mythica-api/coverage/lcov.info).
 coverageReporter = ["text", "lcov"]
