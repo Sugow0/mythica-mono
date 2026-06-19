@@ -84,9 +84,11 @@
 	}
 
 	function step1(attr: string, delta: number) {
-		const min = config.minScore ?? 3;
-		const max =
-			builder.abilityMethod === "manual" ? 20 : (config.maxScore ?? 15);
+		// En saisie manuelle, plage complète 3..20 ; en achat de points, on borne
+		// avec la config (8..15 par défaut).
+		const manual = builder.abilityMethod === "manual";
+		const min = manual ? 3 : (config.minScore ?? 8);
+		const max = manual ? 20 : (config.maxScore ?? 15);
 		const next = (builder.baseScores[attr] ?? min) + delta;
 		if (next < min || next > max) return;
 		builder.baseScores = { ...builder.baseScores, [attr]: next };

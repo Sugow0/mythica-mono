@@ -61,6 +61,20 @@
 		skillChoices.count - builder.skillProficiencies.length
 	);
 
+	// Purge la sur-sélection lorsque la classe (donc options/count) change :
+	// on retire les maîtrises hors options et on borne au nombre autorisé.
+	$effect(() => {
+		const trimmed = builder.skillProficiencies
+			.filter((s) => options.includes(s))
+			.slice(0, skillChoices.count);
+		if (
+			trimmed.length !== builder.skillProficiencies.length ||
+			trimmed.some((s, i) => s !== builder.skillProficiencies[i])
+		) {
+			builder.skillProficiencies = trimmed;
+		}
+	});
+
 	function toggle(skill: string) {
 		const has = builder.skillProficiencies.includes(skill);
 		if (has) {

@@ -12,6 +12,7 @@ import {
 	type AbilityScoreMethod,
 	applyAbilityBonuses,
 	type CasterType,
+	validateAllocation,
 } from "@mythica/character-engine";
 import {
 	abilityModifier,
@@ -37,7 +38,8 @@ export class CharacterBuilder {
 	readonly gameSystemId: string;
 
 	steps = $state<CreationStep[]>([]);
-	stepIndex = $state(0);
+	/** Étape courante suivie par sa clé (robuste aux étapes conditionnelles). */
+	currentStepKey = $state<string | null>(null);
 	loading = $state(true);
 	saving = $state(false);
 	error = $state<string | null>(null);
@@ -65,6 +67,14 @@ export class CharacterBuilder {
 	/** Étapes visibles (les conditionnelles non remplies sont masquées). */
 	visibleSteps = $derived(
 		this.steps.filter((s) => !s.condition || this.conditionMet(s.condition))
+	);
+
+	/** Index dérivé de la clé courante dans les étapes visibles (0 si absente). */
+	stepIndex = $derived(
+		Math.max(
+			0,
+			this.visibleSteps.findIndex((s) => s.stepKey === this.currentStepKey)
+		)
 	);
 
 	currentStep = $derived(this.visibleSteps[this.stepIndex]);
@@ -132,6 +142,7 @@ export class CharacterBuilder {
 		try {
 			const flow = await characterService.getCreationFlow(this.gameSystemId);
 			this.steps = flow.steps;
+			this.currentStepKey = this.visibleSteps[0]?.stepKey ?? null;
 
 			// Pré-charge le contenu des collections référencées par les étapes.
 			const collections: string[] = [];
@@ -172,6 +183,26 @@ export class CharacterBuilder {
 			}
 			case "repeatableSelection":
 				return this.classes.length > 0 && this.totalLevel > 0;
+			case "pointAllocation": {
+				const cfg = step.config as {
+					pointBuyPool?: number;
+					pointBuyCostTable?: Record<number, number>;
+					minScore?: number;
+					maxScore?: number;
+					standardArray?: number[];
+				};
+				return validateAllocation(this.abilityMethod, this.baseScores, {
+					pointBuy: cfg.pointBuyCostTable
+						? {
+								pool: cfg.pointBuyPool ?? 0,
+								costTable: cfg.pointBuyCostTable,
+								min: cfg.minScore ?? 0,
+								max: cfg.maxScore ?? 99,
+							}
+						: undefined,
+					standardArray: cfg.standardArray,
+				}).valid;
+			}
 			default:
 				return true;
 		}
@@ -182,15 +213,18 @@ export class CharacterBuilder {
 	}
 
 	next(): void {
-		if (!this.isLastStep) this.stepIndex += 1;
+		const next = this.visibleSteps[this.stepIndex + 1];
+		if (next) this.currentStepKey = next.stepKey;
 	}
 
 	prev(): void {
-		if (this.stepIndex > 0) this.stepIndex -= 1;
+		const prev = this.visibleSteps[this.stepIndex - 1];
+		if (prev) this.currentStepKey = prev.stepKey;
 	}
 
 	goTo(index: number): void {
-		if (index >= 0 && index < this.visibleSteps.length) this.stepIndex = index;
+		const target = this.visibleSteps[index];
+		if (target) this.currentStepKey = target.stepKey;
 	}
 
 	/** Sélectionne la classe principale (étape `selection` de classe). */
@@ -206,6 +240,19 @@ export class CharacterBuilder {
 		this.saving = true;
 		this.error = null;
 		try {
+			// N'envoie que les sorts cohérents avec les classes retenues (aucun si
+			// le personnage n'a plus de classe lanceuse) — évite de persister des
+			// sorts orphelins après un changement de classe.
+			const classSlugs = this.classes.map((c) => c.slug);
+			const spellSlugs = this.hasCaster
+				? this.spellSlugs.filter((slug) => {
+						const sp = (this.content.sort ?? []).find((s) => s.slug === slug);
+						const classes =
+							((sp?.data ?? {}) as { classes?: string[] }).classes ?? [];
+						return classes.some((c) => classSlugs.includes(c));
+					})
+				: [];
+
 			const body: BuildCharacterData = {
 				raceSlug: this.raceSlug ?? "",
 				classes: this.classes,
@@ -213,7 +260,7 @@ export class CharacterBuilder {
 				abilityMethod: this.abilityMethod,
 				abilityScores: this.baseScores,
 				skillProficiencies: this.skillProficiencies,
-				spellSlugs: this.spellSlugs,
+				spellSlugs,
 				inventory: this.inventory,
 				gold: this.gold ?? undefined,
 				lore: this.lore,
