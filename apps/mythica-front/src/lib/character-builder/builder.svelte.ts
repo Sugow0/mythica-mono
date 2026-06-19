@@ -44,10 +44,13 @@ type SpellcastingMeta = {
 		| "known"
 		| "known_half"
 		| "wizard"
-		| "pact";
+		| "pact"
+		| "third_known";
 	ability: string;
 	cantripsKnown?: number[];
 	spellsKnown?: number[];
+	spellListClass?: string;
+	schoolFilter?: string[];
 };
 
 /** Infos de sélection de sorts calculées pour une classe lanceuse. */
@@ -63,6 +66,10 @@ export type SpellcastingClassInfo = {
 	spellbookLimit: number;
 	/** Libellé du pool principal (« connus » / « préparés »). */
 	spellsLabel: string;
+	/** Liste de sorts à présenter (slug de classe) — diffère pour les tiers-lanceurs. */
+	spellListClass: string;
+	/** Restriction d'écoles (tiers-lanceur). */
+	schoolFilter?: string[];
 };
 
 /** Lit le `data` JSON d'un contenu comme un objet libre. */
@@ -177,14 +184,27 @@ export class CharacterBuilder {
 	/** Infos de sélection de sorts par classe lanceuse (limites, niveau max). */
 	spellcastingClasses = $derived.by<SpellcastingClassInfo[]>(() => {
 		const out: SpellcastingClassInfo[] = [];
+		const subs = this.content["sous-classe"] ?? [];
 		for (const c of this.classes) {
 			const item = (this.content.classe ?? []).find((x) => x.slug === c.slug);
-			const sc = contentData(item).spellcasting as SpellcastingMeta | undefined;
+			// Spellcasting de la classe, sinon de la sous-classe choisie (tiers-lanceur).
+			let sc = contentData(item).spellcasting as SpellcastingMeta | undefined;
+			if (!sc) {
+				const sub = subs.find(
+					(s) => s.slug === this.subclassSelections[c.slug]
+				);
+				sc = sub
+					? (contentData(sub).spellcasting as SpellcastingMeta)
+					: undefined;
+			}
 			if (!sc) continue;
 			const level = c.level;
 			const idx = Math.min(Math.max(level, 1), 20) - 1;
 			const abilityMod = this.modifiers[sc.ability] ?? 0;
-			const casterType = (contentData(item).casterType ?? "none") as CasterType;
+			const casterType: CasterType =
+				sc.kind === "third_known"
+					? "third"
+					: ((contentData(item).casterType ?? "none") as CasterType);
 			const maxSpellLevel =
 				sc.kind === "pact"
 					? pactMagic(level).slotLevel
@@ -207,6 +227,8 @@ export class CharacterBuilder {
 				spellsLimit,
 				spellbookLimit: sc.kind === "wizard" ? wizardSpellbookSize(level) : 0,
 				spellsLabel: prepared !== null ? "Sorts préparés" : "Sorts connus",
+				spellListClass: sc.spellListClass ?? c.slug,
+				schoolFilter: sc.schoolFilter,
 			});
 		}
 		return out;

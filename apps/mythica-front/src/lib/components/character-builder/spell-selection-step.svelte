@@ -19,16 +19,25 @@
 	type SpellData = { level?: number; school?: string; classes?: string[] };
 	const spellData = (s: ContentItem) => (s.data ?? {}) as SpellData;
 
-	/** Sorts d'une classe : tours de magie + sorts de niveau ≤ maxSpellLevel. */
-	function classSpells(classSlug: string, maxLevel: number) {
+	/**
+	 * Sorts présentés pour une classe : tours de magie + sorts de niveau ≤ max.
+	 * `listClass` = liste puisée (diffère pour les tiers-lanceurs) ; `schools`
+	 * restreint les sorts (pas les cantrips) aux écoles autorisées.
+	 */
+	function classSpells(
+		listClass: string,
+		maxLevel: number,
+		schools?: string[]
+	) {
 		const all = (builder.content.sort ?? []).filter((s) =>
-			(spellData(s).classes ?? []).includes(classSlug)
+			(spellData(s).classes ?? []).includes(listClass)
 		);
 		return {
 			cantrips: all.filter((s) => (spellData(s).level ?? 0) === 0),
 			leveled: all.filter((s) => {
 				const l = spellData(s).level ?? 0;
-				return l >= 1 && l <= maxLevel;
+				if (l < 1 || l > maxLevel) return false;
+				return !schools || schools.includes(spellData(s).school ?? "");
 			}),
 		};
 	}
@@ -102,7 +111,11 @@
 	{/if}
 
 	{#each active as info (info.slug)}
-		{@const spells = classSpells(info.slug, info.maxSpellLevel)}
+		{@const spells = classSpells(
+			info.spellListClass,
+			info.maxSpellLevel,
+			info.schoolFilter
+		)}
 		{@const sel = selectionFor(info.slug)}
 		{@const isWizard = info.kind === "wizard"}
 		{@const isPact = info.kind === "pact"}
