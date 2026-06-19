@@ -7,20 +7,26 @@
 --     --file prisma/sql/character-sheet-integrity.sql
 -- Idempotent : DROP IF EXISTS puis ADD.
 
--- La valeur d'une propriété est toujours un objet JSON (enveloppe {v}/{current,max}/…),
--- jamais un scalaire nu ni null.
+-- La valeur d'une propriété peut être un scalaire (number/text/boolean), un
+-- objet (resource {current,max}, list {items}) — mais jamais le JSON `null` :
+-- l'absence de valeur se traduit par l'objet vide `{}` (défaut de colonne).
+-- On nettoie au passage l'ancienne contrainte « objet seulement », trop stricte.
 ALTER TABLE "character_sheet_values"
 	DROP CONSTRAINT IF EXISTS "chk_sheet_values_object";
 ALTER TABLE "character_sheet_values"
-	ADD CONSTRAINT "chk_sheet_values_object"
-	CHECK (jsonb_typeof("value") = 'object');
+	DROP CONSTRAINT IF EXISTS "chk_sheet_values_not_null";
+ALTER TABLE "character_sheet_values"
+	ADD CONSTRAINT "chk_sheet_values_not_null"
+	CHECK (jsonb_typeof("value") <> 'null');
 
 -- Même invariant pour les overrides de token en session.
 ALTER TABLE "session_token_overrides"
 	DROP CONSTRAINT IF EXISTS "chk_token_overrides_object";
 ALTER TABLE "session_token_overrides"
-	ADD CONSTRAINT "chk_token_overrides_object"
-	CHECK (jsonb_typeof("value") = 'object');
+	DROP CONSTRAINT IF EXISTS "chk_token_overrides_not_null";
+ALTER TABLE "session_token_overrides"
+	ADD CONSTRAINT "chk_token_overrides_not_null"
+	CHECK (jsonb_typeof("value") <> 'null');
 
 -- L'or de départ ne peut pas être négatif.
 ALTER TABLE "character_sheets"

@@ -17,6 +17,7 @@
 		"@bogeychan/elysia-logger": "^0.1.10",
 		"@dotenvx/dotenvx": "1.71.3",
 		"@elysiajs/swagger": "^1.3.1",
+		"@mythica/character-engine": "workspace:*",
 		"@prisma/adapter-pg": "^7.8.0",
 		"@prisma/client": "^7.8.0",
 		"@sinclair/typebox": "^0.34.15",

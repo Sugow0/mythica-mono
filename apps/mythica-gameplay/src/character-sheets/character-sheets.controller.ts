@@ -1,3 +1,7 @@
+import {
+	applyAbilityBonuses,
+	validateAllocation,
+} from "@mythica/character-engine";
 import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
 import { ErrorResponse } from "../lib/http";
@@ -103,6 +107,39 @@ const UpdateValuesBody = t.Array(
 		value: t.Unknown(),
 	}),
 );
+
+/**
+ * Corps de finalisation du build (résultat du wizard). Générique : référence le
+ * contenu par `slug` (collections du système), pas de notion D&D en dur.
+ */
+const BuildBody = t.Object({
+	raceSlug: t.String(),
+	classes: t.Array(
+		t.Object({
+			slug: t.String(),
+			level: t.Integer({ minimum: 1, maximum: 20 }),
+			isPrimary: t.Optional(t.Boolean()),
+		}),
+		{ minItems: 1, maxItems: 3 },
+	),
+	backgroundSlug: t.String(),
+	abilityMethod: t.Union([
+		t.Literal("standard_array"),
+		t.Literal("point_buy"),
+		t.Literal("dice_roll"),
+		t.Literal("manual"),
+	]),
+	/** Scores de base choisis (avant bonus raciaux), indexés par clé de carac. */
+	abilityScores: t.Record(t.String(), t.Integer()),
+	skillProficiencies: t.Optional(t.Array(t.String())),
+	spellSlugs: t.Optional(t.Array(t.String())),
+	inventory: t.Optional(
+		t.Array(t.Object({ slug: t.String(), qty: t.Integer({ minimum: 1 }) })),
+	),
+	gold: t.Optional(t.Integer({ minimum: 0 })),
+	/** Champs de lore (clé de propriété textarea -> texte). */
+	lore: t.Optional(t.Record(t.String(), t.String())),
+});
 
 /** Brief système (sélection Prisma partagée). */
 const gameSystemBriefSelect = {
@@ -450,6 +487,260 @@ export const characterSheetsController = new Elysia({
 			detail: {
 				tags: ["CharacterSheets"],
 				summary: "Auto-save des valeurs d'une fiche de personnage",
+			},
+		},
+	)
+
+	/**
+	 * POST /character-sheets/:id/build - Finaliser le build (résultat du wizard).
+	 *
+	 * Générique et data-driven : valide la répartition des caractéristiques
+	 * (méthode + config de l'étape `pointAllocation`) et les prérequis de
+	 * multiclassage via les **données** du contenu, persiste les sélections
+	 * (race, classes, background, sorts, inventaire) dans `CharacterSheetSelection`
+	 * et **projette** les valeurs directes (caracs finales, maîtrises, niveau,
+	 * vitesse, lore) dans `CharacterSheetValue`. Les valeurs dérivées (PV,
+	 * emplacements de sorts) restent calculées côté client (cf. fiche détail).
+	 */
+	.post(
+		"/:id/build",
+		async ({ set, currentUser, params, body }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+
+			const sheet = await prisma.characterSheet.findUnique({
+				where: { id: params.id },
+				select: { id: true, userId: true, gameSystemId: true, deletedAt: true },
+			});
+			if (!sheet || sheet.deletedAt) {
+				set.status = 404;
+				return { success: false as const, error: "Fiche introuvable" };
+			}
+			if (sheet.userId !== currentUser.id) {
+				set.status = 403;
+				return { success: false as const, error: "Accès refusé" };
+			}
+
+			// Contenu du système indexé par (collectionKey, slug).
+			const content = await prisma.systemContent.findMany({
+				where: { gameSystemId: sheet.gameSystemId },
+			});
+			const byKeySlug = new Map(
+				content.map((c) => [`${c.collectionKey}:${c.slug}`, c]),
+			);
+			const getContent = (collectionKey: string, slug: string) =>
+				byKeySlug.get(`${collectionKey}:${slug}`);
+
+			const race = getContent("race", body.raceSlug);
+			const background = getContent("background", body.backgroundSlug);
+			const classRefs = body.classes.map((c) => ({
+				input: c,
+				content: getContent("classe", c.slug),
+			}));
+			if (!race || !background || classRefs.some((c) => !c.content)) {
+				set.status = 400;
+				return {
+					success: false as const,
+					error: "Référence de contenu invalide (race, classe ou background)",
+				};
+			}
+
+			// Validation de la répartition selon la méthode (config data-driven).
+			const allocStep = await prisma.gameSystemCreationStep.findFirst({
+				where: { gameSystemId: sheet.gameSystemId, kind: "pointAllocation" },
+			});
+			const alloc = (allocStep?.config ?? {}) as {
+				pointBuyPool?: number;
+				pointBuyCostTable?: Record<number, number>;
+				minScore?: number;
+				maxScore?: number;
+				standardArray?: number[];
+			};
+			const allocResult = validateAllocation(
+				body.abilityMethod,
+				body.abilityScores,
+				{
+					pointBuy: alloc.pointBuyCostTable
+						? {
+								pool: alloc.pointBuyPool ?? 0,
+								costTable: alloc.pointBuyCostTable,
+								min: alloc.minScore ?? 0,
+								max: alloc.maxScore ?? 99,
+							}
+						: undefined,
+					standardArray: alloc.standardArray,
+				},
+			);
+			if (!allocResult.valid) {
+				set.status = 400;
+				return {
+					success: false as const,
+					error: `Répartition invalide : ${allocResult.errors.join(" ; ")}`,
+				};
+			}
+
+			// Scores finaux = base + bonus raciaux (données de la race).
+			const raceData = race.data as {
+				abilityBonuses?: Record<string, number>;
+				skillProficiencies?: string[];
+				speed?: number;
+			};
+			const finalScores = applyAbilityBonuses(
+				body.abilityScores,
+				raceData.abilityBonuses ?? {},
+			);
+
+			// Prérequis de multiclassage (données de classe) si plusieurs classes.
+			if (body.classes.length > 1) {
+				for (const ref of classRefs) {
+					const data = ref.content?.data as {
+						multiclassPrereq?: Record<string, number>;
+					};
+					const prereq = data?.multiclassPrereq ?? {};
+					const ok = Object.entries(prereq).every(
+						([key, min]) => (finalScores[key] ?? 0) >= Number(min),
+					);
+					if (!ok) {
+						set.status = 400;
+						return {
+							success: false as const,
+							error: `Prérequis de multiclassage non respectés pour ${ref.content?.name}`,
+						};
+					}
+				}
+			}
+
+			const totalLevel = body.classes.reduce((sum, c) => sum + c.level, 0);
+
+			// Maîtrises accordées (race + background) + choisies par le joueur.
+			const bgData = background.data as { skillProficiencies?: string[] };
+			const skills = new Set<string>([
+				...(raceData.skillProficiencies ?? []),
+				...(bgData.skillProficiencies ?? []),
+				...(body.skillProficiencies ?? []),
+			]);
+
+			// Mapping clé de propriété -> propertyId pour la projection à plat.
+			const mappings = await prisma.gameSystemProperty.findMany({
+				where: { gameSystemId: sheet.gameSystemId },
+				include: { property: { select: { key: true } } },
+			});
+			const propIdByKey = new Map(
+				mappings.map((m) => [m.property.key, m.propertyId]),
+			);
+
+			// Valeurs directes (les dérivées restent calculées côté client).
+			const valueByKey: Record<string, unknown> = {};
+			for (const [key, score] of Object.entries(finalScores)) {
+				valueByKey[key] = score;
+			}
+			for (const skill of skills) valueByKey[skill] = true;
+			valueByKey.niveau = totalLevel;
+			if (raceData.speed != null) valueByKey.vitesse = raceData.speed;
+			for (const [key, text] of Object.entries(body.lore ?? {})) {
+				valueByKey[key] = text;
+			}
+			const valueEntries = Object.entries(valueByKey).filter(([key]) =>
+				propIdByKey.has(key),
+			);
+
+			await prisma.$transaction(async (tx) => {
+				// Build idempotent : on repart des sélections à zéro.
+				await tx.characterSheetSelection.deleteMany({
+					where: { characterSheetId: sheet.id },
+				});
+
+				const selections = [
+					{
+						id: newId(),
+						characterSheetId: sheet.id,
+						collectionKey: "race",
+						contentId: race.id,
+					},
+					{
+						id: newId(),
+						characterSheetId: sheet.id,
+						collectionKey: "background",
+						contentId: background.id,
+					},
+					...classRefs.map((ref) => ({
+						id: newId(),
+						characterSheetId: sheet.id,
+						collectionKey: "classe",
+						// biome-ignore lint/style/noNonNullAssertion: présence garantie par le garde ci-dessus.
+						contentId: ref.content!.id,
+						level: ref.input.level,
+						isPrimary: ref.input.isPrimary ?? false,
+					})),
+				];
+				for (const slug of body.spellSlugs ?? []) {
+					const sp = getContent("sort", slug);
+					if (sp) {
+						selections.push({
+							id: newId(),
+							characterSheetId: sheet.id,
+							collectionKey: "sort",
+							contentId: sp.id,
+						});
+					}
+				}
+				for (const item of body.inventory ?? []) {
+					const eq = getContent("equipement", item.slug);
+					if (eq) {
+						selections.push({
+							id: newId(),
+							characterSheetId: sheet.id,
+							collectionKey: "equipement",
+							contentId: eq.id,
+							qty: item.qty,
+						});
+					}
+				}
+				await tx.characterSheetSelection.createMany({ data: selections });
+
+				await tx.characterSheet.update({
+					where: { id: sheet.id },
+					data: { gold: body.gold ?? null, abilityMethod: body.abilityMethod },
+				});
+
+				for (const [key, value] of valueEntries) {
+					const propertyId = propIdByKey.get(key);
+					if (!propertyId) continue;
+					await tx.characterSheetValue.upsert({
+						where: {
+							characterSheetId_propertyId: {
+								characterSheetId: sheet.id,
+								propertyId,
+							},
+						},
+						create: {
+							id: newId(),
+							characterSheetId: sheet.id,
+							propertyId,
+							value: value as object,
+						},
+						update: { value: value as object },
+					});
+				}
+			});
+
+			return { success: true as const, id: sheet.id };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: BuildBody,
+			response: {
+				200: t.Object({ success: t.Literal(true), id: t.String() }),
+				400: ErrorResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["CharacterSheets"],
+				summary: "Finaliser le build d'une fiche (résultat du wizard)",
 			},
 		},
 	);
