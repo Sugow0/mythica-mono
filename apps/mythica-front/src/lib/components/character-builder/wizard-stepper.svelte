@@ -14,6 +14,7 @@
 		maitrises: "Maîtrises",
 		sorts: "Sorts",
 		inventaire: "Équipement",
+		identite: "Identité",
 		lore: "Histoire",
 	};
 

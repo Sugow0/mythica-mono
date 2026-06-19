@@ -34,6 +34,17 @@ export const DND5E_LORE_FIELDS = [
 	"defauts",
 ];
 
+/** Champs d'identité (alignement + physique) saisis pendant la création. */
+export const DND5E_IDENTITY_FIELDS = [
+	"alignement",
+	"age",
+	"taille",
+	"poids",
+	"yeux",
+	"peau",
+	"cheveux",
+];
+
 export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 	{
 		stepKey: "race",
@@ -139,8 +150,14 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 		config: { collectionKey: "equipement", currencyKey: "gold" },
 	},
 	{
-		stepKey: "lore",
+		stepKey: "identite",
 		order: 8,
+		kind: "loreForm",
+		config: { fields: DND5E_IDENTITY_FIELDS },
+	},
+	{
+		stepKey: "lore",
+		order: 9,
 		kind: "loreForm",
 		config: { fields: DND5E_LORE_FIELDS },
 	},

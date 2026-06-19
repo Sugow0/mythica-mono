@@ -33,6 +33,7 @@
 		maitrises: "Choisissez vos maîtrises",
 		sorts: "Sélectionnez vos sorts",
 		inventaire: "Équipement et or",
+		identite: "Identité du personnage",
 		lore: "L'histoire de votre personnage",
 	};
 
