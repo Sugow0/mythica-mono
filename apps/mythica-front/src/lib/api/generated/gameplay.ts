@@ -2564,7 +2564,11 @@ export interface operations {
                         [key: string]: string | number;
                     };
                     skillProficiencies?: string[];
-                    spellSlugs?: string[];
+                    spells?: {
+                        slug: string;
+                        classSlug: string;
+                        role: "cantrip" | "spell" | "book";
+                    }[];
                     inventory?: {
                         slug: string;
                         qty: string | number;
@@ -2587,7 +2591,11 @@ export interface operations {
                         [key: string]: string | number;
                     };
                     skillProficiencies?: string[];
-                    spellSlugs?: string[];
+                    spells?: {
+                        slug: string;
+                        classSlug: string;
+                        role: "cantrip" | "spell" | "book";
+                    }[];
                     inventory?: {
                         slug: string;
                         qty: string | number;
@@ -2610,7 +2618,11 @@ export interface operations {
                         [key: string]: string | number;
                     };
                     skillProficiencies?: string[];
-                    spellSlugs?: string[];
+                    spells?: {
+                        slug: string;
+                        classSlug: string;
+                        role: "cantrip" | "spell" | "book";
+                    }[];
                     inventory?: {
                         slug: string;
                         qty: string | number;
