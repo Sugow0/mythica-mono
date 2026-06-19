@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 // ===== MOCKS (hoisted) =====
 
 const p = {
+	user: {
+		upsert: mock(async () => ({}) as unknown),
+	},
 	gameSystem: {
 		findUnique: mock(async () => null as unknown),
 	},

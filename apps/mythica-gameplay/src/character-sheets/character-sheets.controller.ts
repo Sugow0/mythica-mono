@@ -182,6 +182,15 @@ export const characterSheetsController = new Elysia({
 
 			try {
 				await prisma.$transaction(async (tx) => {
+					// Garantit la présence du miroir utilisateur (alimenté en temps
+					// normal par l'event sync) : évite une violation de clé étrangère
+					// si l'event n'a pas encore été consommé pour cet utilisateur.
+					await tx.user.upsert({
+						where: { id: currentUser.id },
+						create: { id: currentUser.id },
+						update: {},
+					});
+
 					await tx.characterSheet.create({
 						data: {
 							id: newSheetId,
