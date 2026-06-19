@@ -17,6 +17,11 @@ import {
 import {
 	abilityModifier,
 	computeSpellSlots,
+	maxSpellSlotLevel,
+	pactMagic,
+	preparedSpellsCount,
+	singleClassSlots,
+	wizardSpellbookSize,
 } from "@mythica/character-engine/dnd5e";
 import {
 	type BuildCharacterData,
@@ -27,6 +32,38 @@ import {
 
 /** Une classe sélectionnée dans le build. */
 export type SelectedClass = { slug: string; level: number; isPrimary: boolean };
+
+/** Rôle d'un sort sélectionné. */
+export type SpellRole = "cantrip" | "spell" | "book";
+
+/** Mécanique de sélection de sorts d'une classe (depuis le contenu). */
+type SpellcastingMeta = {
+	kind:
+		| "prepared"
+		| "prepared_half"
+		| "known"
+		| "known_half"
+		| "wizard"
+		| "pact";
+	ability: string;
+	cantripsKnown?: number[];
+	spellsKnown?: number[];
+};
+
+/** Infos de sélection de sorts calculées pour une classe lanceuse. */
+export type SpellcastingClassInfo = {
+	slug: string;
+	name: string;
+	kind: SpellcastingMeta["kind"];
+	ability: string;
+	abilityMod: number;
+	maxSpellLevel: number;
+	cantripsLimit: number;
+	spellsLimit: number;
+	spellbookLimit: number;
+	/** Libellé du pool principal (« connus » / « préparés »). */
+	spellsLabel: string;
+};
 
 /** Lit le `data` JSON d'un contenu comme un objet libre. */
 function contentData(item: ContentItem | undefined): Record<string, unknown> {
@@ -54,7 +91,13 @@ export class CharacterBuilder {
 	abilityMethod = $state<AbilityScoreMethod>("standard_array");
 	baseScores = $state<Record<string, number>>({});
 	skillProficiencies = $state<string[]>([]);
-	spellSlugs = $state<string[]>([]);
+	/** Sélection de sorts par classe : cantrips, sorts (connus/préparés), grimoire. */
+	spellSelections = $state<
+		Record<
+			string,
+			{ cantrips: string[]; spells: string[]; spellbook: string[] }
+		>
+	>({});
 	inventory = $state<{ slug: string; qty: number }[]>([]);
 	gold = $state<number | null>(null);
 	lore = $state<Record<string, string>>({});
@@ -129,9 +172,54 @@ export class CharacterBuilder {
 		this.classes.reduce((sum, c) => sum + (c.level || 0), 0)
 	);
 
+	/** Infos de sélection de sorts par classe lanceuse (limites, niveau max). */
+	spellcastingClasses = $derived.by<SpellcastingClassInfo[]>(() => {
+		const out: SpellcastingClassInfo[] = [];
+		for (const c of this.classes) {
+			const item = (this.content.classe ?? []).find((x) => x.slug === c.slug);
+			const sc = contentData(item).spellcasting as SpellcastingMeta | undefined;
+			if (!sc) continue;
+			const level = c.level;
+			const idx = Math.min(Math.max(level, 1), 20) - 1;
+			const abilityMod = this.modifiers[sc.ability] ?? 0;
+			const casterType = (contentData(item).casterType ?? "none") as CasterType;
+			const maxSpellLevel =
+				sc.kind === "pact"
+					? pactMagic(level).slotLevel
+					: maxSpellSlotLevel(singleClassSlots(casterType, level));
+			const prepared =
+				sc.kind === "prepared" || sc.kind === "wizard"
+					? preparedSpellsCount(abilityMod, level)
+					: sc.kind === "prepared_half"
+						? preparedSpellsCount(abilityMod, level, true)
+						: null;
+			const spellsLimit = prepared ?? sc.spellsKnown?.[idx] ?? 0;
+			out.push({
+				slug: c.slug,
+				name: item?.name ?? c.slug,
+				kind: sc.kind,
+				ability: sc.ability,
+				abilityMod,
+				maxSpellLevel,
+				cantripsLimit: sc.cantripsKnown?.[idx] ?? 0,
+				spellsLimit,
+				spellbookLimit: sc.kind === "wizard" ? wizardSpellbookSize(level) : 0,
+				spellsLabel: prepared !== null ? "Sorts préparés" : "Sorts connus",
+			});
+		}
+		return out;
+	});
+
+	/** Y a-t-il au moins un sort/cantrip à choisir au niveau actuel ? */
+	hasSpellsToChoose = $derived(
+		this.spellcastingClasses.some(
+			(i) => i.cantripsLimit > 0 || i.maxSpellLevel > 0
+		)
+	);
+
 	/** Évalue un prédicat d'étape conditionnelle. */
 	private conditionMet(condition: string): boolean {
-		if (condition === "has_caster_class") return this.hasCaster;
+		if (condition === "has_caster_class") return this.hasSpellsToChoose;
 		return true;
 	}
 
@@ -240,18 +328,19 @@ export class CharacterBuilder {
 		this.saving = true;
 		this.error = null;
 		try {
-			// N'envoie que les sorts cohérents avec les classes retenues (aucun si
-			// le personnage n'a plus de classe lanceuse) — évite de persister des
-			// sorts orphelins après un changement de classe.
-			const classSlugs = this.classes.map((c) => c.slug);
-			const spellSlugs = this.hasCaster
-				? this.spellSlugs.filter((slug) => {
-						const sp = (this.content.sort ?? []).find((s) => s.slug === slug);
-						const classes =
-							((sp?.data ?? {}) as { classes?: string[] }).classes ?? [];
-						return classes.some((c) => classSlugs.includes(c));
-					})
-				: [];
+			// Sorts rattachés à leur classe + rôle. On n'envoie que les classes
+			// encore retenues (évite les sorts orphelins après un changement).
+			const classSlugs = new Set(this.classes.map((c) => c.slug));
+			const spells: { slug: string; classSlug: string; role: SpellRole }[] = [];
+			for (const [classSlug, sel] of Object.entries(this.spellSelections)) {
+				if (!classSlugs.has(classSlug)) continue;
+				for (const slug of sel.cantrips ?? [])
+					spells.push({ slug, classSlug, role: "cantrip" });
+				for (const slug of sel.spellbook ?? [])
+					spells.push({ slug, classSlug, role: "book" });
+				for (const slug of sel.spells ?? [])
+					spells.push({ slug, classSlug, role: "spell" });
+			}
 
 			const body: BuildCharacterData = {
 				raceSlug: this.raceSlug ?? "",
@@ -260,7 +349,7 @@ export class CharacterBuilder {
 				abilityMethod: this.abilityMethod,
 				abilityScores: this.baseScores,
 				skillProficiencies: this.skillProficiencies,
-				spellSlugs,
+				spells,
 				inventory: this.inventory,
 				gold: this.gold ?? undefined,
 				lore: this.lore,

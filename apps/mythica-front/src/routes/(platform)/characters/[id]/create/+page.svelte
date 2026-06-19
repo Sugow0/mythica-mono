@@ -96,7 +96,7 @@
 			{:else if step.kind === "proficiencyChoice"}
 				<ProficiencyChoiceStep {builder} />
 			{:else if step.kind === "spellSelection"}
-				<SpellSelectionStep {builder} {step} />
+				<SpellSelectionStep {builder} />
 			{:else if step.kind === "inventory"}
 				<InventoryStep {builder} {step} />
 			{:else if step.kind === "loreForm"}
