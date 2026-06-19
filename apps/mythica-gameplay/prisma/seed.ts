@@ -210,6 +210,30 @@ async function seedCreationFlow(
 	console.log(`✔ flow de création seedé : ${slug} (${steps.length} étapes)`);
 }
 
+/**
+ * Applique les contraintes d'intégrité non exprimables dans le schéma Prisma
+ * (CHECK sur JSONB, etc.) depuis `prisma/sql/character-sheet-integrity.sql`.
+ * Le SQL est idempotent (DROP IF EXISTS puis ADD), donc rejouable à chaque seed.
+ */
+async function seedIntegrityConstraints(): Promise<void> {
+	const path = `${import.meta.dir}/sql/character-sheet-integrity.sql`;
+	const sql = await Bun.file(path).text();
+	const statements = sql
+		.split("\n")
+		.filter((line) => !line.trim().startsWith("--"))
+		.join("\n")
+		.split(";")
+		.map((s) => s.trim())
+		.filter((s) => s.length > 0);
+
+	for (const statement of statements) {
+		await prisma.$executeRawUnsafe(statement);
+	}
+	console.log(
+		`✔ contraintes d'intégrité appliquées (${statements.length} instructions)`,
+	);
+}
+
 async function main() {
 	// Insérer les systèmes parents avant leurs enfants (FK parentSystemId).
 	const ordered = [...OFFICIAL_GAME_SYSTEMS].sort(
@@ -295,6 +319,9 @@ async function main() {
 	// parcours de création data-driven.
 	await seedSystemContent(DND5E_2014_SLUG, DND5E_CONTENT);
 	await seedCreationFlow(DND5E_2014_SLUG, DND5E_CREATION_FLOW);
+
+	// Garde-fous d'intégrité base (CHECK JSONB, etc.) non exprimables en Prisma.
+	await seedIntegrityConstraints();
 }
 
 main()
