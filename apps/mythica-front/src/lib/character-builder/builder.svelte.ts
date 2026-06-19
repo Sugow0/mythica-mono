@@ -26,6 +26,7 @@ import {
 } from "@mythica/character-engine/dnd5e";
 import {
 	type BuildCharacterData,
+	type CharacterSheetDetail,
 	characterService,
 	type ContentItem,
 	type CreationStep,
@@ -124,6 +125,12 @@ export class CharacterBuilder {
 	goldRolled = $state<number | null>(null);
 	/** Classe pour laquelle la bourse a été lancée (réinitialise si elle change). */
 	rolledClassSlug = $state<string | null>(null);
+
+	// — Ré-édition d'un build existant —
+	/** Inventaire déjà enregistré (conservé tant que la bourse n'est pas relancée). */
+	existingInventory = $state<EquipmentEntry[]>([]);
+	/** Or déjà enregistré (conservé tant que la bourse n'est pas relancée). */
+	existingGold = $state<number | null>(null);
 
 	constructor(sheetId: string, gameSystemId: string) {
 		this.sheetId = sheetId;
@@ -245,6 +252,19 @@ export class CharacterBuilder {
 	goldRollDone = $derived(
 		this.goldRolled !== null &&
 			this.rolledClassSlug === this.primaryClassContent?.slug
+	);
+
+	/** Un inventaire/or a-t-il déjà été enregistré (ré-édition) ? */
+	hasExistingInventory = $derived(
+		this.existingInventory.length > 0 || this.existingGold !== null
+	);
+
+	/**
+	 * En ré-édition, on conserve l'inventaire et l'or existants tant que la bourse
+	 * n'a pas été relancée (un nouveau lancer repart de zéro).
+	 */
+	keepExistingInventory = $derived(
+		this.goldRolled === null && this.hasExistingInventory
 	);
 
 	/** Lance l'unique jet de richesse de départ (verrouillé ensuite). */
@@ -394,6 +414,116 @@ export class CharacterBuilder {
 		return true;
 	}
 
+	/**
+	 * Hydrate l'état du wizard depuis une fiche déjà construite, pour ré-éditer
+	 * les choix du build. À appeler après `init()` (le contenu doit être chargé).
+	 *
+	 * Reconstitue les choix réversibles (race, classes, sous-classes, sorts,
+	 * caractéristiques de base, maîtrises, lore) ; l'inventaire et l'or sont
+	 * conservés tels quels tant que la bourse n'est pas relancée.
+	 */
+	loadExisting(detail: CharacterSheetDetail): void {
+		const sel = detail.selections ?? [];
+		const ofKey = (key: string) => sel.filter((s) => s.collectionKey === key);
+
+		this.raceSlug = ofKey("race")[0]?.slug ?? null;
+		this.backgroundSlug = ofKey("background")[0]?.slug ?? null;
+
+		const classes = ofKey("classe").map((s) => ({
+			slug: s.slug,
+			level: Number(s.level ?? 1),
+			isPrimary: s.isPrimary ?? false,
+		}));
+		if (classes.length > 0 && !classes.some((c) => c.isPrimary)) {
+			classes[0].isPrimary = true;
+		}
+		this.classes = classes;
+
+		const subs: Record<string, string> = {};
+		for (const s of ofKey("sous-classe")) {
+			const cs = (s.extra as { classSlug?: string } | null)?.classSlug;
+			if (cs) subs[cs] = s.slug;
+		}
+		this.subclassSelections = subs;
+
+		const spells: Record<
+			string,
+			{ cantrips: string[]; spells: string[]; spellbook: string[] }
+		> = {};
+		for (const s of ofKey("sort")) {
+			const extra = (s.extra ?? {}) as { classSlug?: string; role?: SpellRole };
+			const cs = extra.classSlug;
+			if (!cs) continue;
+			const bucket = (spells[cs] ??= {
+				cantrips: [],
+				spells: [],
+				spellbook: [],
+			});
+			if (extra.role === "cantrip") bucket.cantrips.push(s.slug);
+			else if (extra.role === "book") bucket.spellbook.push(s.slug);
+			else bucket.spells.push(s.slug);
+		}
+		this.spellSelections = spells;
+
+		if (detail.abilityMethod) {
+			this.abilityMethod = detail.abilityMethod as AbilityScoreMethod;
+		}
+
+		// Valeurs projetées sur la fiche (caracs finales, maîtrises, lore…).
+		const valueByKey: Record<string, unknown> = {};
+		for (const p of detail.properties) valueByKey[p.key] = p.value;
+
+		// Scores de base = scores finaux − bonus raciaux (inverse de la projection).
+		const allocStep = this.steps.find((s) => s.kind === "pointAllocation");
+		const attrs =
+			(allocStep?.config as { attributes?: string[] } | undefined)
+				?.attributes ?? [];
+		const bonuses = this.raceBonuses;
+		const base: Record<string, number> = {};
+		for (const a of attrs) {
+			const final = Number(valueByKey[a]);
+			if (Number.isFinite(final) && final > 0) {
+				base[a] = final - (bonuses[a] ?? 0);
+			}
+		}
+		if (Object.keys(base).length > 0) this.baseScores = base;
+
+		// Maîtrises choisies = maîtrises vraies de la classe, hors maîtrises
+		// déjà accordées par la race ou l'historique.
+		const granted = [
+			...((contentData(this.raceContent).skillProficiencies ?? []) as string[]),
+			...((contentData(this.backgroundContent).skillProficiencies ??
+				[]) as string[]),
+		];
+		const classChoices = (contentData(this.primaryClassContent).skillChoices ??
+			{}) as { from?: string[] };
+		const fromList = classChoices.from ?? [];
+		this.skillProficiencies = Object.entries(valueByKey)
+			.filter(
+				([k, v]) => v === true && fromList.includes(k) && !granted.includes(k)
+			)
+			.map(([k]) => k);
+
+		// Lore = valeurs des champs des étapes loreForm.
+		const lore: Record<string, string> = {};
+		for (const s of this.steps) {
+			if (s.kind !== "loreForm") continue;
+			const fields = (s.config as { fields?: string[] }).fields ?? [];
+			for (const f of fields) {
+				const v = valueByKey[f];
+				if (typeof v === "string" && v) lore[f] = v;
+			}
+		}
+		this.lore = lore;
+
+		// Inventaire & or : conservés tels quels tant que la bourse n'est pas relancée.
+		this.existingInventory = ofKey("equipement").map((s) => ({
+			slug: s.slug,
+			qty: Number(s.qty ?? 1),
+		}));
+		this.existingGold = detail.gold == null ? null : Number(detail.gold);
+	}
+
 	/** Charge le parcours puis le contenu des collections de sélection. */
 	async init(): Promise<void> {
 		this.loading = true;
@@ -447,7 +577,9 @@ export class CharacterBuilder {
 			case "repeatableSelection":
 				return this.classes.length > 0 && this.totalLevel > 0;
 			case "inventory":
-				// La bourse doit avoir été lancée et ne pas être en découvert.
+				// En ré-édition, l'inventaire existant est conservé tant qu'on ne
+				// relance pas la bourse. Sinon : bourse lancée et non à découvert.
+				if (this.keepExistingInventory) return true;
 				return this.goldRollDone && this.availableGold >= 0;
 			case "pointAllocation": {
 				const cfg = step.config as {
@@ -525,6 +657,17 @@ export class CharacterBuilder {
 				.filter(([classSlug]) => classSlugs.includes(classSlug))
 				.map(([classSlug, slug]) => ({ classSlug, slug }));
 
+			// En ré-édition, l'inventaire et l'or existants sont préservés tant que
+			// la bourse n'a pas été relancée (évite d'écraser l'équipement).
+			const inventory = this.keepExistingInventory
+				? this.existingInventory
+				: this.finalInventory;
+			// `gold` est stocké en entier (colonne Int) : on arrondit pour éviter
+			// l'échec d'écriture en cas de revente à demi-valeur (coût impair / 2).
+			const gold = this.keepExistingInventory
+				? (this.existingGold ?? 0)
+				: Math.max(0, Math.round(this.availableGold));
+
 			const body: BuildCharacterData = {
 				raceSlug: this.raceSlug ?? "",
 				classes: this.classes,
@@ -534,8 +677,8 @@ export class CharacterBuilder {
 				abilityScores: this.baseScores,
 				skillProficiencies: this.skillProficiencies,
 				spells,
-				inventory: this.finalInventory,
-				gold: Math.max(0, Math.round(this.availableGold * 100) / 100),
+				inventory,
+				gold,
 				lore: this.lore,
 			};
 			const res = await characterService.finalizeBuild(this.sheetId, body);

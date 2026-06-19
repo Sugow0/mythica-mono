@@ -76,6 +76,15 @@
 </script>
 
 <div class="mx-auto max-w-2xl space-y-6">
+	{#if builder.keepExistingInventory}
+		<div
+			class="border-primary/30 bg-primary/5 text-foreground rounded-lg border px-3 py-2.5 text-sm"
+		>
+			Votre équipement et votre bourse actuels sont conservés. Relancez la
+			bourse ci-dessous uniquement si vous voulez tout refaire.
+		</div>
+	{/if}
+
 	<!-- Équipement de départ de la classe -->
 	{#if groups.length > 0}
 		<section class="space-y-3">

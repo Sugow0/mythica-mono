@@ -13,6 +13,7 @@ const p = {
 		create: mock(async () => ({}) as unknown),
 		findMany: mock(async () => [] as unknown[]),
 		findUnique: mock(async () => null as unknown),
+		update: mock(async () => ({}) as unknown),
 	},
 	gameSystemProperty: {
 		findMany: mock(async () => [] as unknown[]),
@@ -76,12 +77,15 @@ function aSheet(extra: Record<string, unknown> = {}) {
 		gameSystemId: GS,
 		name: "Aragorn",
 		avatarFileId: null,
+		gold: null,
+		abilityMethod: null,
 		isActive: true,
 		createdAt: new Date("2026-06-16T00:00:00Z"),
 		updatedAt: new Date("2026-06-16T00:00:00Z"),
 		deletedAt: null,
 		gameSystem: gameSystemBrief,
 		values: [],
+		selections: [],
 		...extra,
 	};
 }
@@ -117,6 +121,8 @@ beforeEach(() => {
 	p.characterSheet.findMany.mockResolvedValue([] as unknown[]);
 	p.characterSheet.findUnique.mockReset();
 	p.characterSheet.findUnique.mockResolvedValue(null as unknown);
+	p.characterSheet.update.mockReset();
+	p.characterSheet.update.mockResolvedValue({ id: SHEET } as unknown);
 	p.gameSystemProperty.findMany.mockReset();
 	p.gameSystemProperty.findMany.mockResolvedValue([] as unknown[]);
 	p.characterSheetValue.createMany.mockReset();
@@ -470,5 +476,100 @@ describe("PATCH /character-sheets/:id/values", () => {
 			{ propertyId: PROP_A, value: "16" },
 			{ propertyId: PROP_B, value: { current: 3, max: 4 } },
 		]);
+	});
+});
+
+// ==================== DELETE /character-sheets/:id ====================
+
+describe("DELETE /character-sheets/:id", () => {
+	it("401 sans authentification", async () => {
+		const r = await call("DELETE", `/character-sheets/${SHEET}`);
+		expect(r.status).toBe(401);
+	});
+
+	it("404 si la fiche est introuvable", async () => {
+		p.characterSheet.findUnique.mockResolvedValue(null as unknown);
+		const r = await call("DELETE", `/character-sheets/${SHEET}`, {
+			userId: USER,
+		});
+		expect(r.status).toBe(404);
+		expect(p.characterSheet.update).not.toHaveBeenCalled();
+	});
+
+	it("404 si la fiche est déjà supprimée (idempotent)", async () => {
+		p.characterSheet.findUnique.mockResolvedValue(
+			aSheet({ deletedAt: new Date("2026-06-17T00:00:00Z") }) as unknown,
+		);
+		const r = await call("DELETE", `/character-sheets/${SHEET}`, {
+			userId: USER,
+		});
+		expect(r.status).toBe(404);
+		expect(p.characterSheet.update).not.toHaveBeenCalled();
+	});
+
+	it("403 si la fiche appartient à un autre utilisateur", async () => {
+		p.characterSheet.findUnique.mockResolvedValue(
+			aSheet({ userId: OTHER }) as unknown,
+		);
+		const r = await call("DELETE", `/character-sheets/${SHEET}`, {
+			userId: USER,
+		});
+		expect(r.status).toBe(403);
+		expect(p.characterSheet.update).not.toHaveBeenCalled();
+	});
+
+	it("soft-delete la fiche (deletedAt) et renvoie success", async () => {
+		p.characterSheet.findUnique.mockResolvedValue(aSheet() as unknown);
+		const r = await call("DELETE", `/character-sheets/${SHEET}`, {
+			userId: USER,
+		});
+		expect(r.status).toBe(200);
+		expect(r.json?.success).toBe(true);
+		const arg = p.characterSheet.update.mock.calls[0]?.[0] as {
+			where: { id: string };
+			data: { deletedAt: Date };
+		};
+		expect(arg.where.id).toBe(SHEET);
+		expect(arg.data.deletedAt).toBeInstanceOf(Date);
+	});
+});
+
+// ==================== POST /character-sheets/:id/avatar ====================
+
+describe("POST /character-sheets/:id/avatar", () => {
+	async function callMultipart(path: string, userId?: string, file?: File) {
+		const headers: Record<string, string> = {};
+		if (userId) headers["x-user-id"] = userId;
+		const form = new FormData();
+		if (file) form.set("avatar", file);
+		const res = await characterSheetsController.handle(
+			new Request(`http://localhost${path}`, {
+				method: "POST",
+				headers,
+				body: form,
+			}),
+		);
+		const text = await res.text();
+		return {
+			status: res.status,
+			json: text ? (JSON.parse(text) as Record<string, unknown>) : null,
+		};
+	}
+
+	it("401 sans authentification", async () => {
+		const file = new File([new Uint8Array([1, 2, 3])], "t.png", {
+			type: "image/png",
+		});
+		const r = await callMultipart(
+			`/character-sheets/${SHEET}/avatar`,
+			undefined,
+			file,
+		);
+		expect(r.status).toBe(401);
+	});
+
+	it("400 si aucun fichier n'est envoyé", async () => {
+		const r = await callMultipart(`/character-sheets/${SHEET}/avatar`, USER);
+		expect(r.status).toBe(400);
 	});
 });

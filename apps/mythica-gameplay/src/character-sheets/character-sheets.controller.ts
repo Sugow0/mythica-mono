@@ -4,9 +4,20 @@ import {
 } from "@mythica/character-engine";
 import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
+import { getPresignedAvatarUrl } from "../lib/avatar-storage";
 import { ErrorResponse } from "../lib/http";
 import { newId } from "../lib/id";
 import { prisma } from "../lib/prisma";
+import { uploadAvatarHandler } from "./commands/upload-avatar/upload-avatar.handler";
+
+/** URL présignée de l'avatar d'une fiche (null si aucun avatar). */
+async function avatarUrlFor(sheet: {
+	id: string;
+	avatarFileId: string | null;
+}): Promise<string | null> {
+	if (!sheet.avatarFileId) return null;
+	return getPresignedAvatarUrl(sheet.id).catch(() => null);
+}
 
 /** Code d'erreur Prisma pour violation de clé étrangère. */
 const PRISMA_FK_VIOLATION = "P2003";
@@ -50,10 +61,27 @@ const CharacterSheetListItemSchema = t.Object({
 	gameSystemId: t.String(),
 	gameSystem: GameSystemBriefSchema,
 	avatarFileId: t.Union([t.String(), t.Null()]),
+	avatarUrl: t.Union([t.String(), t.Null()]),
 	isActive: t.Boolean(),
 	createdAt: t.Date(),
 	updatedAt: t.Date(),
 	values: t.Array(SheetValueSchema),
+});
+
+/**
+ * Une sélection de build résolue : contenu choisi (race, classe, sous-classe,
+ * background, sort, équipement…) avec son slug/nom et ses métadonnées (niveau,
+ * classe principale, quantité, extra). Sert à l'affichage de la fiche et à la
+ * pré-saisie du wizard lors d'une ré-édition du build.
+ */
+const SheetSelectionSchema = t.Object({
+	collectionKey: t.String(),
+	slug: t.String(),
+	name: t.String(),
+	level: t.Union([t.Integer(), t.Null()]),
+	isPrimary: t.Union([t.Boolean(), t.Null()]),
+	qty: t.Union([t.Integer(), t.Null()]),
+	extra: t.Union([t.Unknown(), t.Null()]),
 });
 
 /**
@@ -85,10 +113,14 @@ const CharacterSheetDetailSchema = t.Object({
 	gameSystemId: t.String(),
 	gameSystem: GameSystemBriefSchema,
 	avatarFileId: t.Union([t.String(), t.Null()]),
+	avatarUrl: t.Union([t.String(), t.Null()]),
+	abilityMethod: t.Union([t.String(), t.Null()]),
+	gold: t.Union([t.Integer(), t.Null()]),
 	isActive: t.Boolean(),
 	createdAt: t.Date(),
 	updatedAt: t.Date(),
 	properties: t.Array(CharacterSheetPropertySchema),
+	selections: t.Array(SheetSelectionSchema),
 });
 
 const CreateCharacterSheetBody = t.Object({
@@ -295,21 +327,24 @@ export const characterSheetsController = new Elysia({
 				},
 			});
 
-			const items = sheets.map((s) => ({
-				id: s.id,
-				name: s.name,
-				gameSystemId: s.gameSystemId,
-				gameSystem: s.gameSystem,
-				avatarFileId: s.avatarFileId,
-				isActive: s.isActive,
-				createdAt: s.createdAt,
-				updatedAt: s.updatedAt,
-				values: s.values.map((v) => ({
-					propertyId: v.propertyId,
-					key: v.property.key,
-					value: v.value,
+			const items = await Promise.all(
+				sheets.map(async (s) => ({
+					id: s.id,
+					name: s.name,
+					gameSystemId: s.gameSystemId,
+					gameSystem: s.gameSystem,
+					avatarFileId: s.avatarFileId,
+					avatarUrl: await avatarUrlFor(s),
+					isActive: s.isActive,
+					createdAt: s.createdAt,
+					updatedAt: s.updatedAt,
+					values: s.values.map((v) => ({
+						propertyId: v.propertyId,
+						key: v.property.key,
+						value: v.value,
+					})),
 				})),
-			}));
+			);
 
 			return { success: true as const, items };
 		},
@@ -348,6 +383,10 @@ export const characterSheetsController = new Elysia({
 				include: {
 					gameSystem: { select: gameSystemBriefSelect },
 					values: true,
+					selections: {
+						include: { content: { select: { slug: true, name: true } } },
+						orderBy: { createdAt: "asc" },
+					},
 				},
 			});
 			if (!sheet || sheet.deletedAt) {
@@ -387,6 +426,16 @@ export const characterSheetsController = new Elysia({
 					: null,
 			}));
 
+			const selections = sheet.selections.map((s) => ({
+				collectionKey: s.collectionKey,
+				slug: s.content.slug,
+				name: s.content.name,
+				level: s.level,
+				isPrimary: s.isPrimary,
+				qty: s.qty,
+				extra: s.extra ?? null,
+			}));
+
 			return {
 				success: true as const,
 				id: sheet.id,
@@ -394,10 +443,14 @@ export const characterSheetsController = new Elysia({
 				gameSystemId: sheet.gameSystemId,
 				gameSystem: sheet.gameSystem,
 				avatarFileId: sheet.avatarFileId,
+				avatarUrl: await avatarUrlFor(sheet),
+				abilityMethod: sheet.abilityMethod,
+				gold: sheet.gold,
 				isActive: sheet.isActive,
 				createdAt: sheet.createdAt,
 				updatedAt: sheet.updatedAt,
 				properties,
+				selections,
 			};
 		},
 		{
@@ -847,6 +900,122 @@ export const characterSheetsController = new Elysia({
 			detail: {
 				tags: ["CharacterSheets"],
 				summary: "Finaliser le build d'une fiche (résultat du wizard)",
+			},
+		},
+	)
+
+	/**
+	 * DELETE /character-sheets/:id - Supprimer une fiche (soft delete).
+	 *
+	 * Marque la fiche comme supprimée (deletedAt) sans la détruire. Réservé au
+	 * propriétaire. Idempotent : une fiche déjà supprimée renvoie 404.
+	 */
+	.delete(
+		"/:id",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+
+			const sheet = await prisma.characterSheet.findUnique({
+				where: { id: params.id },
+				select: { id: true, userId: true, deletedAt: true },
+			});
+			if (!sheet || sheet.deletedAt) {
+				set.status = 404;
+				return { success: false as const, error: "Fiche introuvable" };
+			}
+			if (sheet.userId !== currentUser.id) {
+				set.status = 403;
+				return { success: false as const, error: "Accès refusé" };
+			}
+
+			await prisma.characterSheet.update({
+				where: { id: sheet.id },
+				data: { deletedAt: new Date() },
+			});
+
+			return { success: true as const };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			response: {
+				200: t.Object({ success: t.Literal(true) }),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["CharacterSheets"],
+				summary: "Supprimer une fiche de personnage",
+			},
+		},
+	)
+
+	/**
+	 * POST /character-sheets/:id/avatar - Téléverser l'avatar (token) de la fiche.
+	 *
+	 * Le token est recadré côté client ; on stocke l'image telle quelle. Réservé
+	 * au propriétaire. Renvoie l'id de fichier et une URL présignée d'affichage.
+	 */
+	.post(
+		"/:id/avatar",
+		async ({ set, currentUser, params, body }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+
+			const file = body.avatar ?? body.file;
+			if (!file || !(file instanceof File)) {
+				set.status = 400;
+				return {
+					success: false as const,
+					error: "Fichier manquant. Envoyez un champ 'avatar' ou 'file'.",
+				};
+			}
+
+			const buffer = Buffer.from(await file.arrayBuffer());
+			const result = await uploadAvatarHandler({
+				sheetId: params.id,
+				userId: currentUser.id,
+				data: buffer,
+				contentType: file.type || "image/png",
+			});
+
+			if (!result.ok) {
+				set.status = result.status;
+				return { success: false as const, error: result.error };
+			}
+
+			set.status = 201;
+			return {
+				success: true as const,
+				fileId: result.fileId,
+				avatarUrl: result.avatarUrl,
+			};
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: t.Object({
+				avatar: t.Optional(t.File()),
+				file: t.Optional(t.File()),
+			}),
+			response: {
+				201: t.Object({
+					success: t.Literal(true),
+					fileId: t.String(),
+					avatarUrl: t.Union([t.String(), t.Null()]),
+				}),
+				400: ErrorResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["CharacterSheets"],
+				summary: "Téléverser l'avatar (token) d'une fiche de personnage",
 			},
 		},
 	);

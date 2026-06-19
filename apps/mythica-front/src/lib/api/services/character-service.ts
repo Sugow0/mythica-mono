@@ -1,5 +1,6 @@
 import { GameplayApiClient } from "../api-client-gameplay";
 import type { paths } from "../generated/gameplay";
+import { ApiError, type ApiErrorResponse } from "../types";
 
 /** Corps de création d'une fiche de personnage. */
 export type CreateCharacterSheetData =
@@ -23,6 +24,10 @@ export type CharacterSheetDetail =
 
 /** Une entrée de fiche assemblée (propriété + valeur courante). */
 export type CharacterSheetField = CharacterSheetDetail["properties"][number];
+
+/** Une sélection de build résolue (race, classe, sous-classe, sort...). */
+export type CharacterSheetSelection =
+	CharacterSheetDetail["selections"][number];
 
 /** Type d'une propriété de fiche (enum PropertyType). */
 export type CharacterPropertyType = CharacterSheetField["type"];
@@ -122,6 +127,47 @@ export class CharacterService extends GameplayApiClient {
 		);
 		if (error) throw error;
 		return data;
+	}
+
+	/** Supprimer une fiche de personnage (soft delete). */
+	async deleteCharacterSheet(id: string) {
+		const { data, error } = await this.client.DELETE("/character-sheets/{id}", {
+			params: { path: { id } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/**
+	 * Téléverser l'avatar (token) d'une fiche. Le token est recadré côté client ;
+	 * `file` est l'image finale. Retourne l'id de fichier et une URL d'affichage.
+	 */
+	async uploadAvatar(id: string, file: File | Blob) {
+		const formData = new FormData();
+		formData.set("avatar", file, "avatar.png");
+		const res = await fetch(`${this.baseUrl}/character-sheets/${id}/avatar`, {
+			method: "POST",
+			credentials: "include",
+			body: formData,
+		});
+		if (!res.ok) {
+			let body: ApiErrorResponse | undefined;
+			try {
+				body = await res.clone().json();
+			} catch {
+				// réponse non-JSON
+			}
+			throw new ApiError(
+				body?.error ?? `Échec de l'upload (${res.status})`,
+				res.status,
+				body
+			);
+		}
+		return (await res.json()) as {
+			success: true;
+			fileId: string;
+			avatarUrl: string | null;
+		};
 	}
 }
 

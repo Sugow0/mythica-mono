@@ -1,8 +1,11 @@
 <script lang="ts">
+	import LoaderIcon from "@lucide/svelte/icons/loader-circle";
 	import PlusIcon from "@lucide/svelte/icons/plus";
+	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import UserIcon from "@lucide/svelte/icons/user";
 	import { onMount } from "svelte";
 	import type { CharacterSheetListItem } from "$lib/api/services/character-service";
+	import * as AlertDialog from "$lib/components/ui/alert-dialog";
 	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
@@ -14,6 +17,8 @@
 	let sheets = $state<CharacterSheetListItem[]>([]);
 	let isLoading = $state(true);
 	let error = $state<string | null>(null);
+	let pendingDelete = $state<CharacterSheetListItem | null>(null);
+	let deleting = $state(false);
 
 	async function load() {
 		isLoading = true;
@@ -25,6 +30,20 @@
 			error = err instanceof ApiError ? err.message : m.characters_load_error();
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	async function confirmDelete() {
+		if (!pendingDelete) return;
+		deleting = true;
+		try {
+			await characterService.deleteCharacterSheet(pendingDelete.id);
+			sheets = sheets.filter((s) => s.id !== pendingDelete?.id);
+			pendingDelete = null;
+		} catch {
+			// On garde la fiche en cas d'échec.
+		} finally {
+			deleting = false;
 		}
 	}
 
@@ -70,29 +89,84 @@
 	{:else}
 		<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 			{#each sheets as sheet (sheet.id)}
-				<a href="/characters/{sheet.id}" class="block" data-testid="sheet-card">
-					<Card.Root class="hover:border-primary/50 h-full transition-colors">
-						<Card.Header>
-							<div class="flex items-center gap-3">
-								<div
-									class="bg-muted flex h-10 w-10 items-center justify-center rounded-full"
-								>
+				<Card.Root
+					class="group hover:border-primary/50 relative h-full transition-colors"
+					data-testid="sheet-card"
+				>
+					<!-- Lien étiré : toute la carte est cliquable. -->
+					<a
+						href="/characters/{sheet.id}"
+						class="absolute inset-0 z-0 rounded-xl"
+						aria-label={sheet.name}
+					></a>
+					<Card.Header>
+						<div class="flex items-center gap-3">
+							<div
+								class="border-primary/30 bg-muted flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2"
+							>
+								{#if sheet.avatarUrl}
+									<img
+										src={sheet.avatarUrl}
+										alt=""
+										class="h-full w-full object-cover"
+									/>
+								{:else}
 									<UserIcon class="text-muted-foreground h-5 w-5" />
-								</div>
-								<div class="min-w-0">
-									<Card.Title class="truncate">{sheet.name}</Card.Title>
-									<p class="text-muted-foreground truncate text-xs">
-										{sheet.gameSystem.nom}
-									</p>
-								</div>
+								{/if}
 							</div>
-						</Card.Header>
-						<Card.Footer>
-							<Badge variant="secondary">{sheet.gameSystem.slug}</Badge>
-						</Card.Footer>
-					</Card.Root>
-				</a>
+							<div class="min-w-0">
+								<Card.Title class="truncate">{sheet.name}</Card.Title>
+								<p class="text-muted-foreground truncate text-xs">
+									{sheet.gameSystem.nom}
+								</p>
+							</div>
+						</div>
+					</Card.Header>
+					<Card.Footer class="relative z-10 justify-between">
+						<Badge variant="secondary">{sheet.gameSystem.slug}</Badge>
+						<Button
+							variant="ghost"
+							size="icon"
+							class="text-muted-foreground hover:text-destructive h-8 w-8"
+							aria-label="Supprimer {sheet.name}"
+							onclick={() => (pendingDelete = sheet)}
+						>
+							<Trash2Icon class="h-4 w-4" />
+						</Button>
+					</Card.Footer>
+				</Card.Root>
 			{/each}
 		</div>
 	{/if}
+
+	<AlertDialog.Root
+		open={pendingDelete !== null}
+		onOpenChange={(o) => {
+			if (!o) pendingDelete = null;
+		}}
+	>
+		<AlertDialog.Content>
+			<AlertDialog.Header>
+				<AlertDialog.Title>Supprimer ce personnage ?</AlertDialog.Title>
+				<AlertDialog.Description>
+					La fiche « {pendingDelete?.name} » sera supprimée. Cette action est définitive.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel disabled={deleting}>Annuler</AlertDialog.Cancel>
+				<Button
+					variant="destructive"
+					onclick={confirmDelete}
+					disabled={deleting}
+				>
+					{#if deleting}
+						<LoaderIcon class="h-4 w-4 animate-spin" />
+					{:else}
+						<Trash2Icon class="h-4 w-4" />
+					{/if}
+					Supprimer
+				</Button>
+			</AlertDialog.Footer>
+		</AlertDialog.Content>
+	</AlertDialog.Root>
 </div>

@@ -2,15 +2,21 @@
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import LoaderIcon from "@lucide/svelte/icons/loader-circle";
+	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import SparkleIcon from "@lucide/svelte/icons/sparkles";
+	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 	import { onMount, type Snippet } from "svelte";
+	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import type {
 		CharacterSheetDetail,
 		CharacterSheetField,
 	} from "$lib/api/services/character-service";
+	import AvatarCropper from "$lib/components/character-builder/avatar-cropper.svelte";
 	import FieldRenderer from "$lib/components/field-renderer.svelte";
+	import * as AlertDialog from "$lib/components/ui/alert-dialog";
+	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
 	import { Skeleton } from "$lib/components/ui/skeleton";
@@ -33,6 +39,34 @@
 	let isLoading = $state(true);
 	let error = $state<string | null>(null);
 	let saveStatus = $state<"idle" | "saving" | "saved" | "error">("idle");
+	let avatarUrl = $state<string | null>(null);
+	let avatarUploading = $state(false);
+	let deleteOpen = $state(false);
+	let deleting = $state(false);
+
+	/** Sélections de build résolues (race, classe, sous-classe, historique…). */
+	const selections = $derived(sheet?.selections ?? []);
+	const raceName = $derived(
+		selections.find((s) => s.collectionKey === "race")?.name ?? null
+	);
+	const backgroundName = $derived(
+		selections.find((s) => s.collectionKey === "background")?.name ?? null
+	);
+	/** Classes (+ niveau), classe principale en tête. */
+	const classLine = $derived.by(() => {
+		const classes = selections
+			.filter((s) => s.collectionKey === "classe")
+			.sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
+		if (classes.length === 0) return null;
+		return classes
+			.map((c) => (c.level ? `${c.name} ${c.level}` : c.name))
+			.join(" / ");
+	});
+	const subclassNames = $derived(
+		selections
+			.filter((s) => s.collectionKey === "sous-classe")
+			.map((s) => s.name)
+	);
 
 	let pending: string[] = [];
 
@@ -134,6 +168,7 @@
 		try {
 			const response = await characterService.getCharacterSheetById(sheetId);
 			sheet = response ?? null;
+			avatarUrl = response?.avatarUrl ?? null;
 			values = Object.fromEntries(
 				(response?.properties ?? []).map((p) => [p.propertyId, p.value])
 			);
@@ -170,6 +205,29 @@
 		if (!pending.includes(propertyId)) pending.push(propertyId);
 		saveStatus = "saving";
 		flush();
+	}
+
+	async function uploadAvatar(blob: Blob) {
+		avatarUploading = true;
+		try {
+			const res = await characterService.uploadAvatar(sheetId, blob);
+			avatarUrl = res.avatarUrl ?? avatarUrl;
+		} catch {
+			// L'échec d'upload n'altère pas la fiche.
+		} finally {
+			avatarUploading = false;
+		}
+	}
+
+	async function confirmDelete() {
+		deleting = true;
+		try {
+			await characterService.deleteCharacterSheet(sheetId);
+			await goto("/characters");
+		} catch {
+			// On garde le dialog ouvert : l'échec ne doit pas passer inaperçu.
+			deleting = false;
+		}
 	}
 
 	onMount(load);
@@ -263,51 +321,120 @@
 	{:else if error}
 		<p class="text-destructive" role="alert">{error}</p>
 	{:else if sheet}
-		<!-- En-tête -->
-		<header class="mb-6 flex flex-wrap items-center gap-4">
-			<span
-				class="bg-primary/10 text-primary font-display grid h-14 w-14 shrink-0 place-items-center rounded-2xl text-2xl font-bold"
-				aria-hidden="true"
-			>
-				{sheet.name.charAt(0).toUpperCase()}
-			</span>
+		<!-- En-tête : token, identité, actions -->
+		<header
+			class="bg-card mb-6 flex flex-col gap-4 rounded-2xl border p-4 shadow-xs sm:flex-row sm:items-center sm:p-5"
+		>
+			<AvatarCropper
+				currentUrl={avatarUrl}
+				fallback={sheet.name.charAt(0).toUpperCase()}
+				uploading={avatarUploading}
+				size="lg"
+				onUpload={uploadAvatar}
+			/>
+
 			<div class="min-w-0 flex-1">
-				<h1 class="font-display truncate text-3xl font-bold">{sheet.name}</h1>
-				<p class="text-muted-foreground text-sm">{identityLine}</p>
-			</div>
+				<h1 class="font-display truncate text-3xl font-bold leading-tight">
+					{sheet.name}
+				</h1>
+				<p class="text-muted-foreground mt-0.5 text-sm">{identityLine}</p>
 
-			{#if has("inspiration")}
-				<button
-					type="button"
-					onclick={() => setVal("inspiration", !boolv("inspiration"))}
-					aria-pressed={boolv("inspiration")}
-					class="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors {boolv(
-						'inspiration'
-					)
-						? 'border-primary bg-primary/10 text-primary'
-						: 'text-muted-foreground hover:bg-muted'}"
-				>
-					<SparkleIcon class="h-4 w-4" /> Inspiration
-				</button>
-			{/if}
-
-			<div
-				class="text-muted-foreground flex items-center gap-1.5 text-sm"
-				aria-live="polite"
-				data-testid="save-status"
-			>
-				{#if saveStatus === "saving"}
-					<LoaderIcon class="h-4 w-4 animate-spin" />
-					{m.character_save_saving()}
-				{:else if saveStatus === "saved"}
-					<CheckIcon class="text-primary h-4 w-4" />
-					{m.character_save_saved()}
-				{:else if saveStatus === "error"}
-					<TriangleAlertIcon class="text-destructive h-4 w-4" />
-					{m.character_save_error()}
+				{#if raceName || classLine || subclassNames.length > 0 || backgroundName}
+					<div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+						{#if raceName}
+							<Badge variant="secondary">{raceName}</Badge>
+						{/if}
+						{#if classLine}
+							<Badge variant="secondary">{classLine}</Badge>
+						{/if}
+						{#each subclassNames as sub (sub)}
+							<Badge variant="outline">{sub}</Badge>
+						{/each}
+						{#if backgroundName}
+							<Badge variant="outline">{backgroundName}</Badge>
+						{/if}
+					</div>
 				{/if}
 			</div>
+
+			<div class="flex items-center gap-2 sm:flex-col sm:items-end">
+				<div class="flex items-center gap-2">
+					{#if has("inspiration")}
+						<button
+							type="button"
+							onclick={() => setVal("inspiration", !boolv("inspiration"))}
+							aria-pressed={boolv("inspiration")}
+							class="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors {boolv(
+								'inspiration'
+							)
+								? 'border-primary bg-primary/10 text-primary'
+								: 'text-muted-foreground hover:bg-muted'}"
+						>
+							<SparkleIcon class="h-4 w-4" /> Inspiration
+						</button>
+					{/if}
+					<Button
+						variant="outline"
+						size="sm"
+						href="/characters/{sheetId}/create"
+					>
+						<PencilIcon class="h-4 w-4" /> Modifier
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon"
+						class="text-muted-foreground hover:text-destructive"
+						aria-label="Supprimer le personnage"
+						onclick={() => (deleteOpen = true)}
+					>
+						<Trash2Icon class="h-4 w-4" />
+					</Button>
+				</div>
+
+				<div
+					class="text-muted-foreground flex items-center gap-1.5 text-sm"
+					aria-live="polite"
+					data-testid="save-status"
+				>
+					{#if saveStatus === "saving"}
+						<LoaderIcon class="h-4 w-4 animate-spin" />
+						{m.character_save_saving()}
+					{:else if saveStatus === "saved"}
+						<CheckIcon class="text-primary h-4 w-4" />
+						{m.character_save_saved()}
+					{:else if saveStatus === "error"}
+						<TriangleAlertIcon class="text-destructive h-4 w-4" />
+						{m.character_save_error()}
+					{/if}
+				</div>
+			</div>
 		</header>
+
+		<AlertDialog.Root bind:open={deleteOpen}>
+			<AlertDialog.Content>
+				<AlertDialog.Header>
+					<AlertDialog.Title>Supprimer ce personnage ?</AlertDialog.Title>
+					<AlertDialog.Description>
+						La fiche « {sheet.name} » sera supprimée. Cette action est définitive.
+					</AlertDialog.Description>
+				</AlertDialog.Header>
+				<AlertDialog.Footer>
+					<AlertDialog.Cancel disabled={deleting}>Annuler</AlertDialog.Cancel>
+					<Button
+						variant="destructive"
+						onclick={confirmDelete}
+						disabled={deleting}
+					>
+						{#if deleting}
+							<LoaderIcon class="h-4 w-4 animate-spin" />
+						{:else}
+							<Trash2Icon class="h-4 w-4" />
+						{/if}
+						Supprimer
+					</Button>
+				</AlertDialog.Footer>
+			</AlertDialog.Content>
+		</AlertDialog.Root>
 
 		<!-- Rail de constantes -->
 		<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">

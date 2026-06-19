@@ -8,6 +8,7 @@
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { CharacterBuilder } from "$lib/character-builder/builder.svelte";
+	import AvatarCropper from "$lib/components/character-builder/avatar-cropper.svelte";
 	import InventoryStep from "$lib/components/character-builder/inventory-step.svelte";
 	import LoreFormStep from "$lib/components/character-builder/lore-form-step.svelte";
 	import PointAllocationStep from "$lib/components/character-builder/point-allocation-step.svelte";
@@ -24,6 +25,11 @@
 
 	let builder = $state<CharacterBuilder | null>(null);
 	let bootError = $state<string | null>(null);
+	/** Ré-édition d'un personnage déjà construit (pré-remplissage du wizard). */
+	let isReedit = $state(false);
+	let charName = $state("");
+	let avatarUrl = $state<string | null>(null);
+	let avatarUploading = $state(false);
 
 	const STEP_TITLES: Record<string, string> = {
 		race: "Choisissez votre race",
@@ -42,8 +48,15 @@
 	onMount(async () => {
 		try {
 			const sheet = await characterService.getCharacterSheetById(sheetId);
+			charName = sheet.name;
+			avatarUrl = sheet.avatarUrl;
 			const b = new CharacterBuilder(sheetId, sheet.gameSystemId);
 			await b.init();
+			// Fiche déjà construite : on pré-remplit le wizard pour la ré-éditer.
+			if ((sheet.selections?.length ?? 0) > 0) {
+				b.loadExisting(sheet);
+				isReedit = true;
+			}
 			builder = b;
 		} catch (err) {
 			bootError = err instanceof Error ? err.message : "Erreur de chargement";
@@ -54,6 +67,18 @@
 		if (!builder) return;
 		const id = await builder.finalize();
 		if (id) await goto(`/characters/${id}`);
+	}
+
+	async function uploadAvatar(blob: Blob) {
+		avatarUploading = true;
+		try {
+			const res = await characterService.uploadAvatar(sheetId, blob);
+			avatarUrl = res.avatarUrl ?? avatarUrl;
+		} catch {
+			// L'erreur d'upload n'interrompt pas la création.
+		} finally {
+			avatarUploading = false;
+		}
 	}
 </script>
 
@@ -105,6 +130,20 @@
 			{:else if step.kind === "inventory"}
 				<InventoryStep {builder} />
 			{:else if step.kind === "loreForm"}
+				{#if step.stepKey === "identite"}
+					<div class="mb-6 flex flex-col items-center gap-2">
+						<AvatarCropper
+							currentUrl={avatarUrl}
+							fallback={charName.charAt(0).toUpperCase()}
+							uploading={avatarUploading}
+							size="lg"
+							onUpload={uploadAvatar}
+						/>
+						<p class="text-muted-foreground text-xs">
+							Token du personnage (optionnel)
+						</p>
+					</div>
+				{/if}
 				<LoreFormStep {builder} {step} />
 			{/if}
 		</div>
@@ -131,7 +170,7 @@
 					{:else}
 						<SparklesIcon class="h-4 w-4" />
 					{/if}
-					Créer le personnage
+					{isReedit ? "Enregistrer les modifications" : "Créer le personnage"}
 				</Button>
 			{:else}
 				<Button onclick={() => builder?.next()} disabled={!builder.canGoNext}>
