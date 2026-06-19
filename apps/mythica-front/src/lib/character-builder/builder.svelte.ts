@@ -101,6 +101,8 @@ export class CharacterBuilder {
 	inventory = $state<{ slug: string; qty: number }[]>([]);
 	gold = $state<number | null>(null);
 	lore = $state<Record<string, string>>({});
+	/** Sous-classe choisie par classe : slug de classe → slug de sous-classe. */
+	subclassSelections = $state<Record<string, string>>({});
 
 	constructor(sheetId: string, gameSystemId: string) {
 		this.sheetId = sheetId;
@@ -217,9 +219,37 @@ export class CharacterBuilder {
 		)
 	);
 
+	/** Sous-classes choisissables par classe (selon le niveau d'obtention). */
+	subclassChoices = $derived.by(() => {
+		const all = this.content["sous-classe"] ?? [];
+		return this.classes
+			.map((c) => {
+				const item = (this.content.classe ?? []).find((x) => x.slug === c.slug);
+				const subclasses = all.filter((s) => {
+					const d = contentData(s) as {
+						parentClass?: string;
+						acquisitionLevel?: number;
+					};
+					return (
+						d.parentClass === c.slug && (d.acquisitionLevel ?? 99) <= c.level
+					);
+				});
+				return {
+					classSlug: c.slug,
+					className: item?.name ?? c.slug,
+					subclasses,
+				};
+			})
+			.filter((x) => x.subclasses.length > 0);
+	});
+
+	/** Au moins une sous-classe à choisir au niveau actuel ? */
+	hasSubclassChoice = $derived(this.subclassChoices.length > 0);
+
 	/** Évalue un prédicat d'étape conditionnelle. */
 	private conditionMet(condition: string): boolean {
 		if (condition === "has_caster_class") return this.hasSpellsToChoose;
+		if (condition === "has_subclass_choice") return this.hasSubclassChoice;
 		return true;
 	}
 
@@ -267,6 +297,10 @@ export class CharacterBuilder {
 				if (key === "race") return this.raceSlug !== null;
 				if (key === "background") return this.backgroundSlug !== null;
 				if (key === "classe") return this.classes.length > 0;
+				if (key === "sous-classe")
+					return this.subclassChoices.every(
+						(c) => this.subclassSelections[c.classSlug]
+					);
 				return true;
 			}
 			case "repeatableSelection":
@@ -342,9 +376,15 @@ export class CharacterBuilder {
 					spells.push({ slug, classSlug, role: "spell" });
 			}
 
+			// Sous-classes choisies, rattachées à leur classe (celles encore retenues).
+			const subclasses = Object.entries(this.subclassSelections)
+				.filter(([classSlug]) => classSlugs.includes(classSlug))
+				.map(([classSlug, slug]) => ({ classSlug, slug }));
+
 			const body: BuildCharacterData = {
 				raceSlug: this.raceSlug ?? "",
 				classes: this.classes,
+				subclasses,
 				backgroundSlug: this.backgroundSlug ?? "",
 				abilityMethod: this.abilityMethod,
 				abilityScores: this.baseScores,

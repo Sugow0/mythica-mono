@@ -9,6 +9,7 @@
 		race: "Race",
 		classe: "Classe",
 		niveau: "Niveau",
+		"sous-classe": "Sous-classe",
 		background: "Historique",
 		caracteristiques: "Caractéristiques",
 		maitrises: "Maîtrises",

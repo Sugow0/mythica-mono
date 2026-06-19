@@ -15,6 +15,7 @@
 	import RepeatableSelectionStep from "$lib/components/character-builder/repeatable-selection-step.svelte";
 	import SelectionStep from "$lib/components/character-builder/selection-step.svelte";
 	import SpellSelectionStep from "$lib/components/character-builder/spell-selection-step.svelte";
+	import SubclassSelectionStep from "$lib/components/character-builder/subclass-selection-step.svelte";
 	import WizardStepper from "$lib/components/character-builder/wizard-stepper.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import { characterService } from "$lib/index.js";
@@ -28,6 +29,7 @@
 		race: "Choisissez votre race",
 		classe: "Choisissez votre classe",
 		niveau: "Niveau et multiclassage",
+		"sous-classe": "Choisissez votre sous-classe",
 		background: "Choisissez votre historique",
 		caracteristiques: "Répartissez vos caractéristiques",
 		maitrises: "Choisissez vos maîtrises",
@@ -88,7 +90,9 @@
 		<WizardStepper {builder} />
 
 		<div class="my-6">
-			{#if step.kind === "selection"}
+			{#if step.kind === "selection" && (step.config as { collectionKey?: string }).collectionKey === "sous-classe"}
+				<SubclassSelectionStep {builder} />
+			{:else if step.kind === "selection"}
 				<SelectionStep {builder} {step} />
 			{:else if step.kind === "repeatableSelection"}
 				<RepeatableSelectionStep {builder} {step} />
