@@ -56,8 +56,28 @@ export type RaceData = {
 	traits: NamedTrait[];
 };
 
-/** Catégorie de lanceur (aligné sur character-engine). */
+/** Catégorie de lanceur (aligné sur character-engine), pour les emplacements. */
 export type CasterType = "none" | "full" | "half" | "third" | "warlock";
+
+/** Mécanique de sélection des sorts (séparée des emplacements). */
+export type SpellcastingKind =
+	| "prepared"
+	| "prepared_half"
+	| "known"
+	| "known_half"
+	| "wizard"
+	| "pact";
+
+/** Métadonnée de sélection de sorts d'une classe lanceuse. */
+export type SpellcastingData = {
+	kind: SpellcastingKind;
+	/** Caractéristique d'incantation (clé de propriété). */
+	ability: string;
+	/** Tours de magie connus par niveau (1→20), si la classe en a. */
+	cantripsKnown?: number[];
+	/** Sorts connus par niveau (1→20), pour les connaissants. */
+	spellsKnown?: number[];
+};
 
 /** `data` d'une classe. */
 export type ClassData = {
@@ -71,6 +91,8 @@ export type ClassData = {
 	skillChoices: { count: number; from: string[] };
 	casterType: CasterType;
 	spellcastingAbility?: string;
+	/** Sélection de sorts (cantrips/connus/préparés) ; absent si non-lanceur. */
+	spellcasting?: SpellcastingData;
 	/** Prérequis de caractéristiques pour multiclasser vers/depuis cette classe. */
 	multiclassPrereq?: AbilityBonusMap;
 	startingEquipment: string[];

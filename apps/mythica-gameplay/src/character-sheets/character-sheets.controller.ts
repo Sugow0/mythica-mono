@@ -132,7 +132,20 @@ const BuildBody = t.Object({
 	/** Scores de base choisis (avant bonus raciaux), indexés par clé de carac. */
 	abilityScores: t.Record(t.String(), t.Integer()),
 	skillProficiencies: t.Optional(t.Array(t.String())),
-	spellSlugs: t.Optional(t.Array(t.String())),
+	/** Sorts choisis, rattachés à leur classe et à leur rôle (multiclassage). */
+	spells: t.Optional(
+		t.Array(
+			t.Object({
+				slug: t.String(),
+				classSlug: t.String(),
+				role: t.Union([
+					t.Literal("cantrip"),
+					t.Literal("spell"),
+					t.Literal("book"),
+				]),
+			}),
+		),
+	),
 	inventory: t.Optional(
 		t.Array(t.Object({ slug: t.String(), qty: t.Integer({ minimum: 1 }) })),
 	),
@@ -661,7 +674,16 @@ export const characterSheetsController = new Elysia({
 					where: { characterSheetId: sheet.id },
 				});
 
-				const selections = [
+				const selections: {
+					id: string;
+					characterSheetId: string;
+					collectionKey: string;
+					contentId: string;
+					level?: number;
+					isPrimary?: boolean;
+					qty?: number;
+					extra?: Record<string, unknown>;
+				}[] = [
 					{
 						id: newId(),
 						characterSheetId: sheet.id,
@@ -684,14 +706,16 @@ export const characterSheetsController = new Elysia({
 						isPrimary: ref.input.isPrimary ?? false,
 					})),
 				];
-				for (const slug of body.spellSlugs ?? []) {
-					const sp = getContent("sort", slug);
+				for (const s of body.spells ?? []) {
+					const sp = getContent("sort", s.slug);
 					if (sp) {
 						selections.push({
 							id: newId(),
 							characterSheetId: sheet.id,
 							collectionKey: "sort",
 							contentId: sp.id,
+							// classe d'origine + rôle (cantrip / sort / grimoire) en multiclasse.
+							extra: { classSlug: s.classSlug, role: s.role },
 						});
 					}
 				}

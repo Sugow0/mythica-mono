@@ -187,7 +187,9 @@ const singleClassBody = {
 	abilityMethod: "manual",
 	abilityScores: baseScores,
 	skillProficiencies: ["arcanes"],
-	spellSlugs: ["projectile-magique"],
+	spells: [
+		{ slug: "projectile-magique", classSlug: "magicien", role: "spell" },
+	],
 	inventory: [{ slug: "grimoire", qty: 1 }],
 	gold: 50,
 	lore: { apparence: "Grand et élancé" },

@@ -5,7 +5,8 @@
  * Nomenclature FR du PHB (Ensorceleur = sorcerer, Sorcier = warlock).
  */
 
-import type { ClassData, SystemContentSeed } from "./types";
+import { CANTRIPS_KNOWN, SPELLS_KNOWN } from "./spell-progression";
+import type { ClassData, SpellcastingData, SystemContentSeed } from "./types";
 
 const klass = (
 	slug: string,
@@ -435,3 +436,56 @@ export const DND5E_CLASSES: SystemContentSeed[] = [
 		11,
 	),
 ];
+
+/**
+ * Métadonnées de sélection de sorts par classe (cantrips/connus/préparés/pacte).
+ * Injectées dans `data.spellcasting` ; les non-lanceurs n'en ont pas. Les
+ * tiers-lanceurs (chevalier occulte, escroc arcanique) seront portés par leurs
+ * sous-classes (FEAT ultérieure).
+ */
+const SPELLCASTING: Record<string, SpellcastingData> = {
+	barde: {
+		kind: "known",
+		ability: "charisme",
+		cantripsKnown: CANTRIPS_KNOWN.barde,
+		spellsKnown: SPELLS_KNOWN.barde,
+	},
+	clerc: {
+		kind: "prepared",
+		ability: "sagesse",
+		cantripsKnown: CANTRIPS_KNOWN.clerc,
+	},
+	druide: {
+		kind: "prepared",
+		ability: "sagesse",
+		cantripsKnown: CANTRIPS_KNOWN.druide,
+	},
+	ensorceleur: {
+		kind: "known",
+		ability: "charisme",
+		cantripsKnown: CANTRIPS_KNOWN.ensorceleur,
+		spellsKnown: SPELLS_KNOWN.ensorceleur,
+	},
+	magicien: {
+		kind: "wizard",
+		ability: "intelligence",
+		cantripsKnown: CANTRIPS_KNOWN.magicien,
+	},
+	paladin: { kind: "prepared_half", ability: "charisme" },
+	rodeur: {
+		kind: "known_half",
+		ability: "sagesse",
+		spellsKnown: SPELLS_KNOWN.rodeur,
+	},
+	sorcier: {
+		kind: "pact",
+		ability: "charisme",
+		cantripsKnown: CANTRIPS_KNOWN.sorcier,
+		spellsKnown: SPELLS_KNOWN.sorcier,
+	},
+};
+
+for (const c of DND5E_CLASSES) {
+	const sc = SPELLCASTING[c.slug];
+	if (sc) (c.data as Record<string, unknown>).spellcasting = sc;
+}
