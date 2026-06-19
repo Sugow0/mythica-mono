@@ -6,6 +6,7 @@
  */
 
 import { CANTRIPS_KNOWN, SPELLS_KNOWN } from "./spell-progression";
+import { STARTING_EQUIPMENT, STARTING_GOLD } from "./starting-gear";
 import type { ClassData, SpellcastingData, SystemContentSeed } from "./types";
 
 const klass = (
@@ -488,4 +489,8 @@ const SPELLCASTING: Record<string, SpellcastingData> = {
 for (const c of DND5E_CLASSES) {
 	const sc = SPELLCASTING[c.slug];
 	if (sc) (c.data as Record<string, unknown>).spellcasting = sc;
+	const gold = STARTING_GOLD[c.slug];
+	if (gold) (c.data as Record<string, unknown>).startingGoldRoll = gold;
+	const gear = STARTING_EQUIPMENT[c.slug];
+	if (gear) (c.data as Record<string, unknown>).startingEquipmentOptions = gear;
 }

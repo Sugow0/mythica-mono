@@ -153,7 +153,7 @@ const BuildBody = t.Object({
 	inventory: t.Optional(
 		t.Array(t.Object({ slug: t.String(), qty: t.Integer({ minimum: 1 }) })),
 	),
-	gold: t.Optional(t.Integer({ minimum: 0 })),
+	gold: t.Optional(t.Number({ minimum: 0 })),
 	/** Champs de lore (clé de propriété textarea -> texte). */
 	lore: t.Optional(t.Record(t.String(), t.String())),
 });

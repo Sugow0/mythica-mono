@@ -84,6 +84,21 @@ export type SpellcastingData = {
 	schoolFilter?: string[];
 };
 
+/** Un objet d'équipement avec sa quantité. */
+export type EquipmentEntry = { slug: string; qty: number };
+
+/** Une option d'un groupe de choix d'équipement (ex. « cuir + arc long »). */
+export type EquipmentOption = { label: string; items: EquipmentEntry[] };
+
+/**
+ * Un groupe de choix d'équipement de départ. Une seule option par groupe ;
+ * un groupe à une option unique est un octroi fixe.
+ */
+export type EquipmentChoiceGroup = { options: EquipmentOption[] };
+
+/** Dés de richesse de départ (un unique lancer), ex. 5d4 × 10 po. */
+export type StartingGoldRoll = { dice: number; sides: number; mult: number };
+
 /** `data` d'une classe. */
 export type ClassData = {
 	hitDie: number;
@@ -100,7 +115,12 @@ export type ClassData = {
 	spellcasting?: SpellcastingData;
 	/** Prérequis de caractéristiques pour multiclasser vers/depuis cette classe. */
 	multiclassPrereq?: AbilityBonusMap;
+	/** Équipement de départ simple (déprécié au profit de `startingEquipmentOptions`). */
 	startingEquipment: string[];
+	/** Groupes de choix d'équipement de départ (aidedd) de la classe. */
+	startingEquipmentOptions?: EquipmentChoiceGroup[];
+	/** Dés de richesse de départ de la classe (alternative/bourse). */
+	startingGoldRoll?: StartingGoldRoll;
 };
 
 /** `data` d'un background. */
