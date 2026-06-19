@@ -21,6 +21,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getIndex"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/game-systems/": {
         parameters: {
             query?: never;
@@ -111,6 +127,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/game-systems/{id}/creation-flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Parcours de création (data-driven) d'un système */
+        get: operations["getGame-systemsByIdCreation-flow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game-systems/{id}/content/{collectionKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Contenu d'une collection d'un système */
+        get: operations["getGame-systemsByIdContentByCollectionKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/character-sheets/": {
         parameters: {
             query?: never;
@@ -161,6 +211,23 @@ export interface paths {
         head?: never;
         /** Auto-save des valeurs d'une fiche de personnage */
         patch: operations["patchCharacter-sheetsByIdValues"];
+        trace?: never;
+    };
+    "/character-sheets/{id}/build": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Finaliser le build d'une fiche (résultat du wizard) */
+        post: operations["postCharacter-sheetsByIdBuild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/campaigns/": {
@@ -572,6 +639,23 @@ export interface components {
 export type $defs = Record<string, never>;
 export interface operations {
     getHealth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getIndex: {
         parameters: {
             query?: never;
             header?: never;
@@ -1708,6 +1792,188 @@ export interface operations {
             };
         };
     };
+    "getGame-systemsByIdCreation-flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        steps: {
+                            stepKey: string;
+                            order: string | number;
+                            kind: string;
+                            config: unknown;
+                            condition: string | null;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        steps: {
+                            stepKey: string;
+                            order: string | number;
+                            kind: string;
+                            config: unknown;
+                            condition: string | null;
+                        }[];
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        steps: {
+                            stepKey: string;
+                            order: string | number;
+                            kind: string;
+                            config: unknown;
+                            condition: string | null;
+                        }[];
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "getGame-systemsByIdContentByCollectionKey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                collectionKey: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        items: {
+                            id: string;
+                            collectionKey: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            data: unknown;
+                            sortOrder: string | number;
+                            portraitFileId: string | null;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        items: {
+                            id: string;
+                            collectionKey: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            data: unknown;
+                            sortOrder: string | number;
+                            portraitFileId: string | null;
+                        }[];
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        items: {
+                            id: string;
+                            collectionKey: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            data: unknown;
+                            sortOrder: string | number;
+                            portraitFileId: string | null;
+                        }[];
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
     "getCharacter-sheets": {
         parameters: {
             query?: {
@@ -2181,6 +2447,201 @@ export interface operations {
                             propertyId: string;
                             value: unknown;
                         }[];
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "postCharacter-sheetsByIdBuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    raceSlug: string;
+                    classes: {
+                        slug: string;
+                        level: string | number;
+                        isPrimary?: boolean;
+                    }[];
+                    backgroundSlug: string;
+                    abilityMethod: "standard_array" | "point_buy" | "dice_roll" | "manual";
+                    abilityScores: {
+                        [key: string]: string | number;
+                    };
+                    skillProficiencies?: string[];
+                    spellSlugs?: string[];
+                    inventory?: {
+                        slug: string;
+                        qty: string | number;
+                    }[];
+                    gold?: string | number;
+                    lore?: {
+                        [key: string]: string;
+                    };
+                };
+                "multipart/form-data": {
+                    raceSlug: string;
+                    classes: {
+                        slug: string;
+                        level: string | number;
+                        isPrimary?: boolean;
+                    }[];
+                    backgroundSlug: string;
+                    abilityMethod: "standard_array" | "point_buy" | "dice_roll" | "manual";
+                    abilityScores: {
+                        [key: string]: string | number;
+                    };
+                    skillProficiencies?: string[];
+                    spellSlugs?: string[];
+                    inventory?: {
+                        slug: string;
+                        qty: string | number;
+                    }[];
+                    gold?: string | number;
+                    lore?: {
+                        [key: string]: string;
+                    };
+                };
+                "text/plain": {
+                    raceSlug: string;
+                    classes: {
+                        slug: string;
+                        level: string | number;
+                        isPrimary?: boolean;
+                    }[];
+                    backgroundSlug: string;
+                    abilityMethod: "standard_array" | "point_buy" | "dice_roll" | "manual";
+                    abilityScores: {
+                        [key: string]: string | number;
+                    };
+                    skillProficiencies?: string[];
+                    spellSlugs?: string[];
+                    inventory?: {
+                        slug: string;
+                        qty: string | number;
+                    }[];
+                    gold?: string | number;
+                    lore?: {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        id: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        id: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        id: string;
                     };
                 };
             };
