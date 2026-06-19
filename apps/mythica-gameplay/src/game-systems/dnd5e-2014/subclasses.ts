@@ -6,6 +6,7 @@
  * Lot 1 : Clerc (domaines divins, obtenus au niveau 1).
  */
 
+import { THIRD_CASTER } from "./spell-progression";
 import type { SubclassData, SystemContentSeed } from "./types";
 
 const subclass = (
@@ -336,5 +337,283 @@ export const DND5E_SUBCLASSES: SystemContentSeed[] = [
 			],
 		},
 		6,
+	),
+
+	// — Guerrier : archétypes martiaux (niveau 3) —
+	subclass(
+		"champion",
+		"Champion",
+		"La maîtrise martiale brute : des coups plus précis et plus mortels.",
+		{
+			parentClass: "guerrier",
+			acquisitionLevel: 3,
+			features: [
+				{
+					level: 3,
+					name: "Critique amélioré",
+					description:
+						"Vos attaques d'arme infligent un coup critique sur un 19 ou 20.",
+				},
+				{
+					level: 7,
+					name: "Athlète remarquable",
+					description:
+						"Demi bonus de maîtrise aux tests de For/Dex/Con non maîtrisés ; course d'élan allongée.",
+				},
+				{
+					level: 10,
+					name: "Style de combat supplémentaire",
+					description: "Vous adoptez un second style de combat.",
+				},
+				{
+					level: 15,
+					name: "Critique supérieur",
+					description:
+						"Vos attaques d'arme infligent un coup critique sur un 18 à 20.",
+				},
+				{
+					level: 18,
+					name: "Survivant",
+					description:
+						"Au début de votre tour, regagnez des PV si vous êtes à la moitié ou moins.",
+				},
+			],
+		},
+		7,
+	),
+	subclass(
+		"maitre-de-guerre",
+		"Maître de guerre",
+		"Un tacticien qui manie des manœuvres de combat précises.",
+		{
+			parentClass: "guerrier",
+			acquisitionLevel: 3,
+			features: [
+				{
+					level: 3,
+					name: "Manœuvres de combat",
+					description:
+						"Vous apprenez 3 manœuvres et disposez de 4 dés de supériorité (d8).",
+				},
+				{
+					level: 3,
+					name: "Étudiant de la guerre",
+					description: "Maîtrise d'un type d'outils d'artisan.",
+				},
+				{
+					level: 7,
+					name: "Connais ton ennemi",
+					description:
+						"En observant une créature, vous évaluez ses capacités relatives aux vôtres.",
+				},
+				{
+					level: 10,
+					name: "Dés de supériorité améliorés",
+					description: "Vos dés de supériorité passent à d10.",
+				},
+				{
+					level: 15,
+					name: "Relance",
+					description:
+						"Quand vous lancez l'initiative sans dé de supériorité, vous en récupérez un.",
+				},
+				{
+					level: 18,
+					name: "Dés de supériorité (d12)",
+					description: "Vos dés de supériorité passent à d12.",
+				},
+			],
+		},
+		8,
+	),
+	subclass(
+		"chevalier-occulte",
+		"Chevalier occulte",
+		"Un guerrier qui mêle l'acier à la magie d'abjuration et d'évocation.",
+		{
+			parentClass: "guerrier",
+			acquisitionLevel: 3,
+			spellcasting: {
+				kind: "third_known",
+				ability: "intelligence",
+				cantripsKnown: THIRD_CASTER.cantripsKnownEK,
+				spellsKnown: THIRD_CASTER.spellsKnown,
+				spellListClass: "magicien",
+				schoolFilter: ["Abjuration", "Évocation"],
+			},
+			features: [
+				{
+					level: 3,
+					name: "Incantation",
+					description:
+						"Vous lancez des sorts de magicien (abjuration et évocation), Intelligence comme caractéristique d'incantation.",
+				},
+				{
+					level: 3,
+					name: "Lien avec l'arme",
+					description:
+						"Vous liez magiquement jusqu'à deux armes : elles reviennent à l'appel et ne peuvent vous être arrachées.",
+				},
+				{
+					level: 7,
+					name: "Charge martiale",
+					description:
+						"Quand vous lancez un tour de magie, vous pouvez faire une attaque d'arme en action bonus.",
+				},
+				{
+					level: 10,
+					name: "Maîtrise de la guerre magique",
+					description:
+						"Charge martiale fonctionne aussi avec les sorts d'incantation rapide.",
+				},
+				{
+					level: 15,
+					name: "Charge martiale améliorée",
+					description:
+						"Vous effectuez deux attaques d'arme au lieu d'une avec Charge martiale.",
+				},
+				{
+					level: 18,
+					name: "Transfert d'incantation",
+					description:
+						"Vous pouvez déplacer un sort de concentration sur une arme liée.",
+				},
+			],
+		},
+		9,
+	),
+
+	// — Roublard : archétypes (niveau 3) —
+	subclass(
+		"voleur",
+		"Voleur",
+		"L'archétype agile et opportuniste, expert des larcins.",
+		{
+			parentClass: "roublard",
+			acquisitionLevel: 3,
+			features: [
+				{
+					level: 3,
+					name: "Mains agiles",
+					description:
+						"Votre action bonus d'Astuce permet aussi d'Utiliser un objet.",
+				},
+				{
+					level: 3,
+					name: "Travail en hauteur",
+					description:
+						"Vitesse d'escalade ; vous sautez depuis une hauteur sans coût supplémentaire.",
+				},
+				{
+					level: 9,
+					name: "Discrétion suprême",
+					description:
+						"Avantage aux tests de Discrétion si vous bougez de la moitié de votre vitesse ou moins.",
+				},
+				{
+					level: 13,
+					name: "Usage d'objets magiques",
+					description:
+						"Vous ignorez les conditions de classe, race et niveau pour utiliser un objet magique.",
+				},
+				{
+					level: 17,
+					name: "Réflexes de voleur",
+					description: "Vous jouez deux tours au premier round d'un combat.",
+				},
+			],
+		},
+		10,
+	),
+	subclass(
+		"assassin",
+		"Assassin",
+		"Le maître du déguisement, du poison et de la mise à mort.",
+		{
+			parentClass: "roublard",
+			acquisitionLevel: 3,
+			features: [
+				{
+					level: 3,
+					name: "Maîtrises bonus",
+					description:
+						"Maîtrise du kit d'empoisonneur et du matériel de déguisement.",
+				},
+				{
+					level: 3,
+					name: "Assassinat",
+					description:
+						"Avantage contre les créatures n'ayant pas encore agi ; coup critique automatique sur une cible surprise.",
+				},
+				{
+					level: 9,
+					name: "Infiltration",
+					description: "Vous créez une fausse identité crédible et durable.",
+				},
+				{
+					level: 13,
+					name: "Imposteur",
+					description:
+						"Vous imitez à la perfection le discours, l'écriture et le comportement d'autrui.",
+				},
+				{
+					level: 17,
+					name: "Coup fatal",
+					description:
+						"1×/tour, votre attaque sournoise contre une cible surprise inflige le double de dés.",
+				},
+			],
+		},
+		11,
+	),
+	subclass(
+		"escroc-arcanique",
+		"Escroc arcanique",
+		"Un roublard mêlant la magie d'enchantement et d'illusion à ses larcins.",
+		{
+			parentClass: "roublard",
+			acquisitionLevel: 3,
+			spellcasting: {
+				kind: "third_known",
+				ability: "intelligence",
+				cantripsKnown: THIRD_CASTER.cantripsKnownAT,
+				spellsKnown: THIRD_CASTER.spellsKnown,
+				spellListClass: "magicien",
+				schoolFilter: ["Enchantement", "Illusion"],
+			},
+			features: [
+				{
+					level: 3,
+					name: "Incantation",
+					description:
+						"Vous lancez des sorts de magicien (enchantement et illusion), Intelligence comme caractéristique d'incantation.",
+				},
+				{
+					level: 3,
+					name: "Magie d'esprit",
+					description:
+						"Vous connaissez main du mage et pouvez la lancer de façon invisible et discrète.",
+				},
+				{
+					level: 9,
+					name: "Embuscade magique",
+					description:
+						"Une créature ratant un jet contre votre sort est désavantagée si vous étiez caché.",
+				},
+				{
+					level: 13,
+					name: "Vol enchanté",
+					description:
+						"Action : utilisez main du mage pour escamoter un objet à distance.",
+				},
+				{
+					level: 17,
+					name: "Voleur de sorts",
+					description:
+						"Réaction : tentez de voler le savoir d'un sort lancé sur vous.",
+				},
+			],
+		},
+		12,
 	),
 ];

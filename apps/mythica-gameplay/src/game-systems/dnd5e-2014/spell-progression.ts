@@ -28,6 +28,18 @@ export const CANTRIPS_KNOWN: Record<string, number[]> = {
 	sorcier: [2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
 };
 
+/** Tiers-lanceurs (chevalier occulte / escroc arcanique), par niveau de classe. */
+export const THIRD_CASTER = {
+	/** Sorts connus (identique EK/AT) : premiers sorts au niveau 3. */
+	spellsKnown: [
+		0, 0, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, 13,
+	],
+	/** Tours de magie — chevalier occulte (2 au niv 3, 3 au niv 10). */
+	cantripsKnownEK: [0, 0, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+	/** Tours de magie — escroc arcanique (3 dès le niveau 3, dont main du mage). */
+	cantripsKnownAT: [0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+};
+
 /** Sorts connus par niveau (classes connaissantes uniquement). */
 export const SPELLS_KNOWN: Record<string, number[]> = {
 	barde: [

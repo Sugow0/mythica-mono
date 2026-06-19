@@ -71,13 +71,17 @@ export type SpellcastingKind =
 
 /** Métadonnée de sélection de sorts d'une classe lanceuse. */
 export type SpellcastingData = {
-	kind: SpellcastingKind;
+	kind: SpellcastingKind | "third_known";
 	/** Caractéristique d'incantation (clé de propriété). */
 	ability: string;
 	/** Tours de magie connus par niveau (1→20), si la classe en a. */
 	cantripsKnown?: number[];
 	/** Sorts connus par niveau (1→20), pour les connaissants. */
 	spellsKnown?: number[];
+	/** Liste de sorts puisée (slug de classe), si différente — ex. tiers-lanceur. */
+	spellListClass?: string;
+	/** Restriction d'écoles (tiers-lanceur), ex. ["Abjuration", "Évocation"]. */
+	schoolFilter?: string[];
 };
 
 /** `data` d'une classe. */
