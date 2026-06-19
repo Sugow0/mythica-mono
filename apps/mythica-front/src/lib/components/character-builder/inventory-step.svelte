@@ -6,6 +6,7 @@
 	import type { CreationStep } from "$lib/api/services/character-service";
 	import { Button } from "$lib/components/ui/button";
 	import { Input } from "$lib/components/ui/input";
+	import { NativeSelect } from "$lib/components/ui/native-select";
 
 	let { builder, step }: { builder: CharacterBuilder; step: CreationStep } =
 		$props();
@@ -66,7 +67,7 @@
 
 <div class="mx-auto max-w-2xl space-y-5">
 	<label
-		class="flex items-center gap-3 rounded-xl border border-border bg-card p-4"
+		class="bg-card text-card-foreground flex items-center gap-3 rounded-xl border p-4 shadow-xs"
 	>
 		<CoinsIcon class="text-primary h-5 w-5" />
 		<span class="font-medium">Or de départ</span>
@@ -83,7 +84,7 @@
 	<div class="space-y-2">
 		{#each builder.inventory as item (item.slug)}
 			<div
-				class="flex items-center gap-3 rounded-lg border border-border bg-card p-3"
+				class="bg-card text-card-foreground flex items-center gap-3 rounded-lg border p-3 shadow-xs"
 			>
 				<span class="flex-1 text-sm font-medium">{name(item.slug)}</span>
 				<Input
@@ -108,8 +109,8 @@
 	{#if available.length > 0}
 		<div class="flex items-center gap-2">
 			<PlusIcon class="text-muted-foreground h-4 w-4" />
-			<select
-				class="border-input bg-background h-9 flex-1 rounded-md border px-2 text-sm"
+			<NativeSelect
+				class="flex-1"
 				onchange={(e) => {
 					add(e.currentTarget.value);
 					e.currentTarget.value = "";
@@ -119,7 +120,7 @@
 				{#each available as item (item.slug)}
 					<option value={item.slug}>{item.name}</option>
 				{/each}
-			</select>
+			</NativeSelect>
 		</div>
 	{/if}
 </div>

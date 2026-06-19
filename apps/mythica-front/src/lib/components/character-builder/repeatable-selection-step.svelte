@@ -54,7 +54,7 @@
 
 	{#each builder.classes as cls (cls.slug)}
 		<div
-			class="flex items-center gap-3 rounded-xl border border-border bg-card p-4"
+			class="bg-card text-card-foreground flex items-center gap-3 rounded-xl border p-4 shadow-xs"
 		>
 			<div class="min-w-0 flex-1">
 				<p class="font-display font-semibold">{name(cls.slug)}</p>

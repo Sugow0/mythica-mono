@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ImageIcon from "@lucide/svelte/icons/image";
 	import SparklesIcon from "@lucide/svelte/icons/sparkles";
 	import type { CharacterBuilder } from "$lib/character-builder/builder.svelte";
 	import type {
@@ -6,6 +7,7 @@
 		CreationStep,
 	} from "$lib/api/services/character-service";
 	import { Badge } from "$lib/components/ui/badge";
+	import * as Card from "$lib/components/ui/card";
 
 	let { builder, step }: { builder: CharacterBuilder; step: CreationStep } =
 		$props();
@@ -83,14 +85,6 @@
 	);
 	const skills = $derived((data(active).skillProficiencies ?? []) as string[]);
 	const languages = $derived((data(active).languages ?? []) as string[]);
-
-	/** Résumé court des bonus pour les puces de carte. */
-	function bonusSummary(item: ContentItem): string {
-		const b = (data(item).abilityBonuses ?? {}) as Record<string, number>;
-		return Object.entries(b)
-			.map(([k, v]) => `${ABBR[k] ?? k} +${v}`)
-			.join(" · ");
-	}
 </script>
 
 <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -104,38 +98,23 @@
 				type="button"
 				onclick={() => select(item.slug)}
 				aria-pressed={isActive}
-				class="group relative overflow-hidden rounded-xl border p-4 text-left transition-all
+				class="group bg-card text-card-foreground flex items-center gap-3 rounded-xl border p-3 text-left transition-colors
 					{isActive
-					? 'border-primary bg-primary/5 ring-1 ring-primary'
-					: 'border-border bg-card hover:border-primary/40 hover:bg-muted/40'}"
+					? 'border-primary ring-primary bg-primary/5 ring-1'
+					: 'hover:border-primary/40 hover:bg-muted/40'}"
 			>
-				<!-- Coin « rune » de la carte active -->
-				{#if isActive}
-					<span
-						class="absolute -right-3 -top-3 h-8 w-8 rotate-45 bg-primary/15"
-						aria-hidden="true"
-					></span>
-				{/if}
-				<div class="flex items-center gap-3">
-					<span
-						class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg font-display text-lg font-semibold
-							{isActive
-							? 'bg-primary text-primary-foreground'
-							: 'bg-muted text-muted-foreground'}"
-					>
-						{item.name.charAt(0)}
-					</span>
-					<div class="min-w-0">
-						<p class="font-display text-base font-semibold leading-tight">
-							{item.name}
-						</p>
-						{#if bonusSummary(item)}
-							<p class="text-primary mt-0.5 text-xs font-medium">
-								{bonusSummary(item)}
-							</p>
-						{/if}
-					</div>
-				</div>
+				<span
+					class="font-display flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-bold
+						{isActive
+						? 'bg-primary text-primary-foreground'
+						: 'bg-primary/10 text-primary'}"
+					aria-hidden="true"
+				>
+					{item.name.charAt(0)}
+				</span>
+				<span class="font-display min-w-0 truncate text-base font-semibold">
+					{item.name}
+				</span>
 			</button>
 		{/each}
 	</div>
@@ -143,22 +122,25 @@
 	<!-- Colonne droite : portrait + lore + grants -->
 	{#if active}
 		<div class="lg:sticky lg:top-4 lg:self-start">
-			<div class="overflow-hidden rounded-2xl border border-border bg-card">
-				<!-- Cadre portrait -->
-				{#if config.showPortrait !== false}
-					<div
-						class="relative flex h-44 items-center justify-center border-b border-border bg-gradient-to-b from-muted/60 to-card"
-					>
+			<Card.Root class="gap-0 overflow-hidden py-0 shadow-sm">
+				<!-- Emplacement de l'illustration du personnage (image à venir). -->
+				<div
+					class="bg-muted/40 relative flex h-52 items-center justify-center border-b"
+				>
+					<div class="text-muted-foreground flex flex-col items-center gap-2">
 						<span
-							class="font-display text-6xl font-bold text-primary/30 select-none"
+							class="bg-primary/10 text-primary font-display flex h-16 w-16 items-center justify-center rounded-2xl text-3xl font-bold"
 							aria-hidden="true"
 						>
 							{active.name.charAt(0)}
 						</span>
+						<span class="flex items-center gap-1.5 text-xs">
+							<ImageIcon class="h-3.5 w-3.5" /> Illustration à venir
+						</span>
 					</div>
-				{/if}
+				</div>
 
-				<div class="space-y-5 p-6">
+				<Card.Content class="space-y-5 py-6">
 					<div>
 						<h3 class="font-display text-2xl font-bold">{active.name}</h3>
 						{#if active.description}
@@ -231,8 +213,8 @@
 							</p>
 						{/if}
 					{/if}
-				</div>
-			</div>
+				</Card.Content>
+			</Card.Root>
 		</div>
 	{/if}
 </div>

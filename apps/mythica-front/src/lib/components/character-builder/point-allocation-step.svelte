@@ -10,6 +10,8 @@
 	import type { CharacterBuilder } from "$lib/character-builder/builder.svelte";
 	import type { CreationStep } from "$lib/api/services/character-service";
 	import { Button } from "$lib/components/ui/button";
+	import * as Card from "$lib/components/ui/card";
+	import { NativeSelect } from "$lib/components/ui/native-select";
 
 	let { builder, step }: { builder: CharacterBuilder; step: CreationStep } =
 		$props();
@@ -175,62 +177,64 @@
 			{@const final = builder.finalScores[attr] ?? 0}
 			{@const mod = builder.modifiers[attr] ?? 0}
 			{@const bonus = builder.raceBonuses[attr] ?? 0}
-			<div class="rounded-xl border border-border bg-card p-4">
-				<div class="flex items-center justify-between">
-					<span class="font-display text-sm font-semibold"
-						>{LABELS[attr] ?? attr}</span
-					>
-					<span class="text-muted-foreground text-xs">
-						mod <span class="text-foreground font-medium">{fmtMod(mod)}</span>
-					</span>
-				</div>
-
-				<div class="mt-3 flex items-center gap-2">
-					{#if usesSteppers}
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => step1(attr, -1)}
+			<Card.Root class="gap-0 py-4">
+				<Card.Content class="px-4">
+					<div class="flex items-center justify-between">
+						<span class="font-display text-sm font-semibold"
+							>{LABELS[attr] ?? attr}</span
 						>
-							<MinusIcon class="h-4 w-4" />
-						</Button>
-						<span class="font-display w-10 text-center text-xl font-bold">
-							{builder.baseScores[attr] ?? 0}
+						<span class="text-muted-foreground text-xs">
+							mod <span class="text-foreground font-medium">{fmtMod(mod)}</span>
 						</span>
-						<Button
-							variant="outline"
-							size="icon"
-							class="h-8 w-8"
-							onclick={() => step1(attr, 1)}
-						>
-							<PlusIcon class="h-4 w-4" />
-						</Button>
-					{:else}
-						<select
-							class="border-input bg-background h-9 w-20 rounded-md border px-2 text-sm"
-							value={builder.baseScores[attr] ?? 0}
-							onchange={(e) => assign(attr, Number(e.currentTarget.value))}
-						>
-							<option value={0}>—</option>
-							{#each optionsFor(attr) as v, i (i)}
-								<option value={v}>{v}</option>
-							{/each}
-						</select>
-					{/if}
-
-					<div class="ml-auto text-right">
-						<div class="font-display text-lg font-bold text-primary">
-							{final}
-						</div>
-						{#if bonus}
-							<div class="text-muted-foreground text-[11px]">
-								base +{bonus} race
-							</div>
-						{/if}
 					</div>
-				</div>
-			</div>
+
+					<div class="mt-3 flex items-center gap-2">
+						{#if usesSteppers}
+							<Button
+								variant="outline"
+								size="icon"
+								class="h-8 w-8"
+								onclick={() => step1(attr, -1)}
+							>
+								<MinusIcon class="h-4 w-4" />
+							</Button>
+							<span class="font-display w-10 text-center text-xl font-bold">
+								{builder.baseScores[attr] ?? 0}
+							</span>
+							<Button
+								variant="outline"
+								size="icon"
+								class="h-8 w-8"
+								onclick={() => step1(attr, 1)}
+							>
+								<PlusIcon class="h-4 w-4" />
+							</Button>
+						{:else}
+							<NativeSelect
+								class="w-20"
+								value={builder.baseScores[attr] ?? 0}
+								onchange={(e) => assign(attr, Number(e.currentTarget.value))}
+							>
+								<option value={0}>—</option>
+								{#each optionsFor(attr) as v, i (i)}
+									<option value={v}>{v}</option>
+								{/each}
+							</NativeSelect>
+						{/if}
+
+						<div class="ml-auto text-right">
+							<div class="font-display text-lg font-bold text-primary">
+								{final}
+							</div>
+							{#if bonus}
+								<div class="text-muted-foreground text-[11px]">
+									base +{bonus} race
+								</div>
+							{/if}
+						</div>
+					</div>
+				</Card.Content>
+			</Card.Root>
 		{/each}
 	</div>
 </div>

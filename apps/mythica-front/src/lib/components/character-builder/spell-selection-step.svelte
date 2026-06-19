@@ -46,7 +46,7 @@
 </script>
 
 <div class="mx-auto max-w-3xl space-y-5">
-	<div class="rounded-xl border border-border bg-muted/30 p-4 text-sm">
+	<div class="rounded-xl border bg-muted/30 p-4 text-sm">
 		<p class="font-medium">Emplacements de sorts (calculés)</p>
 		<p class="text-muted-foreground mt-1">
 			{slotsSummary || "Aucun emplacement à ce niveau."}
