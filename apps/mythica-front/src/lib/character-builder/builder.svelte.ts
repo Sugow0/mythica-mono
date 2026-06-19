@@ -12,6 +12,7 @@ import {
 	type AbilityScoreMethod,
 	applyAbilityBonuses,
 	type CasterType,
+	rollStartingWealth,
 	validateAllocation,
 } from "@mythica/character-engine";
 import {
@@ -35,6 +36,9 @@ export type SelectedClass = { slug: string; level: number; isPrimary: boolean };
 
 /** Rôle d'un sort sélectionné. */
 export type SpellRole = "cantrip" | "spell" | "book";
+
+/** Un objet d'équipement avec sa quantité. */
+export type EquipmentEntry = { slug: string; qty: number };
 
 /** Mécanique de sélection de sorts d'une classe (depuis le contenu). */
 type SpellcastingMeta = {
@@ -105,11 +109,21 @@ export class CharacterBuilder {
 			{ cantrips: string[]; spells: string[]; spellbook: string[] }
 		>
 	>({});
-	inventory = $state<{ slug: string; qty: number }[]>([]);
-	gold = $state<number | null>(null);
 	lore = $state<Record<string, string>>({});
 	/** Sous-classe choisie par classe : slug de classe → slug de sous-classe. */
 	subclassSelections = $state<Record<string, string>>({});
+
+	// — Équipement & bourse de départ —
+	/** Option choisie par groupe de choix d'équipement de la classe principale. */
+	equipmentChoices = $state<number[]>([]);
+	/** Objets de base revendus (par slug) contre 50 % de leur valeur. */
+	soldBaseSlugs = $state<string[]>([]);
+	/** Objets achetés avec la bourse. */
+	purchases = $state<{ slug: string; qty: number }[]>([]);
+	/** Bourse obtenue par l'unique lancer de richesse (null tant que non lancée). */
+	goldRolled = $state<number | null>(null);
+	/** Classe pour laquelle la bourse a été lancée (réinitialise si elle change). */
+	rolledClassSlug = $state<string | null>(null);
 
 	constructor(sheetId: string, gameSystemId: string) {
 		this.sheetId = sheetId;
@@ -135,6 +149,111 @@ export class CharacterBuilder {
 	raceContent = $derived(
 		(this.content.race ?? []).find((r) => r.slug === this.raceSlug)
 	);
+
+	/** Contenu de la classe principale. */
+	primaryClassContent = $derived(
+		(this.content.classe ?? []).find(
+			(c) =>
+				c.slug ===
+				(this.classes.find((x) => x.isPrimary) ?? this.classes[0])?.slug
+		)
+	);
+
+	/** Contenu de l'historique sélectionné. */
+	backgroundContent = $derived(
+		(this.content.background ?? []).find((b) => b.slug === this.backgroundSlug)
+	);
+
+	/** Groupes de choix d'équipement de la classe principale. */
+	startingEquipmentGroups = $derived(
+		(contentData(this.primaryClassContent).startingEquipmentOptions ?? []) as {
+			options: { label: string; items: EquipmentEntry[] }[];
+		}[]
+	);
+
+	/** Dés de richesse de départ de la classe principale. */
+	startingGoldRoll = $derived(
+		contentData(this.primaryClassContent).startingGoldRoll as
+			| { dice: number; sides: number; mult: number }
+			| undefined
+	);
+
+	/** Or fixe accordé par l'historique. */
+	backgroundGold = $derived(
+		Number(contentData(this.backgroundContent).startingGold ?? 0)
+	);
+
+	/** Coût (en po) d'un objet d'équipement. */
+	itemCost(slug: string): number {
+		const item = (this.content.equipement ?? []).find((i) => i.slug === slug);
+		return Number((contentData(item).costGp as number) ?? 0);
+	}
+
+	/** Nom d'un objet d'équipement. */
+	itemName(slug: string): string {
+		return (
+			(this.content.equipement ?? []).find((i) => i.slug === slug)?.name ?? slug
+		);
+	}
+
+	/** Équipement de base accordé (options choisies fusionnées par slug). */
+	baseEquipmentAll = $derived.by<EquipmentEntry[]>(() => {
+		const merged: Record<string, number> = {};
+		this.startingEquipmentGroups.forEach((group, i) => {
+			const opt =
+				group.options[this.equipmentChoices[i] ?? 0] ?? group.options[0];
+			for (const it of opt?.items ?? [])
+				merged[it.slug] = (merged[it.slug] ?? 0) + it.qty;
+		});
+		return Object.entries(merged).map(([slug, qty]) => ({ slug, qty }));
+	});
+
+	/** Équipement de base conservé (hors objets revendus). */
+	baseEquipment = $derived(
+		this.baseEquipmentAll.filter((e) => !this.soldBaseSlugs.includes(e.slug))
+	);
+
+	/** Coût total des achats. */
+	purchaseCost = $derived(
+		this.purchases.reduce((s, p) => s + this.itemCost(p.slug) * p.qty, 0)
+	);
+
+	/** Remboursement des reventes (50 % de la valeur). */
+	sellRefund = $derived(
+		this.baseEquipmentAll
+			.filter((e) => this.soldBaseSlugs.includes(e.slug))
+			.reduce((s, e) => s + (this.itemCost(e.slug) * e.qty) / 2, 0)
+	);
+
+	/** Bourse disponible = lancer + or d'historique − achats + reventes. */
+	availableGold = $derived(
+		(this.goldRolled ?? 0) +
+			this.backgroundGold -
+			this.purchaseCost +
+			this.sellRefund
+	);
+
+	/** Inventaire final = équipement de base conservé + achats (fusionné). */
+	finalInventory = $derived.by<EquipmentEntry[]>(() => {
+		const merged: Record<string, number> = {};
+		for (const e of [...this.baseEquipment, ...this.purchases])
+			merged[e.slug] = (merged[e.slug] ?? 0) + e.qty;
+		return Object.entries(merged).map(([slug, qty]) => ({ slug, qty }));
+	});
+
+	/** La bourse a-t-elle été lancée pour la classe principale courante ? */
+	goldRollDone = $derived(
+		this.goldRolled !== null &&
+			this.rolledClassSlug === this.primaryClassContent?.slug
+	);
+
+	/** Lance l'unique jet de richesse de départ (verrouillé ensuite). */
+	rollStartingGold(): void {
+		const spec = this.startingGoldRoll;
+		if (!spec || this.goldRollDone) return;
+		this.goldRolled = rollStartingWealth(spec);
+		this.rolledClassSlug = this.primaryClassContent?.slug ?? null;
+	}
 
 	/** Bonus de caractéristiques de la race (données). */
 	raceBonuses = $derived(
@@ -327,6 +446,9 @@ export class CharacterBuilder {
 			}
 			case "repeatableSelection":
 				return this.classes.length > 0 && this.totalLevel > 0;
+			case "inventory":
+				// La bourse doit avoir été lancée et ne pas être en découvert.
+				return this.goldRollDone && this.availableGold >= 0;
 			case "pointAllocation": {
 				const cfg = step.config as {
 					pointBuyPool?: number;
@@ -412,8 +534,8 @@ export class CharacterBuilder {
 				abilityScores: this.baseScores,
 				skillProficiencies: this.skillProficiencies,
 				spells,
-				inventory: this.inventory,
-				gold: this.gold ?? undefined,
+				inventory: this.finalInventory,
+				gold: Math.max(0, Math.round(this.availableGold * 100) / 100),
 				lore: this.lore,
 			};
 			const res = await characterService.finalizeBuild(this.sheetId, body);

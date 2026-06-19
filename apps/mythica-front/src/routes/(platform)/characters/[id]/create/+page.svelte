@@ -103,7 +103,7 @@
 			{:else if step.kind === "spellSelection"}
 				<SpellSelectionStep {builder} />
 			{:else if step.kind === "inventory"}
-				<InventoryStep {builder} {step} />
+				<InventoryStep {builder} />
 			{:else if step.kind === "loreForm"}
 				<LoreFormStep {builder} {step} />
 			{/if}
