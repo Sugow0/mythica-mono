@@ -190,7 +190,8 @@ export interface paths {
         get: operations["getCharacter-sheetsById"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Supprimer une fiche de personnage */
+        delete: operations["deleteCharacter-sheetsById"];
         options?: never;
         head?: never;
         patch?: never;
@@ -224,6 +225,23 @@ export interface paths {
         put?: never;
         /** Finaliser le build d'une fiche (résultat du wizard) */
         post: operations["postCharacter-sheetsByIdBuild"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/character-sheets/{id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Téléverser l'avatar (token) d'une fiche de personnage */
+        post: operations["postCharacter-sheetsByIdAvatar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2004,6 +2022,7 @@ export interface operations {
                                 version: string;
                             };
                             avatarFileId: string | null;
+                            avatarUrl: string | null;
                             isActive: boolean;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
@@ -2028,6 +2047,7 @@ export interface operations {
                                 version: string;
                             };
                             avatarFileId: string | null;
+                            avatarUrl: string | null;
                             isActive: boolean;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
@@ -2052,6 +2072,7 @@ export interface operations {
                                 version: string;
                             };
                             avatarFileId: string | null;
+                            avatarUrl: string | null;
                             isActive: boolean;
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
@@ -2240,6 +2261,9 @@ export interface operations {
                             version: string;
                         };
                         avatarFileId: string | null;
+                        avatarUrl: string | null;
+                        abilityMethod: string | null;
+                        gold: (string | number) | null;
                         isActive: boolean;
                         createdAt: Record<string, never> | string | number;
                         updatedAt: Record<string, never> | string | number;
@@ -2256,6 +2280,15 @@ export interface operations {
                             isRequired: boolean;
                             formula: string | null;
                             value: unknown;
+                        }[];
+                        selections: {
+                            collectionKey: string;
+                            slug: string;
+                            name: string;
+                            level: (string | number) | null;
+                            isPrimary: boolean | null;
+                            qty: (string | number) | null;
+                            extra: unknown | null;
                         }[];
                     };
                     "multipart/form-data": {
@@ -2271,6 +2304,9 @@ export interface operations {
                             version: string;
                         };
                         avatarFileId: string | null;
+                        avatarUrl: string | null;
+                        abilityMethod: string | null;
+                        gold: (string | number) | null;
                         isActive: boolean;
                         createdAt: Record<string, never> | string | number;
                         updatedAt: Record<string, never> | string | number;
@@ -2287,6 +2323,15 @@ export interface operations {
                             isRequired: boolean;
                             formula: string | null;
                             value: unknown;
+                        }[];
+                        selections: {
+                            collectionKey: string;
+                            slug: string;
+                            name: string;
+                            level: (string | number) | null;
+                            isPrimary: boolean | null;
+                            qty: (string | number) | null;
+                            extra: unknown | null;
                         }[];
                     };
                     "text/plain": {
@@ -2302,6 +2347,9 @@ export interface operations {
                             version: string;
                         };
                         avatarFileId: string | null;
+                        avatarUrl: string | null;
+                        abilityMethod: string | null;
+                        gold: (string | number) | null;
                         isActive: boolean;
                         createdAt: Record<string, never> | string | number;
                         updatedAt: Record<string, never> | string | number;
@@ -2319,6 +2367,113 @@ export interface operations {
                             formula: string | null;
                             value: unknown;
                         }[];
+                        selections: {
+                            collectionKey: string;
+                            slug: string;
+                            name: string;
+                            level: (string | number) | null;
+                            isPrimary: boolean | null;
+                            qty: (string | number) | null;
+                            extra: unknown | null;
+                        }[];
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "deleteCharacter-sheetsById": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
                     };
                 };
             };
@@ -2666,6 +2821,171 @@ export interface operations {
                         /** @constant */
                         success: true;
                         id: string;
+                    };
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "postCharacter-sheetsByIdAvatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    avatar?: string;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file?: string;
+                };
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    avatar?: string;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file?: string;
+                };
+                "text/plain": {
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    avatar?: string;
+                    /**
+                     * Format: binary
+                     * @default File
+                     */
+                    file?: string;
+                };
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        fileId: string;
+                        avatarUrl: string | null;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        fileId: string;
+                        avatarUrl: string | null;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        fileId: string;
+                        avatarUrl: string | null;
                     };
                 };
             };
