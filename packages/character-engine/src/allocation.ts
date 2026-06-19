@@ -113,6 +113,28 @@ function rollDie(sides: number, rng: Rng): number {
 	return Math.floor(rng() * sides) + 1;
 }
 
+/** Lance `count` dés à `sides` faces et renvoie la somme. */
+export function rollDice(
+	count: number,
+	sides: number,
+	rng: Rng = Math.random,
+): number {
+	let sum = 0;
+	for (let i = 0; i < count; i++) sum += rollDie(sides, rng);
+	return sum;
+}
+
+/**
+ * Richesse de départ : un unique lancer `dice`d`sides` multiplié par `mult`
+ * (table par classe, ex. guerrier 5d4 × 10 po).
+ */
+export function rollStartingWealth(
+	spec: { dice: number; sides: number; mult: number },
+	rng: Rng = Math.random,
+): number {
+	return rollDice(spec.dice, spec.sides, rng) * spec.mult;
+}
+
 /** Lance 4d6 et garde les 3 meilleurs. */
 export function roll4d6DropLowest(rng: Rng = Math.random): number {
 	const dice = [

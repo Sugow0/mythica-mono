@@ -5,6 +5,8 @@ import {
 	pointBuyTotalCost,
 	roll4d6DropLowest,
 	rollAbilityScores,
+	rollDice,
+	rollStartingWealth,
 	validateAllocation,
 	validatePointBuy,
 	validateStandardArray,
@@ -80,6 +82,18 @@ describe("lancer de dés", () => {
 			expect(scores[i]).toBeGreaterThanOrEqual(3);
 			expect(scores[i]).toBeLessThanOrEqual(18);
 		}
+	});
+
+	test("rollDice somme `count` dés", () => {
+		expect(rollDice(5, 4, makeSequenceRng([0.99, 0.99, 0.99, 0.99, 0.99]))).toBe(
+			20,
+		);
+		expect(rollDice(2, 4, makeSequenceRng([0.0, 0.0]))).toBe(2);
+	});
+
+	test("rollStartingWealth applique le multiplicateur (guerrier 5d4×10)", () => {
+		const rng = makeSequenceRng([0.99, 0.99, 0.99, 0.99, 0.99]); // 4×5 = 20
+		expect(rollStartingWealth({ dice: 5, sides: 4, mult: 10 }, rng)).toBe(200);
 	});
 });
 
