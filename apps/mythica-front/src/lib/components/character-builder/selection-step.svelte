@@ -89,9 +89,7 @@
 
 <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
 	<!-- Colonne gauche : cartes de sélection -->
-	<div
-		class="flex max-h-[60vh] flex-col gap-2 overflow-y-auto pr-1 lg:max-h-[68vh]"
-	>
+	<div class="flex flex-col gap-2">
 		{#each items as item (item.slug)}
 			{@const isActive = item.slug === selectedSlug}
 			<button

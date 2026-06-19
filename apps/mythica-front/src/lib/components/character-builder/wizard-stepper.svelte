@@ -23,11 +23,11 @@
 </script>
 
 <nav aria-label="Étapes de création" class="w-full">
-	<ol class="flex items-center gap-1 overflow-x-auto pb-1">
+	<ol class="flex flex-wrap items-center gap-x-1.5 gap-y-2">
 		{#each builder.visibleSteps as step, i (step.stepKey)}
 			{@const isCurrent = i === builder.stepIndex}
 			{@const isDone = i < builder.stepIndex}
-			<li class="flex items-center gap-1 shrink-0">
+			<li>
 				<button
 					type="button"
 					onclick={() => builder.goTo(i)}
@@ -56,12 +56,6 @@
 					</span>
 					<span class="hidden sm:inline">{label(step.stepKey)}</span>
 				</button>
-				{#if i < builder.visibleSteps.length - 1}
-					<span
-						class="h-px w-4 shrink-0 {isDone ? 'bg-primary/40' : 'bg-border'}"
-						aria-hidden="true"
-					></span>
-				{/if}
 			</li>
 		{/each}
 	</ol>
