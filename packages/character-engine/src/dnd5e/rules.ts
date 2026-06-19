@@ -123,6 +123,34 @@ export function meetsMulticlassPrereq(
 	);
 }
 
+// --- Sélection des sorts (distincte des emplacements) -----------------------
+
+/** Niveau de sort maximum accessible d'après une liste d'emplacements [L1..L9]. */
+export function maxSpellSlotLevel(slots: number[]): number {
+	for (let i = slots.length - 1; i >= 0; i--) {
+		if ((slots[i] ?? 0) > 0) return i + 1;
+	}
+	return 0;
+}
+
+/**
+ * Nombre de sorts préparés : `max(1, mod + niveau)` (préparant complet) ou
+ * `max(1, mod + floor(niveau/2))` (demi-préparant comme le paladin).
+ */
+export function preparedSpellsCount(
+	abilityMod: number,
+	classLevel: number,
+	half = false,
+): number {
+	const effective = half ? Math.floor(classLevel / 2) : classLevel;
+	return Math.max(1, abilityMod + effective);
+}
+
+/** Taille du grimoire du magicien : 6 sorts au niveau 1, +2 par niveau suivant. */
+export function wizardSpellbookSize(classLevel: number): number {
+	return 6 + 2 * (Math.max(1, classLevel) - 1);
+}
+
 /**
  * Fonctions D&D exposées au registre de l'évaluateur de formules. Permet aux
  * formules de propriétés d'écrire `mod(dexterite)` ou `prof(niveau)`.

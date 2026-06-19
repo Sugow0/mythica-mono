@@ -2,11 +2,14 @@ import { describe, expect, test } from "bun:test";
 import {
 	abilityModifier,
 	computeSpellSlots,
+	maxSpellSlotLevel,
 	meetsMulticlassPrereq,
 	multiclassCasterLevel,
 	pactMagic,
+	preparedSpellsCount,
 	proficiencyBonus,
 	singleClassSlots,
+	wizardSpellbookSize,
 } from "./rules";
 
 describe("abilityModifier", () => {
@@ -112,6 +115,33 @@ describe("computeSpellSlots", () => {
 			{ slug: "guerrier", level: 10, casterType: "none" },
 		]);
 		expect(res.slots).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+	});
+});
+
+describe("maxSpellSlotLevel", () => {
+	test("renvoie le niveau de sort le plus élevé disponible", () => {
+		expect(maxSpellSlotLevel([4, 3, 2, 0, 0, 0, 0, 0, 0])).toBe(3);
+		expect(maxSpellSlotLevel([2, 0, 0, 0, 0, 0, 0, 0, 0])).toBe(1);
+		expect(maxSpellSlotLevel([0, 0, 0, 0, 0, 0, 0, 0, 0])).toBe(0);
+	});
+});
+
+describe("preparedSpellsCount", () => {
+	test("préparant complet : max(1, mod + niveau)", () => {
+		expect(preparedSpellsCount(3, 3)).toBe(6); // druide niv 3, Sag 16
+		expect(preparedSpellsCount(-1, 1)).toBe(1); // plancher à 1
+	});
+	test("demi-préparant : max(1, mod + floor(niveau/2))", () => {
+		expect(preparedSpellsCount(3, 5, true)).toBe(5); // paladin niv 5 (+2 eff) + 3
+		expect(preparedSpellsCount(0, 2, true)).toBe(1); // niv 2 → eff 1
+	});
+});
+
+describe("wizardSpellbookSize", () => {
+	test("6 au niveau 1, +2 par niveau", () => {
+		expect(wizardSpellbookSize(1)).toBe(6);
+		expect(wizardSpellbookSize(3)).toBe(10);
+		expect(wizardSpellbookSize(20)).toBe(44);
 	});
 });
 
