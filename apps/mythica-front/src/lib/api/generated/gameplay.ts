@@ -2558,6 +2558,10 @@ export interface operations {
                         level: string | number;
                         isPrimary?: boolean;
                     }[];
+                    subclasses?: {
+                        classSlug: string;
+                        slug: string;
+                    }[];
                     backgroundSlug: string;
                     abilityMethod: "standard_array" | "point_buy" | "dice_roll" | "manual";
                     abilityScores: {
@@ -2585,6 +2589,10 @@ export interface operations {
                         level: string | number;
                         isPrimary?: boolean;
                     }[];
+                    subclasses?: {
+                        classSlug: string;
+                        slug: string;
+                    }[];
                     backgroundSlug: string;
                     abilityMethod: "standard_array" | "point_buy" | "dice_roll" | "manual";
                     abilityScores: {
@@ -2611,6 +2619,10 @@ export interface operations {
                         slug: string;
                         level: string | number;
                         isPrimary?: boolean;
+                    }[];
+                    subclasses?: {
+                        classSlug: string;
+                        slug: string;
                     }[];
                     backgroundSlug: string;
                     abilityMethod: "standard_array" | "point_buy" | "dice_roll" | "manual";
