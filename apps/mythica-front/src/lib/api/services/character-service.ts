@@ -27,6 +27,18 @@ export type CharacterSheetField = CharacterSheetDetail["properties"][number];
 /** Type d'une propriété de fiche (enum PropertyType). */
 export type CharacterPropertyType = CharacterSheetField["type"];
 
+/** Une étape du parcours de création (kind + config). */
+export type CreationStep =
+	paths["/game-systems/{id}/creation-flow"]["get"]["responses"][200]["content"]["application/json"]["steps"][number];
+
+/** Une entrée de contenu d'une collection (race, classe, sort...). */
+export type ContentItem =
+	paths["/game-systems/{id}/content/{collectionKey}"]["get"]["responses"][200]["content"]["application/json"]["items"][number];
+
+/** Corps de finalisation du build (résultat du wizard). */
+export type BuildCharacterData =
+	paths["/character-sheets/{id}/build"]["post"]["requestBody"]["content"]["application/json"];
+
 /**
  * Character Service — service gameplay.
  * Gère les fiches de personnage standalone de l'utilisateur courant.
@@ -77,6 +89,36 @@ export class CharacterService extends GameplayApiClient {
 		const { data, error } = await this.client.PATCH(
 			"/character-sheets/{id}/values",
 			{ params: { path: { id } }, body: values }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Parcours de création (étapes data-driven) d'un système de jeu. */
+	async getCreationFlow(gameSystemId: string) {
+		const { data, error } = await this.client.GET(
+			"/game-systems/{id}/creation-flow",
+			{ params: { path: { id: gameSystemId } } }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Contenu d'une collection d'un système (race, classe, sort...). */
+	async getContent(gameSystemId: string, collectionKey: string) {
+		const { data, error } = await this.client.GET(
+			"/game-systems/{id}/content/{collectionKey}",
+			{ params: { path: { id: gameSystemId, collectionKey } } }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Finaliser le build d'une fiche (résultat du wizard). */
+	async finalizeBuild(id: string, body: BuildCharacterData) {
+		const { data, error } = await this.client.POST(
+			"/character-sheets/{id}/build",
+			{ params: { path: { id } }, body }
 		);
 		if (error) throw error;
 		return data;

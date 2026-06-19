@@ -29,7 +29,7 @@
 				gameSystemId,
 			});
 			if (response?.id) {
-				await goto(`/characters/${response.id}`);
+				await goto(`/characters/${response.id}/create`);
 			}
 		} catch (err) {
 			error =
