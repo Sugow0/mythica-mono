@@ -1,7 +1,7 @@
 /**
- * Races D&D 5e (2014) — sous-ensemble curé. Données pures, idempotentes par
- * `slug`. Les sous-races courantes sont modélisées comme races à part entière
- * pour la verticale (le sous-choix arrivera avec le contenu complet).
+ * Races D&D 5e (2014) — jeu complet du PHB (chap. 2). Les sous-races sont
+ * aplaties en entrées sélectionnables (cumul des bonus/traits race + sous-race),
+ * adapté à l'étape de sélection unique du wizard. Nomenclature FR du PHB.
  */
 
 import type { RaceData, SystemContentSeed } from "./types";
@@ -21,7 +21,168 @@ const race = (
 	data: data as unknown as Record<string, unknown>,
 });
 
+const darkvision: RaceData["traits"][number] = {
+	name: "Vision dans le noir",
+	description:
+		"Vision à 18 m dans la pénombre comme en plein jour (nuances de gris).",
+};
+const feyAncestry: RaceData["traits"][number] = {
+	name: "Ascendance féerique",
+	description:
+		"Avantage aux jets contre l'état charmé ; le sommeil magique est sans effet sur vous.",
+};
+const trance: RaceData["traits"][number] = {
+	name: "Transe",
+	description: "Vous ne dormez pas : 4 h de méditation valent un long repos.",
+};
+const dwarvenResilience: RaceData["traits"][number] = {
+	name: "Résistance naine",
+	description: "Avantage contre le poison ; résistance aux dégâts de poison.",
+};
+const gnomeCunning: RaceData["traits"][number] = {
+	name: "Ruse gnome",
+	description:
+		"Avantage aux jets de sauvegarde d'Int, Sag et Cha contre la magie.",
+};
+const lucky: RaceData["traits"][number] = {
+	name: "Chanceux",
+	description:
+		"Relancez les 1 obtenus aux jets d'attaque, de caractéristique et de sauvegarde.",
+};
+const brave: RaceData["traits"][number] = {
+	name: "Brave",
+	description: "Avantage aux jets de sauvegarde contre l'état effrayé.",
+};
+const halflingNimble: RaceData["traits"][number] = {
+	name: "Agilité halfeline",
+	description:
+		"Vous pouvez traverser l'espace d'une créature de taille supérieure.",
+};
+
 export const DND5E_RACES: SystemContentSeed[] = [
+	// — Elfe —
+	race(
+		"haut-elfe",
+		"Haut-elfe",
+		"Fiers et cultivés, les hauts-elfes maîtrisent une magie élémentaire.",
+		{
+			size: "M",
+			speed: 9,
+			abilityBonuses: { dexterite: 2, intelligence: 1 },
+			languages: ["Commun", "Elfique", "une langue au choix"],
+			skillProficiencies: ["perception"],
+			traits: [
+				darkvision,
+				feyAncestry,
+				trance,
+				{
+					name: "Tour de magie",
+					description:
+						"Vous connaissez un tour de magie de la liste de magicien (Int).",
+				},
+			],
+		},
+		0,
+	),
+	race(
+		"elfe-des-bois",
+		"Elfe des bois",
+		"Discrets et endurants, les elfes des bois vivent en harmonie avec la nature.",
+		{
+			size: "M",
+			speed: 10.5,
+			abilityBonuses: { dexterite: 2, sagesse: 1 },
+			languages: ["Commun", "Elfique"],
+			skillProficiencies: ["perception"],
+			traits: [
+				darkvision,
+				feyAncestry,
+				trance,
+				{
+					name: "Masque de la nature",
+					description:
+						"Vous pouvez tenter de vous cacher même dans un terrain peu couvrant.",
+				},
+			],
+		},
+		1,
+	),
+	race(
+		"drow",
+		"Drow (elfe noir)",
+		"Habitants de l'Outreterre, les drows manient une magie ténébreuse.",
+		{
+			size: "M",
+			speed: 9,
+			abilityBonuses: { dexterite: 2, charisme: 1 },
+			languages: ["Commun", "Elfique"],
+			skillProficiencies: ["perception"],
+			traits: [
+				{
+					name: "Vision dans le noir supérieure",
+					description: "Vision dans le noir à 36 m.",
+				},
+				feyAncestry,
+				trance,
+				{
+					name: "Sensibilité au soleil",
+					description: "Désavantage à la vue et aux attaques en plein soleil.",
+				},
+				{
+					name: "Magie drow",
+					description:
+						"Tour de magie lueurs féeriques, puis ténèbres et lumières dansantes selon le niveau (Cha).",
+				},
+			],
+		},
+		2,
+	),
+	// — Halfelin —
+	race(
+		"halfelin-pied-leger",
+		"Halfelin pied-léger",
+		"Discrets et affables, ils passent facilement inaperçus.",
+		{
+			size: "P",
+			speed: 7.5,
+			abilityBonuses: { dexterite: 2, charisme: 1 },
+			languages: ["Commun", "Halfelin"],
+			traits: [
+				lucky,
+				brave,
+				halflingNimble,
+				{
+					name: "Discrétion naturelle",
+					description:
+						"Vous pouvez vous cacher derrière une créature plus grande que vous.",
+				},
+			],
+		},
+		3,
+	),
+	race(
+		"halfelin-robuste",
+		"Halfelin robuste",
+		"Plus résistants, ils ont du sang nain dans les veines.",
+		{
+			size: "P",
+			speed: 7.5,
+			abilityBonuses: { dexterite: 2, constitution: 1 },
+			languages: ["Commun", "Halfelin"],
+			traits: [
+				lucky,
+				brave,
+				halflingNimble,
+				{
+					name: "Robustesse halfeline",
+					description:
+						"Avantage contre le poison ; résistance aux dégâts de poison.",
+				},
+			],
+		},
+		4,
+	),
+	// — Humain —
 	race(
 		"humain",
 		"Humain",
@@ -45,94 +206,95 @@ export const DND5E_RACES: SystemContentSeed[] = [
 				},
 			],
 		},
-		0,
+		5,
 	),
-	race(
-		"haut-elfe",
-		"Haut-elfe",
-		"Élégants et érudits, les hauts-elfes excellent dans la magie et la perception.",
-		{
-			size: "M",
-			speed: 9,
-			abilityBonuses: { dexterite: 2, intelligence: 1 },
-			languages: ["Commun", "Elfique", "une langue au choix"],
-			skillProficiencies: ["perception"],
-			traits: [
-				{
-					name: "Vision dans le noir",
-					description: "Vision à 18 m dans la pénombre.",
-				},
-				{
-					name: "Ascendance féerique",
-					description:
-						"Avantage contre l'état charmé ; immunité au sommeil magique.",
-				},
-				{
-					name: "Tour de magie",
-					description: "Connaît un tour de magie de la liste de magicien.",
-				},
-			],
-		},
-		1,
-	),
+	// — Nain —
 	race(
 		"nain-collines",
 		"Nain des collines",
-		"Robustes et tenaces, les nains des collines sont réputés pour leur résistance.",
+		"Tenaces et sages, réputés pour leur endurance.",
 		{
 			size: "M",
 			speed: 7.5,
 			abilityBonuses: { constitution: 2, sagesse: 1 },
 			languages: ["Commun", "Nain"],
 			traits: [
+				darkvision,
+				dwarvenResilience,
 				{
-					name: "Vision dans le noir",
-					description: "Vision à 18 m dans la pénombre.",
+					name: "Entraînement nain au combat",
+					description:
+						"Maîtrise de la hache d'armes, de la hachette, du marteau léger et du marteau de guerre.",
 				},
 				{
-					name: "Résistance naine",
+					name: "Connaissance de la pierre",
 					description:
-						"Avantage contre le poison ; résistance aux dégâts de poison.",
+						"Bonus de maîtrise doublé aux tests d'Histoire liés à la pierre.",
 				},
 				{
 					name: "Ténacité naine",
-					description: "+1 PV maximum par niveau.",
+					description: "+1 point de vie maximum par niveau.",
 				},
 			],
 		},
-		2,
+		6,
 	),
 	race(
-		"halfelin-pied-leger",
-		"Halfelin pied-léger",
-		"Discrets et chanceux, les halfelins pieds-légers passent facilement inaperçus.",
+		"nain-montagnes",
+		"Nain des montagnes",
+		"Forts et endurcis, accoutumés à la vie en altitude.",
 		{
-			size: "P",
+			size: "M",
 			speed: 7.5,
-			abilityBonuses: { dexterite: 2, charisme: 1 },
-			languages: ["Commun", "Halfelin"],
+			abilityBonuses: { constitution: 2, force: 2 },
+			languages: ["Commun", "Nain"],
 			traits: [
+				darkvision,
+				dwarvenResilience,
 				{
-					name: "Chanceux",
+					name: "Entraînement nain au combat",
 					description:
-						"Relance les 1 obtenus aux tests d'attaque, de caractéristique et de sauvegarde.",
+						"Maîtrise de la hache d'armes, de la hachette, du marteau léger et du marteau de guerre.",
 				},
 				{
-					name: "Brave",
-					description: "Avantage contre l'état effrayé.",
-				},
-				{
-					name: "Discrétion naturelle",
-					description: "Peut se cacher derrière une créature plus grande.",
+					name: "Entraînement nain aux armures",
+					description: "Maîtrise des armures légères et intermédiaires.",
 				},
 			],
 		},
-		3,
+		7,
 	),
+	// — Demi-elfe —
+	race(
+		"demi-elfe",
+		"Demi-elfe",
+		"Entre deux mondes, charismatiques et adaptables.",
+		{
+			size: "M",
+			speed: 9,
+			abilityBonuses: { charisme: 2 },
+			languages: ["Commun", "Elfique", "une langue au choix"],
+			traits: [
+				darkvision,
+				feyAncestry,
+				{
+					name: "Polyvalence des caractéristiques",
+					description:
+						"+1 à deux caractéristiques de votre choix (autres que le Charisme).",
+				},
+				{
+					name: "Polyvalence des compétences",
+					description: "Maîtrise de deux compétences de votre choix.",
+				},
+			],
+		},
+		8,
+	),
+	// — Demi-orc —
 	race(
 		"demi-orc",
 		"Demi-orc",
-		"Puissants et endurants, les demi-orcs sont des combattants redoutables.",
+		"Puissants et endurants, redoutables au combat.",
 		{
 			size: "M",
 			speed: 9,
@@ -140,27 +302,78 @@ export const DND5E_RACES: SystemContentSeed[] = [
 			languages: ["Commun", "Orc"],
 			skillProficiencies: ["intimidation"],
 			traits: [
-				{
-					name: "Vision dans le noir",
-					description: "Vision à 18 m dans la pénombre.",
-				},
+				darkvision,
 				{
 					name: "Endurance implacable",
-					description: "Tombe à 1 PV au lieu de 0 une fois par repos long.",
+					description:
+						"Quand vous tombez à 0 PV sans être tué net, vous tombez à 1 PV (1×/repos long).",
 				},
 				{
 					name: "Attaques sauvages",
 					description:
-						"Un dé de dégâts supplémentaire sur un coup critique au corps à corps.",
+						"Sur un coup critique au corps à corps, ajoutez un dé de dégâts de l'arme.",
 				},
 			],
 		},
-		4,
+		9,
+	),
+	// — Gnome —
+	race(
+		"gnome-forets",
+		"Gnome des forêts",
+		"Petits, vifs et farceurs, doués pour l'illusion.",
+		{
+			size: "P",
+			speed: 7.5,
+			abilityBonuses: { intelligence: 2, dexterite: 1 },
+			languages: ["Commun", "Gnome"],
+			traits: [
+				darkvision,
+				gnomeCunning,
+				{
+					name: "Illusionniste-né",
+					description:
+						"Vous connaissez le tour de magie illusion mineure (Int).",
+				},
+				{
+					name: "Communication avec les petits animaux",
+					description: "Vous communiquez des idées simples aux petites bêtes.",
+				},
+			],
+		},
+		10,
 	),
 	race(
-		"drakeide",
-		"Drakéide",
-		"Fiers descendants des dragons, les drakéides exhalent une énergie élémentaire.",
+		"gnome-roches",
+		"Gnome des roches",
+		"Inventifs et bricoleurs, experts en mécanismes.",
+		{
+			size: "P",
+			speed: 7.5,
+			abilityBonuses: { intelligence: 2, constitution: 1 },
+			languages: ["Commun", "Gnome"],
+			traits: [
+				darkvision,
+				gnomeCunning,
+				{
+					name: "Savoir d'artificier",
+					description:
+						"Bonus de maîtrise doublé aux tests d'Histoire sur les objets magiques, alchimiques et technologiques.",
+				},
+				{
+					name: "Bricoleur",
+					description:
+						"Maîtrise des outils de bricoleur ; vous fabriquez de petits dispositifs mécaniques.",
+				},
+			],
+		},
+		11,
+	),
+	// — Sangdragon —
+	race(
+		"sangdragon",
+		"Sangdragon",
+		"Fiers descendants des dragons, porteurs d'un souffle élémentaire.",
 		{
 			size: "M",
 			speed: 9,
@@ -168,16 +381,46 @@ export const DND5E_RACES: SystemContentSeed[] = [
 			languages: ["Commun", "Draconique"],
 			traits: [
 				{
-					name: "Souffle élémentaire",
+					name: "Ascendance draconique",
 					description:
-						"Exhale une énergie selon son ascendance draconique (jet de sauvegarde).",
+						"Choisissez un type de dragon : il définit votre souffle et votre résistance.",
+				},
+				{
+					name: "Souffle",
+					description:
+						"Action : exhalez une énergie élémentaire (jet de sauvegarde, dégâts croissants avec le niveau).",
 				},
 				{
 					name: "Résistance draconique",
-					description: "Résistance au type de dégâts de son ascendance.",
+					description: "Résistance au type de dégâts de votre ascendance.",
 				},
 			],
 		},
-		5,
+		12,
+	),
+	// — Tieffelin —
+	race(
+		"tieffelin",
+		"Tieffelin",
+		"Marqués par un héritage infernal, charismatiques et résistants au feu.",
+		{
+			size: "M",
+			speed: 9,
+			abilityBonuses: { charisme: 2, intelligence: 1 },
+			languages: ["Commun", "Infernal"],
+			traits: [
+				darkvision,
+				{
+					name: "Résistance infernale",
+					description: "Résistance aux dégâts de feu.",
+				},
+				{
+					name: "Héritage infernal",
+					description:
+						"Tour de magie thaumaturgie, puis réprimande infernale et ténèbres selon le niveau (Cha).",
+				},
+			],
+		},
+		13,
 	),
 ];

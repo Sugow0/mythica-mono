@@ -142,6 +142,27 @@ async function seedSystemContent(
 			},
 		});
 	}
+
+	// Élague le contenu orphelin (plus présent dans le seed) tant qu'il n'est
+	// référencé par aucune sélection de fiche (FK Restrict).
+	const keptSlugs = content.map((c) => c.slug);
+	const orphans = await prisma.systemContent.findMany({
+		where: {
+			gameSystemId,
+			slug: { notIn: keptSlugs },
+			selections: { none: {} },
+		},
+		select: { id: true, slug: true },
+	});
+	if (orphans.length > 0) {
+		await prisma.systemContent.deleteMany({
+			where: { id: { in: orphans.map((o) => o.id) } },
+		});
+		console.log(
+			`✔ contenu orphelin élagué : ${orphans.map((o) => o.slug).join(", ")}`,
+		);
+	}
+
 	console.log(`✔ contenu seedé : ${slug} (${content.length} entrées)`);
 }
 
