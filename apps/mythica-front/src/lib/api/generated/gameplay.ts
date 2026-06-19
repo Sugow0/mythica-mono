@@ -2577,7 +2577,7 @@ export interface operations {
                         slug: string;
                         qty: string | number;
                     }[];
-                    gold?: string | number;
+                    gold?: number;
                     lore?: {
                         [key: string]: string;
                     };
@@ -2608,7 +2608,7 @@ export interface operations {
                         slug: string;
                         qty: string | number;
                     }[];
-                    gold?: string | number;
+                    gold?: number;
                     lore?: {
                         [key: string]: string;
                     };
@@ -2639,7 +2639,7 @@ export interface operations {
                         slug: string;
                         qty: string | number;
                     }[];
-                    gold?: string | number;
+                    gold?: number;
                     lore?: {
                         [key: string]: string;
                     };
