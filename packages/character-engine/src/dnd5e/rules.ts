@@ -297,6 +297,24 @@ export function wizardSpellbookSize(classLevel: number): number {
 	return 6 + 2 * (Math.max(1, classLevel) - 1);
 }
 
+/** Une tranche d'expertise accordée à un niveau donné (classe). */
+export type ExpertiseGrant = { level: number; count: number };
+
+/**
+ * Nombre d'expertises (double maîtrise) disponibles à un niveau de classe :
+ * somme des tranches dont le niveau est atteint.
+ */
+export function expertiseSlots(
+	grants: ExpertiseGrant[] | undefined,
+	classLevel: number,
+): number {
+	if (!grants) return 0;
+	return grants.reduce(
+		(sum, g) => (classLevel >= g.level ? sum + g.count : sum),
+		0,
+	);
+}
+
 /**
  * Nombre de sorts préparés selon le type de lanceur, ou `null` si la classe ne
  * prépare pas ses sorts (lanceurs « connus », pacte…). `prepared`/`wizard`
