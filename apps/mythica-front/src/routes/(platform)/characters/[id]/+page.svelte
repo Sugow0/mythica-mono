@@ -58,6 +58,27 @@
 	/** Fiche en lecture seule par défaut ; le bouton « Modifier » déverrouille. */
 	let editing = $state(false);
 
+	/** Le visiteur est-il le propriétaire ? (les fiches publiques sont visibles par tous) */
+	const isOwner = $derived(sheet?.isOwner ?? true);
+
+	/** Visibilité courante (privée / campagne / publique). */
+	const visibility = $derived(sheet?.visibility ?? "private");
+	const VISIBILITY_LABELS: Record<string, string> = {
+		private: "Privée",
+		campaign: "Campagne",
+		public: "Publique",
+	};
+	async function setVisibility(v: "private" | "campaign" | "public") {
+		if (!sheet) return;
+		const prev = sheet.visibility;
+		sheet = { ...sheet, visibility: v };
+		try {
+			await characterService.setVisibility(sheetId, v);
+		} catch {
+			sheet = { ...sheet, visibility: prev };
+		}
+	}
+
 	/** Contenu joint (par slug) : sorts, classes, équipement — pour l'affichage. */
 	type SpellData = { name: string; level: number; school?: string };
 	type ClassData = {
@@ -642,52 +663,72 @@
 			</div>
 
 			<div class="flex items-center gap-2 sm:flex-col sm:items-end">
-				<div class="flex items-center gap-2">
-					{#if has("inspiration")}
-						<button
-							type="button"
-							onclick={() =>
-								editing && setVal("inspiration", !boolv("inspiration"))}
-							aria-pressed={boolv("inspiration")}
-							class="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors {boolv(
-								'inspiration'
-							)
-								? 'border-primary bg-primary/10 text-primary'
-								: 'text-muted-foreground'} {editing
-								? 'hover:bg-muted'
-								: 'cursor-default'}"
-						>
-							<SparkleIcon class="h-4 w-4" /> Inspiration
-						</button>
-					{/if}
-					<Button
-						variant={editing ? "default" : "outline"}
-						size="sm"
-						onclick={() => (editing = !editing)}
-					>
-						{#if editing}
-							<CheckIcon class="h-4 w-4" /> Terminer
-						{:else}
-							<PencilIcon class="h-4 w-4" /> Modifier
+				<div class="flex flex-wrap items-center gap-2">
+					{#if isOwner}
+						{#if has("inspiration")}
+							<button
+								type="button"
+								onclick={() =>
+									editing && setVal("inspiration", !boolv("inspiration"))}
+								aria-pressed={boolv("inspiration")}
+								class="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors {boolv(
+									'inspiration'
+								)
+									? 'border-primary bg-primary/10 text-primary'
+									: 'text-muted-foreground'} {editing
+									? 'hover:bg-muted'
+									: 'cursor-default'}"
+							>
+								<SparkleIcon class="h-4 w-4" /> Inspiration
+							</button>
 						{/if}
-					</Button>
-					<Button
-						variant="ghost"
-						size="sm"
-						href="/characters/{sheetId}/create"
-						title="Modifier la race, la classe, les caractéristiques…"
-					>
-						<SquarePenIcon class="h-4 w-4" /> Modifier le build
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon"
-						class="text-muted-foreground hover:text-destructive"
-						aria-label="Supprimer le personnage"
-						onclick={() => (deleteOpen = true)}
-					>
-						<Trash2Icon class="h-4 w-4" />
-					</Button>
+						<select
+							aria-label="Visibilité de la fiche"
+							value={visibility}
+							onchange={(e) =>
+								setVisibility(
+									e.currentTarget.value as "private" | "campaign" | "public"
+								)}
+							class="focus-visible:ring-ring/50 h-9 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-[3px]"
+							title="Qui peut voir cette fiche"
+						>
+							<option value="private">🔒 Privée</option>
+							<option value="campaign">👥 Campagne</option>
+							<option value="public">🌐 Publique</option>
+						</select>
+						<Button
+							variant={editing ? "default" : "outline"}
+							size="sm"
+							onclick={() => (editing = !editing)}
+						>
+							{#if editing}
+								<CheckIcon class="h-4 w-4" /> Terminer
+							{:else}
+								<PencilIcon class="h-4 w-4" /> Modifier
+							{/if}
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							href="/characters/{sheetId}/create"
+							title="Modifier la race, la classe, les caractéristiques…"
+						>
+							<SquarePenIcon class="h-4 w-4" /> Modifier le build
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							class="text-muted-foreground hover:text-destructive"
+							aria-label="Supprimer le personnage"
+							onclick={() => (deleteOpen = true)}
+						>
+							<Trash2Icon class="h-4 w-4" />
+						</Button>
+					{:else}
+						<Badge variant="secondary">
+							Build {VISIBILITY_LABELS[visibility]?.toLowerCase()} — lecture seule
+						</Badge>
+					{/if}
 				</div>
 
 				<div

@@ -44,6 +44,13 @@ export type ContentItem =
 export type BuildCharacterData =
 	paths["/character-sheets/{id}/build"]["post"]["requestBody"]["content"]["application/json"];
 
+/** Visibilité d'une fiche. */
+export type SheetVisibility = "private" | "campaign" | "public";
+
+/** Un build public (liste de découverte). */
+export type PublicSheetItem =
+	paths["/character-sheets/public"]["get"]["responses"][200]["content"]["application/json"]["items"][number];
+
 /**
  * Character Service — service gameplay.
  * Gère les fiches de personnage standalone de l'utilisateur courant.
@@ -124,6 +131,25 @@ export class CharacterService extends GameplayApiClient {
 		const { data, error } = await this.client.POST(
 			"/character-sheets/{id}/build",
 			{ params: { path: { id } }, body }
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Builds publics partagés par la communauté. */
+	async getPublicSheets(params?: ListCharacterSheetsParams) {
+		const { data, error } = await this.client.GET("/character-sheets/public", {
+			params: { query: params },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Changer la visibilité d'une fiche (privée / campagne / publique). */
+	async setVisibility(id: string, visibility: SheetVisibility) {
+		const { data, error } = await this.client.PATCH(
+			"/character-sheets/{id}/visibility",
+			{ params: { path: { id } }, body: { visibility } }
 		);
 		if (error) throw error;
 		return data;

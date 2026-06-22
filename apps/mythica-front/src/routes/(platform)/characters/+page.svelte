@@ -56,10 +56,14 @@
 			<h1 class="font-display text-3xl font-bold">{m.characters_title()}</h1>
 			<p class="text-muted-foreground mt-1">{m.characters_subtitle()}</p>
 		</div>
-		<Button href="/characters/new">
-			<PlusIcon class="h-4 w-4" />
-			{m.characters_create()}
-		</Button>
+		<div class="flex items-center gap-2">
+			<Button variant="outline" href="/characters/public">Builds publics</Button
+			>
+			<Button href="/characters/new">
+				<PlusIcon class="h-4 w-4" />
+				{m.characters_create()}
+			</Button>
+		</div>
 	</div>
 
 	{#if isLoading}
