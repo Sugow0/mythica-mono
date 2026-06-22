@@ -1672,4 +1672,64 @@ export const DND5E_SUBCLASSES: SystemContentSeed[] = [
 		},
 		39,
 	),
+	// — Artificier : spécialités (niveau 1) —
+	subclass(
+		"alchimiste",
+		"Alchimiste",
+		"Maîtrise des élixirs et des substances qui soignent ou détruisent.",
+		{
+			parentClass: "artificier",
+			acquisitionLevel: 1,
+			features: [
+				{
+					level: 1,
+					name: "Maîtrise d'outils (alchimie)",
+					description:
+						"Maîtrise des outils d'alchimiste ; vous pouvez les fabriquer si besoin.",
+				},
+				{
+					level: 1,
+					name: "Sorts d'alchimiste",
+					description:
+						"Vous apprenez des sorts supplémentaires toujours préparés (soin des blessures, identification…).",
+				},
+				{
+					level: 3,
+					name: "Potion expérimentale",
+					description:
+						"Fabriquez des élixirs aux effets aléatoires (soin, rapidité, résistance…).",
+				},
+			],
+		},
+		40,
+	),
+	subclass(
+		"artilleur",
+		"Artilleur",
+		"Le spécialiste des armes à feu et des canons éldritchs.",
+		{
+			parentClass: "artificier",
+			acquisitionLevel: 1,
+			features: [
+				{
+					level: 1,
+					name: "Maîtrise d'outils (menuiserie)",
+					description: "Maîtrise des outils de menuisier.",
+				},
+				{
+					level: 1,
+					name: "Canon éldritch",
+					description:
+						"Action : créez un petit canon magique (gerbe de flammes, balliste, protecteur).",
+				},
+				{
+					level: 3,
+					name: "Canon arcanique",
+					description:
+						"Vos armes à une main deviennent des foyers d'incantation et gagnent en allonge magique.",
+				},
+			],
+		},
+		41,
+	),
 ];
