@@ -4,6 +4,7 @@
  * Données générées ; régénérables depuis la liste filtrable d'aidedd.
  */
 
+import { SPELL_DESCRIPTIONS } from "./spell-descriptions";
 import type { SpellData, SystemContentSeed } from "./types";
 
 const spell = (
@@ -5467,3 +5468,9 @@ export const DND5E_SPELLS: SystemContentSeed[] = [
 		360,
 	),
 ];
+
+// Attache la description (texte FR aidedd) à chaque sort qui en a une.
+for (const s of DND5E_SPELLS) {
+	const desc = SPELL_DESCRIPTIONS[s.slug];
+	if (desc) (s.data as Record<string, unknown>).description = desc;
+}

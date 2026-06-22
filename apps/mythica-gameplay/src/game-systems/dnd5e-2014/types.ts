@@ -186,6 +186,8 @@ export type SpellData = {
 	range: string;
 	components: string;
 	duration: string;
+	/** Description (effet) du sort, texte FR. */
+	description?: string;
 	/** Slugs des classes pouvant apprendre ce sort. */
 	classes: string[];
 };
