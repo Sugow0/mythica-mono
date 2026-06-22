@@ -17,7 +17,8 @@ export type Dnd5eCollectionKey =
 	| "sous-classe"
 	| "background"
 	| "sort"
-	| "equipement";
+	| "equipement"
+	| "don";
 
 /** Une entrée de contenu générique, prête à seeder. */
 export type SystemContentSeed = {
@@ -111,6 +112,8 @@ export type ClassData = {
 	skillChoices: { count: number; from: string[] };
 	/** Tranches d'expertise (double maîtrise) accordées par niveau (roublard, barde). */
 	expertise?: { level: number; count: number }[];
+	/** Niveaux d'amélioration de caractéristiques / don (ASI). Défaut PHB si absent. */
+	asiLevels?: number[];
 	casterType: CasterType;
 	spellcastingAbility?: string;
 	/** Sélection de sorts (cantrips/connus/préparés) ; absent si non-lanceur. */
@@ -161,6 +164,16 @@ export type SubclassData = {
 	alwaysPrepared?: string[];
 	/** Lanceur conféré par la sous-classe (tiers-lanceur : chevalier occulte...). */
 	spellcasting?: SpellcastingData;
+};
+
+/** `data` d'un don (collection "don"). */
+export type FeatData = {
+	/** Effet du don (texte). */
+	description: string;
+	/** Bonus de caractéristique fixe (demi-don, ex. Vif +1 CON). */
+	abilityBonuses?: AbilityBonusMap;
+	/** Prérequis éventuel (texte). */
+	prerequisite?: string;
 };
 
 /** `data` d'un sort. */

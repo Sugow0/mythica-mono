@@ -112,6 +112,13 @@ const CONTENT = [
 		data: {},
 	},
 	{
+		id: "don1",
+		collectionKey: "don",
+		slug: "vif",
+		name: "Vif",
+		data: { description: "+1 CON.", abilityBonuses: { constitution: 1 } },
+	},
+	{
 		id: "sc1",
 		collectionKey: "sous-classe",
 		slug: "tradition-arcane",
@@ -139,6 +146,8 @@ const PROP_KEYS = [
 	"perception",
 	"discretion",
 	"expertises",
+	"ameliorations",
+	"capacites_traits",
 	"arcanes",
 	"histoire",
 	"apparence",
@@ -372,5 +381,44 @@ describe("POST /character-sheets/:id/build", () => {
 		}
 		expect(valByProp.get("pid-expertises")).toEqual(["discretion"]);
 		expect(valByProp.get("pid-discretion")).toBe(true); // expertise ⇒ maîtrise
+	});
+
+	it("applique les améliorations de caractéristiques et les dons", async () => {
+		const r = await build(
+			{
+				...singleClassBody,
+				asiAllocations: [{ force: 1, dexterite: 1 }],
+				feats: ["vif"],
+			},
+			USER,
+		);
+		expect(r.status).toBe(200);
+		const valByProp = new Map<string, unknown>();
+		for (const c of p.characterSheetValue.upsert.mock.calls) {
+			const a = c[0] as {
+				where: { characterSheetId_propertyId: { propertyId: string } };
+				create: { value: unknown };
+			};
+			valByProp.set(
+				a.where.characterSheetId_propertyId.propertyId,
+				a.create.value,
+			);
+		}
+		// force 8 +1 (ASI) = 9 ; dex 13 +2 (race) +1 (ASI) = 16 ; con 12 +1 (Vif) = 13
+		expect(valByProp.get("pid-force")).toBe(9);
+		expect(valByProp.get("pid-dexterite")).toBe(16);
+		expect(valByProp.get("pid-constitution")).toBe(13);
+		expect(valByProp.get("pid-ameliorations")).toEqual([
+			{ force: 1, dexterite: 1 },
+		]);
+		expect(String(valByProp.get("pid-capacites_traits"))).toContain(
+			"Don : Vif",
+		);
+
+		// Le don est persisté comme sélection.
+		const selArg = p.characterSheetSelection.createMany.mock.calls[0]?.[0] as {
+			data: Array<Record<string, unknown>>;
+		};
+		expect(selArg.data.some((s) => s.collectionKey === "don")).toBe(true);
 	});
 });

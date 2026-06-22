@@ -266,6 +266,13 @@ const COMBAT_EXTRA: CharacterSheetPropertyData[] = [
 		type: "list",
 		description: "Compétences avec expertise (double bonus de maîtrise).",
 	},
+	{
+		key: "ameliorations",
+		label: "Améliorations de caractéristiques",
+		type: "list",
+		description:
+			"Allocations d'amélioration de caractéristiques choisies aux paliers d'ASI.",
+	},
 ];
 
 /** Valeurs d'incantation dérivées (caractéristique selon la classe). */
