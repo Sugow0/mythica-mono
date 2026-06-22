@@ -700,8 +700,10 @@
 			</AlertDialog.Content>
 		</AlertDialog.Root>
 
-		<!-- Rail de constantes -->
-		<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+		<!-- Rail de constantes (auto-fit : remplit la largeur sans cellules vides) -->
+		<div
+			class="mb-6 grid grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] gap-3"
+		>
 			{#if has("ca")}
 				{#snippet caVal()}
 					<input
@@ -908,8 +910,8 @@
 			</Card.Content>
 		</Card.Root>
 
-		<!-- Corps 3 colonnes -->
-		<div class="grid gap-4 lg:grid-cols-3">
+		<!-- Corps : caractéristiques+sauvegardes | compétences -->
+		<div class="grid gap-4 lg:grid-cols-2">
 			<!-- Colonne 1 : caractéristiques + sauvegardes -->
 			<div class="flex flex-col gap-4">
 				<section>
@@ -967,158 +969,154 @@
 					{/each}
 				</Card.Content>
 			</Card.Root>
+		</div>
 
-			<!-- Colonne 3 : sorts + bourse -->
-			<div class="flex flex-col gap-4">
-				{#if casterClasses.length > 0}
-					<Card.Root>
-						<Card.Header class="pb-2">
-							<Card.Title class="flex items-center gap-2 text-base">
-								<WandSparklesIcon class="text-primary h-4 w-4" /> Magie
-							</Card.Title>
-						</Card.Header>
-						<Card.Content class="space-y-3 pt-0">
-							{#each casterClasses as c (c.name)}
-								<div class="rounded-lg border p-3">
-									<p class="mb-2 text-sm font-semibold">
-										{c.name}
-										<span class="text-muted-foreground font-normal"
-											>· {c.abbr}</span
-										>
-									</p>
-									<div class="grid grid-cols-3 gap-2 text-center">
-										<div>
-											<p
-												class="font-display text-primary text-2xl font-bold leading-none"
-											>
-												{c.dc}
-											</p>
-											<p class="text-muted-foreground text-[10px] uppercase">
-												DD des sorts
-											</p>
-										</div>
-										<div>
-											<p
-												class="font-display text-primary text-2xl font-bold leading-none"
-											>
-												{formatModifier(c.attack)}
-											</p>
-											<p class="text-muted-foreground text-[10px] uppercase">
-												Attaque
-											</p>
-										</div>
-										<div>
-											<p class="font-display text-2xl font-bold leading-none">
-												{c.prepared ?? "—"}
-											</p>
-											<p class="text-muted-foreground text-[10px] uppercase">
-												À préparer
-											</p>
-										</div>
-									</div>
-								</div>
-							{/each}
-						</Card.Content>
-					</Card.Root>
-				{/if}
-
-				{#if spellGroups.length > 0}
-					<Card.Root>
-						<Card.Header class="pb-2">
-							<Card.Title class="text-base">Sorts</Card.Title>
-						</Card.Header>
-						<Card.Content class="space-y-3 pt-0">
-							{#each spellGroups as group (group.level)}
-								<div>
-									<h3
-										class="text-muted-foreground mb-1 text-[10px] font-semibold uppercase tracking-widest"
-									>
-										{group.label}
-									</h3>
-									<ul class="space-y-0.5">
-										{#each group.spells as spell (spell.id)}
-											<li class="flex items-center gap-2 text-sm">
-												<span class="flex-1 truncate">{spell.name}</span>
-												{#if roleLabel[spellRole[spell.id]]}
-													<Badge variant="outline" class="text-[10px]">
-														{roleLabel[spellRole[spell.id]]}
-													</Badge>
-												{/if}
-											</li>
-										{/each}
-									</ul>
-								</div>
-							{/each}
-						</Card.Content>
-					</Card.Root>
-				{/if}
-
-				{#if spellSlots.length > 0}
-					<Card.Root>
-						<Card.Header class="pb-2">
-							<Card.Title class="text-base">Emplacements de sorts</Card.Title>
-						</Card.Header>
-						<Card.Content class="grid grid-cols-2 gap-2 pt-0">
-							{#each spellSlots as s (s.lvl)}
-								<div
-									class="flex items-center gap-2 rounded-lg border px-3 py-2"
-								>
-									<span class="text-muted-foreground text-xs">Niv {s.lvl}</span>
-									<input
-										type="number"
-										aria-label="Emplacements niv {s.lvl} disponibles"
-										value={s.current}
-										readonly={!editing}
-										oninput={(e) =>
-											setResource(
-												`spell_slots_${s.lvl}`,
-												"current",
-												e.currentTarget.value
-											)}
-										class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent ml-auto w-10 rounded-md border bg-background text-center text-sm outline-none focus-visible:ring-[3px]"
-									/>
-									<span class="text-muted-foreground text-sm">/ {s.max}</span>
-								</div>
-							{/each}
-						</Card.Content>
-					</Card.Root>
-				{/if}
-
+		<!-- Combat & magie : magie, sorts, emplacements, bourse (auto-fit) -->
+		<div class="mt-4 grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4">
+			{#if casterClasses.length > 0}
 				<Card.Root>
 					<Card.Header class="pb-2">
-						<Card.Title class="text-base">Bourse</Card.Title>
+						<Card.Title class="flex items-center gap-2 text-base">
+							<WandSparklesIcon class="text-primary h-4 w-4" /> Magie
+						</Card.Title>
 					</Card.Header>
-					<Card.Content class="grid grid-cols-5 gap-1.5 pt-0">
-						{#each coins as c (c.key)}
-							{#if has(c.key)}
-								<div class="flex flex-col items-center gap-1">
-									<input
-										type="number"
-										aria-label={c.abbr}
-										value={num(c.key)}
-										readonly={!editing}
-										oninput={(e) =>
-											setVal(c.key, Number(e.currentTarget.value))}
-										class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent w-full rounded-md border bg-background py-1 text-center text-sm outline-none focus-visible:ring-[3px]"
-									/>
-									<span class="text-muted-foreground text-[10px] font-semibold">
-										{c.abbr}
-									</span>
+					<Card.Content class="space-y-3 pt-0">
+						{#each casterClasses as c (c.name)}
+							<div class="rounded-lg border p-3">
+								<p class="mb-2 text-sm font-semibold">
+									{c.name}
+									<span class="text-muted-foreground font-normal"
+										>· {c.abbr}</span
+									>
+								</p>
+								<div class="grid grid-cols-3 gap-2 text-center">
+									<div>
+										<p
+											class="font-display text-primary text-2xl font-bold leading-none"
+										>
+											{c.dc}
+										</p>
+										<p class="text-muted-foreground text-[10px] uppercase">
+											DD des sorts
+										</p>
+									</div>
+									<div>
+										<p
+											class="font-display text-primary text-2xl font-bold leading-none"
+										>
+											{formatModifier(c.attack)}
+										</p>
+										<p class="text-muted-foreground text-[10px] uppercase">
+											Attaque
+										</p>
+									</div>
+									<div>
+										<p class="font-display text-2xl font-bold leading-none">
+											{c.prepared ?? "—"}
+										</p>
+										<p class="text-muted-foreground text-[10px] uppercase">
+											À préparer
+										</p>
+									</div>
 								</div>
-							{/if}
+							</div>
 						{/each}
 					</Card.Content>
 				</Card.Root>
+			{/if}
 
+			{#if spellGroups.length > 0}
+				<Card.Root>
+					<Card.Header class="pb-2">
+						<Card.Title class="text-base">Sorts</Card.Title>
+					</Card.Header>
+					<Card.Content class="space-y-3 pt-0">
+						{#each spellGroups as group (group.level)}
+							<div>
+								<h3
+									class="text-muted-foreground mb-1 text-[10px] font-semibold uppercase tracking-widest"
+								>
+									{group.label}
+								</h3>
+								<ul class="space-y-0.5">
+									{#each group.spells as spell (spell.id)}
+										<li class="flex items-center gap-2 text-sm">
+											<span class="flex-1 truncate">{spell.name}</span>
+											{#if roleLabel[spellRole[spell.id]]}
+												<Badge variant="outline" class="text-[10px]">
+													{roleLabel[spellRole[spell.id]]}
+												</Badge>
+											{/if}
+										</li>
+									{/each}
+								</ul>
+							</div>
+						{/each}
+					</Card.Content>
+				</Card.Root>
+			{/if}
+
+			{#if spellSlots.length > 0}
+				<Card.Root>
+					<Card.Header class="pb-2">
+						<Card.Title class="text-base">Emplacements de sorts</Card.Title>
+					</Card.Header>
+					<Card.Content class="grid grid-cols-2 gap-2 pt-0">
+						{#each spellSlots as s (s.lvl)}
+							<div class="flex items-center gap-2 rounded-lg border px-3 py-2">
+								<span class="text-muted-foreground text-xs">Niv {s.lvl}</span>
+								<input
+									type="number"
+									aria-label="Emplacements niv {s.lvl} disponibles"
+									value={s.current}
+									readonly={!editing}
+									oninput={(e) =>
+										setResource(
+											`spell_slots_${s.lvl}`,
+											"current",
+											e.currentTarget.value
+										)}
+									class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent ml-auto w-10 rounded-md border bg-background text-center text-sm outline-none focus-visible:ring-[3px]"
+								/>
+								<span class="text-muted-foreground text-sm">/ {s.max}</span>
+							</div>
+						{/each}
+					</Card.Content>
+				</Card.Root>
+			{/if}
+
+			<Card.Root>
+				<Card.Header class="pb-2">
+					<Card.Title class="text-base">Bourse</Card.Title>
+				</Card.Header>
+				<Card.Content class="flex flex-wrap gap-2 pt-0">
+					{#each coins as c (c.key)}
+						{#if has(c.key)}
+							<div class="flex w-14 flex-col items-center gap-1">
+								<input
+									type="number"
+									aria-label={c.abbr}
+									value={num(c.key)}
+									readonly={!editing}
+									oninput={(e) => setVal(c.key, Number(e.currentTarget.value))}
+									class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent w-full rounded-md border bg-background py-1 text-center text-sm outline-none focus-visible:ring-[3px]"
+								/>
+								<span class="text-muted-foreground text-[10px] font-semibold">
+									{c.abbr}
+								</span>
+							</div>
+						{/if}
+					{/each}
+				</Card.Content>
+			</Card.Root>
+		</div>
+
+		<!-- Sections narratives (identité, maîtrises, lore…) en grille équilibrée -->
+		{#if asideGroups.length > 0 || detailGroups.length > 0}
+			<div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each asideGroups as [groupName, fields] (groupName)}
 					{@render groupCard(groupName, fields)}
 				{/each}
-			</div>
-		</div>
-
-		<!-- Sections narratives -->
-		{#if detailGroups.length > 0}
-			<div class="mt-4 grid gap-4 md:grid-cols-2">
 				{#each detailGroups as [groupName, fields] (groupName)}
 					{@render groupCard(groupName, fields)}
 				{/each}
