@@ -705,11 +705,22 @@ export const characterSheetsController = new Elysia({
 
 			const totalLevel = body.classes.reduce((sum, c) => sum + c.level, 0);
 
-			// Maîtrises accordées (race + background) + choisies par le joueur.
+			// Maîtrises fixes accordées par les sous-classes choisies.
+			const subclassSkills = (body.subclasses ?? []).flatMap(
+				(sc) =>
+					((
+						getContent("sous-classe", sc.slug)?.data as {
+							skillProficiencies?: string[];
+						}
+					)?.skillProficiencies ?? []) as string[],
+			);
+
+			// Maîtrises accordées (race + background + sous-classe) + choisies par le joueur.
 			const bgData = background.data as { skillProficiencies?: string[] };
 			const skills = new Set<string>([
 				...(raceData.skillProficiencies ?? []),
 				...(bgData.skillProficiencies ?? []),
+				...subclassSkills,
 				...(body.skillProficiencies ?? []),
 			]);
 

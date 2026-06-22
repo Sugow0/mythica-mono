@@ -9,6 +9,28 @@
 import { THIRD_CASTER } from "./spell-progression";
 import type { SubclassData, SystemContentSeed } from "./types";
 
+/** Les 18 compétences (clés) — pour les sous-classes accordant un choix libre. */
+const ALL_SKILLS = [
+	"acrobaties",
+	"arcanes",
+	"athletisme",
+	"discretion",
+	"dressage",
+	"escamotage",
+	"histoire",
+	"intimidation",
+	"intuition",
+	"investigation",
+	"medecine",
+	"nature",
+	"perception",
+	"persuasion",
+	"religion",
+	"representation",
+	"survie",
+	"tromperie",
+];
+
 const subclass = (
 	slug: string,
 	name: string,
@@ -695,6 +717,7 @@ export const DND5E_SUBCLASSES: SystemContentSeed[] = [
 		{
 			parentClass: "barde",
 			acquisitionLevel: 3,
+			skillChoices: { count: 3, from: ALL_SKILLS },
 			features: [
 				{
 					level: 3,

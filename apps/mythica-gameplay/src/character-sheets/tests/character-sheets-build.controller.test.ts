@@ -111,6 +111,18 @@ const CONTENT = [
 		name: "Grimoire",
 		data: {},
 	},
+	{
+		id: "sc1",
+		collectionKey: "sous-classe",
+		slug: "tradition-arcane",
+		name: "Tradition arcane",
+		data: {
+			parentClass: "magicien",
+			acquisitionLevel: 2,
+			features: [],
+			skillProficiencies: ["discretion"],
+		},
+	},
 ];
 
 const PROP_KEYS = [
@@ -125,6 +137,7 @@ const PROP_KEYS = [
 	"hp",
 	"des_de_vie",
 	"perception",
+	"discretion",
 	"arcanes",
 	"histoire",
 	"apparence",
@@ -314,5 +327,28 @@ describe("POST /character-sheets/:id/build", () => {
 		expect(valByProp.get("pid-arcanes")).toBe(true); // background + choix
 		expect(valByProp.get("pid-histoire")).toBe(true); // background
 		expect(valByProp.get("pid-apparence")).toBe("Grand et élancé");
+	});
+
+	it("applique les maîtrises fixes accordées par une sous-classe", async () => {
+		const r = await build(
+			{
+				...singleClassBody,
+				subclasses: [{ classSlug: "magicien", slug: "tradition-arcane" }],
+			},
+			USER,
+		);
+		expect(r.status).toBe(200);
+		const valByProp = new Map<string, unknown>();
+		for (const c of p.characterSheetValue.upsert.mock.calls) {
+			const a = c[0] as {
+				where: { characterSheetId_propertyId: { propertyId: string } };
+				create: { value: unknown };
+			};
+			valByProp.set(
+				a.where.characterSheetId_propertyId.propertyId,
+				a.create.value,
+			);
+		}
+		expect(valByProp.get("pid-discretion")).toBe(true);
 	});
 });

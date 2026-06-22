@@ -149,6 +149,10 @@ export type SubclassData = {
 	acquisitionLevel: number;
 	/** Aptitudes de la sous-classe, par niveau. */
 	features: SubclassFeature[];
+	/** Maîtrises de compétences fixes accordées par la sous-classe. */
+	skillProficiencies?: string[];
+	/** Choix de compétences supplémentaires accordés (ex. Collège du Savoir). */
+	skillChoices?: { count: number; from: string[] };
 	/** Sorts toujours préparés (domaines, serments...) : slugs. */
 	alwaysPrepared?: string[];
 	/** Lanceur conféré par la sous-classe (tiers-lanceur : chevalier occulte...). */
