@@ -313,6 +313,20 @@
 			.filter((s) => s.max > 0)
 	);
 
+	/** Ressources de classe (ki, bardique, fouge, métamagie…) : champs resource
+	 *  non couverts par les panneaux dédiés. */
+	const STATIC_RESOURCE_KEYS = new Set([
+		"hp",
+		"des_de_vie",
+		"pv_temporaires",
+		...Array.from({ length: 9 }, (_, i) => `spell_slots_${i + 1}`),
+	]);
+	const classResourceFields = $derived(
+		(sheet?.properties ?? []).filter(
+			(p) => p.type === "resource" && !STATIC_RESOURCE_KEYS.has(p.key)
+		)
+	);
+
 	const coins = [
 		{ key: "pieces_platine", abbr: "PP" },
 		{ key: "pieces_or", abbr: "PO" },
@@ -344,6 +358,7 @@
 			"pv_temporaires",
 			...Array.from({ length: 9 }, (_, i) => `spell_slots_${i + 1}`),
 			...coins.map((c) => c.key),
+			...classResourceFields.map((f) => f.key),
 		])
 	);
 
@@ -609,6 +624,39 @@
 	</div>
 {/snippet}
 
+{#snippet classResourceVital(field: CharacterSheetField)}
+	<div
+		class="bg-card flex flex-col items-center justify-center rounded-xl border px-3 py-3 text-center shadow-xs"
+	>
+		<span
+			class="text-muted-foreground text-[10px] font-semibold uppercase tracking-widest"
+		>
+			{field.label}
+		</span>
+		<div class="font-display mt-1 text-2xl font-bold leading-none">
+			<span class="flex items-center justify-center gap-1 text-xl">
+				<input
+					type="number"
+					aria-label="{field.label} actuels"
+					value={resource(field.key).current}
+					readonly={!editing}
+					oninput={(e) => setResource(field.key, "current", e.currentTarget.value)}
+					class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-right outline-none focus-visible:ring-[3px]"
+				/>
+				<span class="text-muted-foreground text-base">/</span>
+				<input
+					type="number"
+					aria-label="{field.label} max"
+					value={resource(field.key).max}
+					readonly={!editing}
+					oninput={(e) => setResource(field.key, "max", e.currentTarget.value)}
+					class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-left outline-none focus-visible:ring-[3px]"
+				/>
+			</span>
+		</div>
+	</div>
+{/snippet}
+
 <div class="mx-auto max-w-6xl px-4 py-6 sm:px-6">
 	<Button variant="ghost" href="/characters" class="mb-4">
 		<ArrowLeftIcon class="h-4 w-4" />
@@ -626,6 +674,26 @@
 	{:else if error}
 		<p class="text-destructive" role="alert">{error}</p>
 	{:else if sheet}
+		<!-- Sélecteur de visibilité : au-dessus de la fiche, propriétaire uniquement -->
+		{#if isOwner}
+			<div class="mb-3 flex items-center justify-end gap-2">
+				<select
+					aria-label="Visibilité de la fiche"
+					value={visibility}
+					onchange={(e) =>
+						setVisibility(
+							e.currentTarget.value as "private" | "campaign" | "public"
+						)}
+					class="focus-visible:ring-ring/50 h-9 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-[3px]"
+					title="Qui peut voir cette fiche"
+				>
+					<option value="private">🔒 Privée</option>
+					<option value="campaign">👥 Campagne</option>
+					<option value="public">🌐 Publique</option>
+				</select>
+			</div>
+		{/if}
+
 		<!-- En-tête : token, identité, actions -->
 		<header
 			class="bg-card mb-6 flex flex-col gap-4 rounded-2xl border p-4 shadow-xs sm:flex-row sm:items-center sm:p-5"
@@ -682,20 +750,6 @@
 								<SparkleIcon class="h-4 w-4" /> Inspiration
 							</button>
 						{/if}
-						<select
-							aria-label="Visibilité de la fiche"
-							value={visibility}
-							onchange={(e) =>
-								setVisibility(
-									e.currentTarget.value as "private" | "campaign" | "public"
-								)}
-							class="focus-visible:ring-ring/50 h-9 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-[3px]"
-							title="Qui peut voir cette fiche"
-						>
-							<option value="private">🔒 Privée</option>
-							<option value="campaign">👥 Campagne</option>
-							<option value="public">🌐 Publique</option>
-						</select>
 						<Button
 							variant={editing ? "default" : "outline"}
 							size="sm"
@@ -887,6 +941,9 @@
 						</span>
 					</div>
 				</div>
+			{/each}
+			{#each classResourceFields as field (field.key)}
+				{@render classResourceVital(field)}
 			{/each}
 		</div>
 
