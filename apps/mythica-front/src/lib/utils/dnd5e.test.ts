@@ -82,6 +82,12 @@ describe("skillBonus", () => {
 		expect(skillBonus(14, false, 2)).toBe(2);
 		expect(skillBonus(8, true, 3)).toBe(2); // -1 + 3
 	});
+	it("double le bonus de maîtrise en cas d'expertise", () => {
+		// FOR 14 → +2 ; expertise (2×3) → +8.
+		expect(skillBonus(14, true, 3, true)).toBe(8);
+		// l'expertise prime même si proficient=false.
+		expect(skillBonus(14, false, 2, true)).toBe(6);
+	});
 });
 
 describe("rollD20", () => {

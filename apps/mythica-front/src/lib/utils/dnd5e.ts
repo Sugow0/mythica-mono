@@ -59,15 +59,21 @@ export function proficiencyBonusForLevel(level: number): number {
 }
 
 /**
- * Bonus total d'une compétence ou d'un jet de sauvegarde :
- * modificateur de caractéristique + bonus de maîtrise si maîtrisé.
+ * Bonus total d'une compétence ou d'un jet de sauvegarde : modificateur de
+ * caractéristique + bonus de maîtrise (doublé en cas d'expertise).
  */
 export function skillBonus(
 	abilityScore: number,
 	proficient: boolean,
-	proficiencyBonus = DEFAULT_PROFICIENCY_BONUS
+	proficiencyBonus = DEFAULT_PROFICIENCY_BONUS,
+	expert = false
 ): number {
-	return abilityModifier(abilityScore) + (proficient ? proficiencyBonus : 0);
+	const mastery = expert
+		? 2 * proficiencyBonus
+		: proficient
+			? proficiencyBonus
+			: 0;
+	return abilityModifier(abilityScore) + mastery;
 }
 
 /** Résultat d'un jet de d20 (+ modificateur). */
