@@ -38,6 +38,14 @@ enum CampaignStatus {
   @@map("campaign_status")
 }
 
+enum CharacterSheetVisibility {
+  private
+  campaign
+  public
+
+  @@map("character_sheet_visibility")
+}
+
 enum MemberRole {
   gm
   player
@@ -344,6 +352,8 @@ model CharacterSheet {
   // Résultat du build : monnaie de départ et méthode de génération des caracs.
   gold          Int?
   abilityMethod String?   @map("ability_method") @db.VarChar(30)
+  // Visibilité de la fiche : privée (défaut), partagée campagne, ou publique.
+  visibility    CharacterSheetVisibility @default(private)
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz

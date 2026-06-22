@@ -179,6 +179,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/character-sheets/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Builds publics de la communauté */
+        get: operations["getCharacter-sheetsPublic"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/character-sheets/{id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Changer la visibilité d'une fiche */
+        patch: operations["patchCharacter-sheetsByIdVisibility"];
+        trace?: never;
+    };
     "/character-sheets/{id}": {
         parameters: {
             query?: never;
@@ -2024,6 +2058,7 @@ export interface operations {
                             avatarFileId: string | null;
                             avatarUrl: string | null;
                             isActive: boolean;
+                            visibility: "private" | "campaign" | "public";
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                             values: {
@@ -2049,6 +2084,7 @@ export interface operations {
                             avatarFileId: string | null;
                             avatarUrl: string | null;
                             isActive: boolean;
+                            visibility: "private" | "campaign" | "public";
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                             values: {
@@ -2074,6 +2110,7 @@ export interface operations {
                             avatarFileId: string | null;
                             avatarUrl: string | null;
                             isActive: boolean;
+                            visibility: "private" | "campaign" | "public";
                             createdAt: Record<string, never> | string | number;
                             updatedAt: Record<string, never> | string | number;
                             values: {
@@ -2232,6 +2269,212 @@ export interface operations {
             };
         };
     };
+    "getCharacter-sheetsPublic": {
+        parameters: {
+            query?: {
+                gameSystemId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        items: {
+                            id: string;
+                            name: string;
+                            gameSystem: {
+                                id: string;
+                                nom: string;
+                                slug: string;
+                                version: string;
+                            };
+                            avatarUrl: string | null;
+                            ownerPseudo: string | null;
+                            updatedAt: Record<string, never> | string | number;
+                        }[];
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        items: {
+                            id: string;
+                            name: string;
+                            gameSystem: {
+                                id: string;
+                                nom: string;
+                                slug: string;
+                                version: string;
+                            };
+                            avatarUrl: string | null;
+                            ownerPseudo: string | null;
+                            updatedAt: Record<string, never> | string | number;
+                        }[];
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        items: {
+                            id: string;
+                            name: string;
+                            gameSystem: {
+                                id: string;
+                                nom: string;
+                                slug: string;
+                                version: string;
+                            };
+                            avatarUrl: string | null;
+                            ownerPseudo: string | null;
+                            updatedAt: Record<string, never> | string | number;
+                        }[];
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    "patchCharacter-sheetsByIdVisibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    visibility: "private" | "campaign" | "public";
+                };
+                "multipart/form-data": {
+                    visibility: "private" | "campaign" | "public";
+                };
+                "text/plain": {
+                    visibility: "private" | "campaign" | "public";
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: true;
+                        visibility: "private" | "campaign" | "public";
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: true;
+                        visibility: "private" | "campaign" | "public";
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: true;
+                        visibility: "private" | "campaign" | "public";
+                    };
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
     "getCharacter-sheetsById": {
         parameters: {
             query?: never;
@@ -2265,6 +2508,8 @@ export interface operations {
                         abilityMethod: string | null;
                         gold: (string | number) | null;
                         isActive: boolean;
+                        visibility: "private" | "campaign" | "public";
+                        isOwner: boolean;
                         createdAt: Record<string, never> | string | number;
                         updatedAt: Record<string, never> | string | number;
                         properties: {
@@ -2308,6 +2553,8 @@ export interface operations {
                         abilityMethod: string | null;
                         gold: (string | number) | null;
                         isActive: boolean;
+                        visibility: "private" | "campaign" | "public";
+                        isOwner: boolean;
                         createdAt: Record<string, never> | string | number;
                         updatedAt: Record<string, never> | string | number;
                         properties: {
@@ -2351,6 +2598,8 @@ export interface operations {
                         abilityMethod: string | null;
                         gold: (string | number) | null;
                         isActive: boolean;
+                        visibility: "private" | "campaign" | "public";
+                        isOwner: boolean;
                         createdAt: Record<string, never> | string | number;
                         updatedAt: Record<string, never> | string | number;
                         properties: {

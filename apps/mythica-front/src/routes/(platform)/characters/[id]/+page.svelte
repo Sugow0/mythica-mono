@@ -58,6 +58,27 @@
 	/** Fiche en lecture seule par défaut ; le bouton « Modifier » déverrouille. */
 	let editing = $state(false);
 
+	/** Le visiteur est-il le propriétaire ? (les fiches publiques sont visibles par tous) */
+	const isOwner = $derived(sheet?.isOwner ?? true);
+
+	/** Visibilité courante (privée / campagne / publique). */
+	const visibility = $derived(sheet?.visibility ?? "private");
+	const VISIBILITY_LABELS: Record<string, string> = {
+		private: "Privée",
+		campaign: "Campagne",
+		public: "Publique",
+	};
+	async function setVisibility(v: "private" | "campaign" | "public") {
+		if (!sheet) return;
+		const prev = sheet.visibility;
+		sheet = { ...sheet, visibility: v };
+		try {
+			await characterService.setVisibility(sheetId, v);
+		} catch {
+			sheet = { ...sheet, visibility: prev };
+		}
+	}
+
 	/** Contenu joint (par slug) : sorts, classes, équipement — pour l'affichage. */
 	type SpellData = { name: string; level: number; school?: string };
 	type ClassData = {
@@ -292,6 +313,20 @@
 			.filter((s) => s.max > 0)
 	);
 
+	/** Ressources de classe (ki, bardique, fouge, métamagie…) : champs resource
+	 *  non couverts par les panneaux dédiés. */
+	const STATIC_RESOURCE_KEYS = new Set([
+		"hp",
+		"des_de_vie",
+		"pv_temporaires",
+		...Array.from({ length: 9 }, (_, i) => `spell_slots_${i + 1}`),
+	]);
+	const classResourceFields = $derived(
+		(sheet?.properties ?? []).filter(
+			(p) => p.type === "resource" && !STATIC_RESOURCE_KEYS.has(p.key)
+		)
+	);
+
 	const coins = [
 		{ key: "pieces_platine", abbr: "PP" },
 		{ key: "pieces_or", abbr: "PO" },
@@ -319,8 +354,11 @@
 			"bonus_attaque_sort",
 			"attaques",
 			"expertises",
+			"ameliorations",
+			"pv_temporaires",
 			...Array.from({ length: 9 }, (_, i) => `spell_slots_${i + 1}`),
 			...coins.map((c) => c.key),
+			...classResourceFields.map((f) => f.key),
 		])
 	);
 
@@ -520,12 +558,18 @@
 	</button>
 {/snippet}
 
-{#snippet groupCard(groupName: string, fields: CharacterSheetField[])}
+{#snippet groupCard(
+	groupName: string,
+	fields: CharacterSheetField[],
+	wide = false
+)}
 	<Card.Root>
 		<Card.Header class="pb-2">
 			<Card.Title class="text-base">{groupName}</Card.Title>
 		</Card.Header>
-		<Card.Content class="grid grid-cols-1 gap-4 pt-0">
+		<Card.Content
+			class="grid grid-cols-1 gap-4 pt-0 {wide ? 'sm:grid-cols-2' : ''}"
+		>
 			{#each fields as field (field.propertyId)}
 				<FieldRenderer
 					property={field}
@@ -533,6 +577,33 @@
 					disabled={!editing}
 					onChange={(v) => onFieldChange(field.propertyId, v)}
 				/>
+			{/each}
+		</Card.Content>
+	</Card.Root>
+{/snippet}
+
+{#snippet bourseCard()}
+	<Card.Root>
+		<Card.Header class="pb-2">
+			<Card.Title class="text-base">Bourse</Card.Title>
+		</Card.Header>
+		<Card.Content class="flex flex-wrap gap-2 pt-0">
+			{#each coins as c (c.key)}
+				{#if has(c.key)}
+					<div class="flex w-14 flex-col items-center gap-1">
+						<input
+							type="number"
+							aria-label={c.abbr}
+							value={num(c.key)}
+							readonly={!editing}
+							oninput={(e) => setVal(c.key, Number(e.currentTarget.value))}
+							class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent w-full rounded-md border bg-background py-1 text-center text-sm outline-none focus-visible:ring-[3px]"
+						/>
+						<span class="text-muted-foreground text-[10px] font-semibold">
+							{c.abbr}
+						</span>
+					</div>
+				{/if}
 			{/each}
 		</Card.Content>
 	</Card.Root>
@@ -549,6 +620,39 @@
 		</span>
 		<div class="font-display mt-1 text-2xl font-bold leading-none">
 			{@render content()}
+		</div>
+	</div>
+{/snippet}
+
+{#snippet classResourceVital(field: CharacterSheetField)}
+	<div
+		class="bg-card flex flex-col items-center justify-center rounded-xl border px-3 py-3 text-center shadow-xs"
+	>
+		<span
+			class="text-muted-foreground text-[10px] font-semibold uppercase tracking-widest"
+		>
+			{field.label}
+		</span>
+		<div class="font-display mt-1 text-2xl font-bold leading-none">
+			<span class="flex items-center justify-center gap-1 text-xl">
+				<input
+					type="number"
+					aria-label="{field.label} actuels"
+					value={resource(field.key).current}
+					readonly={!editing}
+					oninput={(e) => setResource(field.key, "current", e.currentTarget.value)}
+					class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-right outline-none focus-visible:ring-[3px]"
+				/>
+				<span class="text-muted-foreground text-base">/</span>
+				<input
+					type="number"
+					aria-label="{field.label} max"
+					value={resource(field.key).max}
+					readonly={!editing}
+					oninput={(e) => setResource(field.key, "max", e.currentTarget.value)}
+					class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-left outline-none focus-visible:ring-[3px]"
+				/>
+			</span>
 		</div>
 	</div>
 {/snippet}
@@ -570,6 +674,26 @@
 	{:else if error}
 		<p class="text-destructive" role="alert">{error}</p>
 	{:else if sheet}
+		<!-- Sélecteur de visibilité : au-dessus de la fiche, propriétaire uniquement -->
+		{#if isOwner}
+			<div class="mb-3 flex items-center justify-end gap-2">
+				<select
+					aria-label="Visibilité de la fiche"
+					value={visibility}
+					onchange={(e) =>
+						setVisibility(
+							e.currentTarget.value as "private" | "campaign" | "public"
+						)}
+					class="focus-visible:ring-ring/50 h-9 rounded-md border bg-background px-2 text-sm outline-none focus-visible:ring-[3px]"
+					title="Qui peut voir cette fiche"
+				>
+					<option value="private">🔒 Privée</option>
+					<option value="campaign">👥 Campagne</option>
+					<option value="public">🌐 Publique</option>
+				</select>
+			</div>
+		{/if}
+
 		<!-- En-tête : token, identité, actions -->
 		<header
 			class="bg-card mb-6 flex flex-col gap-4 rounded-2xl border p-4 shadow-xs sm:flex-row sm:items-center sm:p-5"
@@ -607,52 +731,58 @@
 			</div>
 
 			<div class="flex items-center gap-2 sm:flex-col sm:items-end">
-				<div class="flex items-center gap-2">
-					{#if has("inspiration")}
-						<button
-							type="button"
-							onclick={() =>
-								editing && setVal("inspiration", !boolv("inspiration"))}
-							aria-pressed={boolv("inspiration")}
-							class="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors {boolv(
-								'inspiration'
-							)
-								? 'border-primary bg-primary/10 text-primary'
-								: 'text-muted-foreground'} {editing
-								? 'hover:bg-muted'
-								: 'cursor-default'}"
-						>
-							<SparkleIcon class="h-4 w-4" /> Inspiration
-						</button>
-					{/if}
-					<Button
-						variant={editing ? "default" : "outline"}
-						size="sm"
-						onclick={() => (editing = !editing)}
-					>
-						{#if editing}
-							<CheckIcon class="h-4 w-4" /> Terminer
-						{:else}
-							<PencilIcon class="h-4 w-4" /> Modifier
+				<div class="flex flex-wrap items-center gap-2">
+					{#if isOwner}
+						{#if has("inspiration")}
+							<button
+								type="button"
+								onclick={() =>
+									editing && setVal("inspiration", !boolv("inspiration"))}
+								aria-pressed={boolv("inspiration")}
+								class="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors {boolv(
+									'inspiration'
+								)
+									? 'border-primary bg-primary/10 text-primary'
+									: 'text-muted-foreground'} {editing
+									? 'hover:bg-muted'
+									: 'cursor-default'}"
+							>
+								<SparkleIcon class="h-4 w-4" /> Inspiration
+							</button>
 						{/if}
-					</Button>
-					<Button
-						variant="ghost"
-						size="sm"
-						href="/characters/{sheetId}/create"
-						title="Modifier la race, la classe, les caractéristiques…"
-					>
-						<SquarePenIcon class="h-4 w-4" /> Modifier le build
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon"
-						class="text-muted-foreground hover:text-destructive"
-						aria-label="Supprimer le personnage"
-						onclick={() => (deleteOpen = true)}
-					>
-						<Trash2Icon class="h-4 w-4" />
-					</Button>
+						<Button
+							variant={editing ? "default" : "outline"}
+							size="sm"
+							onclick={() => (editing = !editing)}
+						>
+							{#if editing}
+								<CheckIcon class="h-4 w-4" /> Terminer
+							{:else}
+								<PencilIcon class="h-4 w-4" /> Modifier
+							{/if}
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							href="/characters/{sheetId}/create"
+							title="Modifier la race, la classe, les caractéristiques…"
+						>
+							<SquarePenIcon class="h-4 w-4" /> Modifier le build
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							class="text-muted-foreground hover:text-destructive"
+							aria-label="Supprimer le personnage"
+							onclick={() => (deleteOpen = true)}
+						>
+							<Trash2Icon class="h-4 w-4" />
+						</Button>
+					{:else}
+						<Badge variant="secondary">
+							Build {VISIBILITY_LABELS[visibility]?.toLowerCase()} — lecture seule
+						</Badge>
+					{/if}
 				</div>
 
 				<div
@@ -742,6 +872,20 @@
 				{/snippet}
 				{@render vital("Points de vie", hpVal)}
 			{/if}
+			{#if has("pv_temporaires")}
+				{#snippet tempVal()}
+					<input
+						type="number"
+						aria-label="PV temporaires"
+						value={num("pv_temporaires")}
+						readonly={!editing}
+						oninput={(e) =>
+							setVal("pv_temporaires", Number(e.currentTarget.value))}
+						class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-center outline-none focus-visible:ring-[3px]"
+					/>
+				{/snippet}
+				{@render vital("PV temporaires", tempVal)}
+			{/if}
 			{#snippet initVal()}{formatModifier(initiative)}{/snippet}
 			{@render vital("Initiative", initVal)}
 			{#snippet profVal()}{formatModifier(prof)}{/snippet}
@@ -797,6 +941,9 @@
 						</span>
 					</div>
 				</div>
+			{/each}
+			{#each classResourceFields as field (field.key)}
+				{@render classResourceVital(field)}
 			{/each}
 		</div>
 
@@ -1084,41 +1231,21 @@
 					</Card.Content>
 				</Card.Root>
 			{/if}
-
-			<Card.Root>
-				<Card.Header class="pb-2">
-					<Card.Title class="text-base">Bourse</Card.Title>
-				</Card.Header>
-				<Card.Content class="flex flex-wrap gap-2 pt-0">
-					{#each coins as c (c.key)}
-						{#if has(c.key)}
-							<div class="flex w-14 flex-col items-center gap-1">
-								<input
-									type="number"
-									aria-label={c.abbr}
-									value={num(c.key)}
-									readonly={!editing}
-									oninput={(e) => setVal(c.key, Number(e.currentTarget.value))}
-									class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent w-full rounded-md border bg-background py-1 text-center text-sm outline-none focus-visible:ring-[3px]"
-								/>
-								<span class="text-muted-foreground text-[10px] font-semibold">
-									{c.abbr}
-								</span>
-							</div>
-						{/if}
-					{/each}
-				</Card.Content>
-			</Card.Root>
 		</div>
 
-		<!-- Sections narratives (identité, maîtrises, lore…) en grille équilibrée -->
-		{#if asideGroups.length > 0 || detailGroups.length > 0}
-			<div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{#each asideGroups as [groupName, fields] (groupName)}
-					{@render groupCard(groupName, fields)}
-				{/each}
+		<!-- Cartes courtes : bourse, identité, maîtrises -->
+		<div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{@render bourseCard()}
+			{#each asideGroups as [groupName, fields] (groupName)}
+				{@render groupCard(groupName, fields)}
+			{/each}
+		</div>
+
+		<!-- Lore : bloc dédié (champs narratifs) -->
+		{#if detailGroups.length > 0}
+			<div class="mt-4 grid gap-4">
 				{#each detailGroups as [groupName, fields] (groupName)}
-					{@render groupCard(groupName, fields)}
+					{@render groupCard(groupName, fields, true)}
 				{/each}
 			</div>
 		{/if}

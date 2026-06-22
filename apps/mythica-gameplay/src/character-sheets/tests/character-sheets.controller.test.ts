@@ -80,6 +80,7 @@ function aSheet(extra: Record<string, unknown> = {}) {
 		gold: null,
 		abilityMethod: null,
 		isActive: true,
+		visibility: "private",
 		createdAt: new Date("2026-06-16T00:00:00Z"),
 		updatedAt: new Date("2026-06-16T00:00:00Z"),
 		deletedAt: null,

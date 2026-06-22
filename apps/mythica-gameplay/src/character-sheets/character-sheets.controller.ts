@@ -44,6 +44,13 @@ const GameSystemBriefSchema = t.Object({
 	version: t.String(),
 });
 
+/** Visibilité d'une fiche : privée, partagée à une campagne, ou publique. */
+const VisibilitySchema = t.Union([
+	t.Literal("private"),
+	t.Literal("campaign"),
+	t.Literal("public"),
+]);
+
 /** Une valeur de fiche : la valeur JSON brute associée à une propriété. */
 const SheetValueSchema = t.Object({
 	propertyId: t.String(),
@@ -60,6 +67,7 @@ const CharacterSheetListItemSchema = t.Object({
 	avatarFileId: t.Union([t.String(), t.Null()]),
 	avatarUrl: t.Union([t.String(), t.Null()]),
 	isActive: t.Boolean(),
+	visibility: VisibilitySchema,
 	createdAt: t.Date(),
 	updatedAt: t.Date(),
 	values: t.Array(SheetValueSchema),
@@ -114,6 +122,9 @@ const CharacterSheetDetailSchema = t.Object({
 	abilityMethod: t.Union([t.String(), t.Null()]),
 	gold: t.Union([t.Integer(), t.Null()]),
 	isActive: t.Boolean(),
+	visibility: VisibilitySchema,
+	/** Propriétaire (lecture seule pour les fiches partagées d'autrui). */
+	isOwner: t.Boolean(),
 	createdAt: t.Date(),
 	updatedAt: t.Date(),
 	properties: t.Array(CharacterSheetPropertySchema),
@@ -347,6 +358,7 @@ export const characterSheetsController = new Elysia({
 					avatarFileId: s.avatarFileId,
 					avatarUrl: await avatarUrlFor(s),
 					isActive: s.isActive,
+					visibility: s.visibility,
 					createdAt: s.createdAt,
 					updatedAt: s.updatedAt,
 					values: s.values.map((v) => ({
@@ -371,6 +383,115 @@ export const characterSheetsController = new Elysia({
 			detail: {
 				tags: ["CharacterSheets"],
 				summary: "Liste de mes fiches de personnage",
+			},
+		},
+	)
+
+	/**
+	 * GET /character-sheets/public - Builds publics partagés par la communauté.
+	 * Déclaré avant `/:id` pour ne pas être capté par la route paramétrée.
+	 */
+	.get(
+		"/public",
+		async ({ set, currentUser, query }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const sheets = await prisma.characterSheet.findMany({
+				where: {
+					visibility: "public",
+					deletedAt: null,
+					...(query.gameSystemId ? { gameSystemId: query.gameSystemId } : {}),
+				},
+				orderBy: { updatedAt: "desc" },
+				take: 60,
+				include: {
+					gameSystem: { select: gameSystemBriefSelect },
+					user: { select: { pseudo: true } },
+				},
+			});
+			const items = await Promise.all(
+				sheets.map(async (s) => ({
+					id: s.id,
+					name: s.name,
+					gameSystem: s.gameSystem,
+					avatarUrl: await avatarUrlFor(s),
+					ownerPseudo: s.user.pseudo,
+					updatedAt: s.updatedAt,
+				})),
+			);
+			return { success: true as const, items };
+		},
+		{
+			query: ListQuery,
+			response: {
+				200: t.Object({
+					success: t.Literal(true),
+					items: t.Array(
+						t.Object({
+							id: t.String(),
+							name: t.String(),
+							gameSystem: GameSystemBriefSchema,
+							avatarUrl: t.Union([t.String(), t.Null()]),
+							ownerPseudo: t.Union([t.String(), t.Null()]),
+							updatedAt: t.Date(),
+						}),
+					),
+				}),
+				401: ErrorResponse,
+			},
+			detail: {
+				tags: ["CharacterSheets"],
+				summary: "Builds publics de la communauté",
+			},
+		},
+	)
+
+	/**
+	 * PATCH /character-sheets/:id/visibility - Changer la visibilité (privée /
+	 * campagne / publique). Réservé au propriétaire.
+	 */
+	.patch(
+		"/:id/visibility",
+		async ({ set, currentUser, params, body }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+			const sheet = await prisma.characterSheet.findUnique({
+				where: { id: params.id },
+				select: { id: true, userId: true, deletedAt: true },
+			});
+			if (!sheet || sheet.deletedAt) {
+				set.status = 404;
+				return { success: false as const, error: "Fiche introuvable" };
+			}
+			if (sheet.userId !== currentUser.id) {
+				set.status = 403;
+				return { success: false as const, error: "Accès refusé" };
+			}
+			await prisma.characterSheet.update({
+				where: { id: params.id },
+				data: { visibility: body.visibility },
+			});
+			return { success: true as const, visibility: body.visibility };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: t.Object({ visibility: VisibilitySchema }),
+			response: {
+				200: t.Object({
+					success: t.Literal(true),
+					visibility: VisibilitySchema,
+				}),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["CharacterSheets"],
+				summary: "Changer la visibilité d'une fiche",
 			},
 		},
 	)
@@ -404,7 +525,10 @@ export const characterSheetsController = new Elysia({
 				set.status = 404;
 				return { success: false as const, error: "Fiche introuvable" };
 			}
-			if (sheet.userId !== currentUser.id) {
+			// Accès : le propriétaire toujours ; les autres seulement si la fiche
+			// est publique (le partage campagne passe par les routes de campagne).
+			const isOwner = sheet.userId === currentUser.id;
+			if (!isOwner && sheet.visibility !== "public") {
 				set.status = 403;
 				return { success: false as const, error: "Accès refusé" };
 			}
@@ -458,6 +582,8 @@ export const characterSheetsController = new Elysia({
 				abilityMethod: sheet.abilityMethod,
 				gold: sheet.gold,
 				isActive: sheet.isActive,
+				visibility: sheet.visibility,
+				isOwner,
 				createdAt: sheet.createdAt,
 				updatedAt: sheet.updatedAt,
 				properties,
