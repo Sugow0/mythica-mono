@@ -1,8 +1,23 @@
+import {
+	applyAbilityBonuses,
+	validateAllocation,
+} from "@mythica/character-engine";
 import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
+import { getPresignedAvatarUrl } from "../lib/avatar-storage";
 import { ErrorResponse } from "../lib/http";
 import { newId } from "../lib/id";
 import { prisma } from "../lib/prisma";
+import { uploadAvatarHandler } from "./commands/upload-avatar/upload-avatar.handler";
+
+/** URL présignée de l'avatar d'une fiche (null si aucun avatar). */
+async function avatarUrlFor(sheet: {
+	id: string;
+	avatarFileId: string | null;
+}): Promise<string | null> {
+	if (!sheet.avatarFileId) return null;
+	return getPresignedAvatarUrl(sheet.id).catch(() => null);
+}
 
 /** Code d'erreur Prisma pour violation de clé étrangère. */
 const PRISMA_FK_VIOLATION = "P2003";
@@ -46,10 +61,27 @@ const CharacterSheetListItemSchema = t.Object({
 	gameSystemId: t.String(),
 	gameSystem: GameSystemBriefSchema,
 	avatarFileId: t.Union([t.String(), t.Null()]),
+	avatarUrl: t.Union([t.String(), t.Null()]),
 	isActive: t.Boolean(),
 	createdAt: t.Date(),
 	updatedAt: t.Date(),
 	values: t.Array(SheetValueSchema),
+});
+
+/**
+ * Une sélection de build résolue : contenu choisi (race, classe, sous-classe,
+ * background, sort, équipement…) avec son slug/nom et ses métadonnées (niveau,
+ * classe principale, quantité, extra). Sert à l'affichage de la fiche et à la
+ * pré-saisie du wizard lors d'une ré-édition du build.
+ */
+const SheetSelectionSchema = t.Object({
+	collectionKey: t.String(),
+	slug: t.String(),
+	name: t.String(),
+	level: t.Union([t.Integer(), t.Null()]),
+	isPrimary: t.Union([t.Boolean(), t.Null()]),
+	qty: t.Union([t.Integer(), t.Null()]),
+	extra: t.Union([t.Unknown(), t.Null()]),
 });
 
 /**
@@ -81,10 +113,14 @@ const CharacterSheetDetailSchema = t.Object({
 	gameSystemId: t.String(),
 	gameSystem: GameSystemBriefSchema,
 	avatarFileId: t.Union([t.String(), t.Null()]),
+	avatarUrl: t.Union([t.String(), t.Null()]),
+	abilityMethod: t.Union([t.String(), t.Null()]),
+	gold: t.Union([t.Integer(), t.Null()]),
 	isActive: t.Boolean(),
 	createdAt: t.Date(),
 	updatedAt: t.Date(),
 	properties: t.Array(CharacterSheetPropertySchema),
+	selections: t.Array(SheetSelectionSchema),
 });
 
 const CreateCharacterSheetBody = t.Object({
@@ -103,6 +139,56 @@ const UpdateValuesBody = t.Array(
 		value: t.Unknown(),
 	}),
 );
+
+/**
+ * Corps de finalisation du build (résultat du wizard). Générique : référence le
+ * contenu par `slug` (collections du système), pas de notion D&D en dur.
+ */
+const BuildBody = t.Object({
+	raceSlug: t.String(),
+	classes: t.Array(
+		t.Object({
+			slug: t.String(),
+			level: t.Integer({ minimum: 1, maximum: 20 }),
+			isPrimary: t.Optional(t.Boolean()),
+		}),
+		{ minItems: 1, maxItems: 3 },
+	),
+	/** Sous-classes choisies, rattachées à leur classe. */
+	subclasses: t.Optional(
+		t.Array(t.Object({ classSlug: t.String(), slug: t.String() })),
+	),
+	backgroundSlug: t.String(),
+	abilityMethod: t.Union([
+		t.Literal("standard_array"),
+		t.Literal("point_buy"),
+		t.Literal("dice_roll"),
+		t.Literal("manual"),
+	]),
+	/** Scores de base choisis (avant bonus raciaux), indexés par clé de carac. */
+	abilityScores: t.Record(t.String(), t.Integer()),
+	skillProficiencies: t.Optional(t.Array(t.String())),
+	/** Sorts choisis, rattachés à leur classe et à leur rôle (multiclassage). */
+	spells: t.Optional(
+		t.Array(
+			t.Object({
+				slug: t.String(),
+				classSlug: t.String(),
+				role: t.Union([
+					t.Literal("cantrip"),
+					t.Literal("spell"),
+					t.Literal("book"),
+				]),
+			}),
+		),
+	),
+	inventory: t.Optional(
+		t.Array(t.Object({ slug: t.String(), qty: t.Integer({ minimum: 1 }) })),
+	),
+	gold: t.Optional(t.Number({ minimum: 0 })),
+	/** Champs de lore (clé de propriété textarea -> texte). */
+	lore: t.Optional(t.Record(t.String(), t.String())),
+});
 
 /** Brief système (sélection Prisma partagée). */
 const gameSystemBriefSelect = {
@@ -145,6 +231,15 @@ export const characterSheetsController = new Elysia({
 
 			try {
 				await prisma.$transaction(async (tx) => {
+					// Garantit la présence du miroir utilisateur (alimenté en temps
+					// normal par l'event sync) : évite une violation de clé étrangère
+					// si l'event n'a pas encore été consommé pour cet utilisateur.
+					await tx.user.upsert({
+						where: { id: currentUser.id },
+						create: { id: currentUser.id },
+						update: {},
+					});
+
 					await tx.characterSheet.create({
 						data: {
 							id: newSheetId,
@@ -232,21 +327,24 @@ export const characterSheetsController = new Elysia({
 				},
 			});
 
-			const items = sheets.map((s) => ({
-				id: s.id,
-				name: s.name,
-				gameSystemId: s.gameSystemId,
-				gameSystem: s.gameSystem,
-				avatarFileId: s.avatarFileId,
-				isActive: s.isActive,
-				createdAt: s.createdAt,
-				updatedAt: s.updatedAt,
-				values: s.values.map((v) => ({
-					propertyId: v.propertyId,
-					key: v.property.key,
-					value: v.value,
+			const items = await Promise.all(
+				sheets.map(async (s) => ({
+					id: s.id,
+					name: s.name,
+					gameSystemId: s.gameSystemId,
+					gameSystem: s.gameSystem,
+					avatarFileId: s.avatarFileId,
+					avatarUrl: await avatarUrlFor(s),
+					isActive: s.isActive,
+					createdAt: s.createdAt,
+					updatedAt: s.updatedAt,
+					values: s.values.map((v) => ({
+						propertyId: v.propertyId,
+						key: v.property.key,
+						value: v.value,
+					})),
 				})),
-			}));
+			);
 
 			return { success: true as const, items };
 		},
@@ -285,6 +383,10 @@ export const characterSheetsController = new Elysia({
 				include: {
 					gameSystem: { select: gameSystemBriefSelect },
 					values: true,
+					selections: {
+						include: { content: { select: { slug: true, name: true } } },
+						orderBy: { createdAt: "asc" },
+					},
 				},
 			});
 			if (!sheet || sheet.deletedAt) {
@@ -324,6 +426,16 @@ export const characterSheetsController = new Elysia({
 					: null,
 			}));
 
+			const selections = sheet.selections.map((s) => ({
+				collectionKey: s.collectionKey,
+				slug: s.content.slug,
+				name: s.content.name,
+				level: s.level,
+				isPrimary: s.isPrimary,
+				qty: s.qty,
+				extra: s.extra ?? null,
+			}));
+
 			return {
 				success: true as const,
 				id: sheet.id,
@@ -331,10 +443,14 @@ export const characterSheetsController = new Elysia({
 				gameSystemId: sheet.gameSystemId,
 				gameSystem: sheet.gameSystem,
 				avatarFileId: sheet.avatarFileId,
+				avatarUrl: await avatarUrlFor(sheet),
+				abilityMethod: sheet.abilityMethod,
+				gold: sheet.gold,
 				isActive: sheet.isActive,
 				createdAt: sheet.createdAt,
 				updatedAt: sheet.updatedAt,
 				properties,
+				selections,
 			};
 		},
 		{
@@ -450,6 +566,456 @@ export const characterSheetsController = new Elysia({
 			detail: {
 				tags: ["CharacterSheets"],
 				summary: "Auto-save des valeurs d'une fiche de personnage",
+			},
+		},
+	)
+
+	/**
+	 * POST /character-sheets/:id/build - Finaliser le build (résultat du wizard).
+	 *
+	 * Générique et data-driven : valide la répartition des caractéristiques
+	 * (méthode + config de l'étape `pointAllocation`) et les prérequis de
+	 * multiclassage via les **données** du contenu, persiste les sélections
+	 * (race, classes, background, sorts, inventaire) dans `CharacterSheetSelection`
+	 * et **projette** les valeurs directes (caracs finales, maîtrises, niveau,
+	 * vitesse, lore) dans `CharacterSheetValue`. Les valeurs dérivées (PV,
+	 * emplacements de sorts) restent calculées côté client (cf. fiche détail).
+	 */
+	.post(
+		"/:id/build",
+		async ({ set, currentUser, params, body }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+
+			const sheet = await prisma.characterSheet.findUnique({
+				where: { id: params.id },
+				select: { id: true, userId: true, gameSystemId: true, deletedAt: true },
+			});
+			if (!sheet || sheet.deletedAt) {
+				set.status = 404;
+				return { success: false as const, error: "Fiche introuvable" };
+			}
+			if (sheet.userId !== currentUser.id) {
+				set.status = 403;
+				return { success: false as const, error: "Accès refusé" };
+			}
+
+			// Contenu du système indexé par (collectionKey, slug).
+			const content = await prisma.systemContent.findMany({
+				where: { gameSystemId: sheet.gameSystemId },
+			});
+			const byKeySlug = new Map(
+				content.map((c) => [`${c.collectionKey}:${c.slug}`, c]),
+			);
+			const getContent = (collectionKey: string, slug: string) =>
+				byKeySlug.get(`${collectionKey}:${slug}`);
+
+			const race = getContent("race", body.raceSlug);
+			const background = getContent("background", body.backgroundSlug);
+			const classRefs = body.classes.map((c) => ({
+				input: c,
+				content: getContent("classe", c.slug),
+			}));
+			if (!race || !background || classRefs.some((c) => !c.content)) {
+				set.status = 400;
+				return {
+					success: false as const,
+					error: "Référence de contenu invalide (race, classe ou background)",
+				};
+			}
+
+			// Validation de la répartition selon la méthode (config data-driven).
+			const allocStep = await prisma.gameSystemCreationStep.findFirst({
+				where: { gameSystemId: sheet.gameSystemId, kind: "pointAllocation" },
+			});
+			const alloc = (allocStep?.config ?? {}) as {
+				pointBuyPool?: number;
+				pointBuyCostTable?: Record<number, number>;
+				minScore?: number;
+				maxScore?: number;
+				standardArray?: number[];
+			};
+			const allocResult = validateAllocation(
+				body.abilityMethod,
+				body.abilityScores,
+				{
+					pointBuy: alloc.pointBuyCostTable
+						? {
+								pool: alloc.pointBuyPool ?? 0,
+								costTable: alloc.pointBuyCostTable,
+								min: alloc.minScore ?? 0,
+								max: alloc.maxScore ?? 99,
+							}
+						: undefined,
+					standardArray: alloc.standardArray,
+				},
+			);
+			if (!allocResult.valid) {
+				set.status = 400;
+				return {
+					success: false as const,
+					error: `Répartition invalide : ${allocResult.errors.join(" ; ")}`,
+				};
+			}
+
+			// Scores finaux = base + bonus raciaux (données de la race).
+			const raceData = race.data as {
+				abilityBonuses?: Record<string, number>;
+				skillProficiencies?: string[];
+				speed?: number;
+			};
+			const finalScores = applyAbilityBonuses(
+				body.abilityScores,
+				raceData.abilityBonuses ?? {},
+			);
+
+			// Prérequis de multiclassage (données de classe) si plusieurs classes.
+			if (body.classes.length > 1) {
+				for (const ref of classRefs) {
+					const data = ref.content?.data as {
+						multiclassPrereq?: Record<string, number>;
+					};
+					const prereq = data?.multiclassPrereq ?? {};
+					const ok = Object.entries(prereq).every(
+						([key, min]) => (finalScores[key] ?? 0) >= Number(min),
+					);
+					if (!ok) {
+						set.status = 400;
+						return {
+							success: false as const,
+							error: `Prérequis de multiclassage non respectés pour ${ref.content?.name}`,
+						};
+					}
+				}
+			}
+
+			const totalLevel = body.classes.reduce((sum, c) => sum + c.level, 0);
+
+			// Maîtrises accordées (race + background) + choisies par le joueur.
+			const bgData = background.data as { skillProficiencies?: string[] };
+			const skills = new Set<string>([
+				...(raceData.skillProficiencies ?? []),
+				...(bgData.skillProficiencies ?? []),
+				...(body.skillProficiencies ?? []),
+			]);
+
+			// Mapping clé de propriété -> propertyId pour la projection à plat.
+			const mappings = await prisma.gameSystemProperty.findMany({
+				where: { gameSystemId: sheet.gameSystemId },
+				include: { property: { select: { key: true } } },
+			});
+			const propIdByKey = new Map(
+				mappings.map((m) => [m.property.key, m.propertyId]),
+			);
+
+			// Valeurs directes (les dérivées restent calculées côté client).
+			const valueByKey: Record<string, unknown> = {};
+			for (const [key, score] of Object.entries(finalScores)) {
+				valueByKey[key] = score;
+			}
+			for (const skill of skills) valueByKey[skill] = true;
+			valueByKey.niveau = totalLevel;
+			if (raceData.speed != null) valueByKey.vitesse = raceData.speed;
+			for (const [key, text] of Object.entries(body.lore ?? {})) {
+				valueByKey[key] = text;
+			}
+
+			// Jets de sauvegarde : maîtrises de la classe principale (le
+			// multiclassage n'accorde pas de nouvelles maîtrises de sauvegarde).
+			const primaryRef =
+				classRefs.find((r) => r.input.isPrimary) ?? classRefs[0];
+			const primaryData = (primaryRef?.content?.data ?? {}) as {
+				savingThrows?: string[];
+				toolProficiencies?: string[];
+			};
+			for (const ab of primaryData.savingThrows ?? []) {
+				valueByKey[`sauvegarde_${ab}`] = true;
+			}
+
+			// Or de départ → pièces d'or.
+			if (body.gold != null) valueByKey.pieces_or = body.gold;
+
+			// Autres maîtrises & langues (race + classe principale + historique).
+			const raceExtra = race.data as {
+				languages?: string[];
+				traits?: { name?: string }[];
+			};
+			const bgExtra = background.data as {
+				toolProficiencies?: string[];
+				feature?: { name?: string };
+			};
+			const langs = raceExtra.languages ?? [];
+			const tools = [
+				...(primaryData.toolProficiencies ?? []),
+				...(bgExtra.toolProficiencies ?? []),
+			];
+			const profLines: string[] = [];
+			if (langs.length) profLines.push(`Langues : ${langs.join(", ")}`);
+			if (tools.length) profLines.push(`Outils : ${tools.join(", ")}`);
+			if (profLines.length) {
+				valueByKey.maitrises_langues = profLines.join("\n");
+			}
+
+			// Capacités & traits (traits raciaux + aptitude d'historique +
+			// aptitudes de sous-classe obtenues au niveau actuel).
+			const feats = [
+				...(raceExtra.traits ?? []).map((t) => t.name).filter(Boolean),
+				...(bgExtra.feature?.name ? [bgExtra.feature.name] : []),
+			];
+			for (const sc of body.subclasses ?? []) {
+				const item = getContent("sous-classe", sc.slug);
+				if (!item) continue;
+				const lvl =
+					body.classes.find((c) => c.slug === sc.classSlug)?.level ?? 0;
+				const data = item.data as {
+					features?: { level: number; name: string }[];
+				};
+				for (const f of data.features ?? []) {
+					if (f.level <= lvl) feats.push(`${item.name} : ${f.name}`);
+				}
+			}
+			if (feats.length) valueByKey.capacites_traits = feats.join(", ");
+
+			const valueEntries = Object.entries(valueByKey).filter(([key]) =>
+				propIdByKey.has(key),
+			);
+
+			await prisma.$transaction(async (tx) => {
+				// Build idempotent : on repart des sélections à zéro.
+				await tx.characterSheetSelection.deleteMany({
+					where: { characterSheetId: sheet.id },
+				});
+
+				const selections: {
+					id: string;
+					characterSheetId: string;
+					collectionKey: string;
+					contentId: string;
+					level?: number;
+					isPrimary?: boolean;
+					qty?: number;
+					extra?: Record<string, unknown>;
+				}[] = [
+					{
+						id: newId(),
+						characterSheetId: sheet.id,
+						collectionKey: "race",
+						contentId: race.id,
+					},
+					{
+						id: newId(),
+						characterSheetId: sheet.id,
+						collectionKey: "background",
+						contentId: background.id,
+					},
+					...classRefs.map((ref) => ({
+						id: newId(),
+						characterSheetId: sheet.id,
+						collectionKey: "classe",
+						// biome-ignore lint/style/noNonNullAssertion: présence garantie par le garde ci-dessus.
+						contentId: ref.content!.id,
+						level: ref.input.level,
+						isPrimary: ref.input.isPrimary ?? false,
+					})),
+				];
+				for (const s of body.spells ?? []) {
+					const sp = getContent("sort", s.slug);
+					if (sp) {
+						selections.push({
+							id: newId(),
+							characterSheetId: sheet.id,
+							collectionKey: "sort",
+							contentId: sp.id,
+							// classe d'origine + rôle (cantrip / sort / grimoire) en multiclasse.
+							extra: { classSlug: s.classSlug, role: s.role },
+						});
+					}
+				}
+				for (const sc of body.subclasses ?? []) {
+					const item = getContent("sous-classe", sc.slug);
+					if (item) {
+						selections.push({
+							id: newId(),
+							characterSheetId: sheet.id,
+							collectionKey: "sous-classe",
+							contentId: item.id,
+							extra: { classSlug: sc.classSlug },
+						});
+					}
+				}
+				for (const item of body.inventory ?? []) {
+					const eq = getContent("equipement", item.slug);
+					if (eq) {
+						selections.push({
+							id: newId(),
+							characterSheetId: sheet.id,
+							collectionKey: "equipement",
+							contentId: eq.id,
+							qty: item.qty,
+						});
+					}
+				}
+				await tx.characterSheetSelection.createMany({ data: selections });
+
+				await tx.characterSheet.update({
+					where: { id: sheet.id },
+					data: { gold: body.gold ?? null, abilityMethod: body.abilityMethod },
+				});
+
+				for (const [key, value] of valueEntries) {
+					const propertyId = propIdByKey.get(key);
+					if (!propertyId) continue;
+					await tx.characterSheetValue.upsert({
+						where: {
+							characterSheetId_propertyId: {
+								characterSheetId: sheet.id,
+								propertyId,
+							},
+						},
+						create: {
+							id: newId(),
+							characterSheetId: sheet.id,
+							propertyId,
+							value: value as object,
+						},
+						update: { value: value as object },
+					});
+				}
+			});
+
+			return { success: true as const, id: sheet.id };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: BuildBody,
+			response: {
+				200: t.Object({ success: t.Literal(true), id: t.String() }),
+				400: ErrorResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["CharacterSheets"],
+				summary: "Finaliser le build d'une fiche (résultat du wizard)",
+			},
+		},
+	)
+
+	/**
+	 * DELETE /character-sheets/:id - Supprimer une fiche (soft delete).
+	 *
+	 * Marque la fiche comme supprimée (deletedAt) sans la détruire. Réservé au
+	 * propriétaire. Idempotent : une fiche déjà supprimée renvoie 404.
+	 */
+	.delete(
+		"/:id",
+		async ({ set, currentUser, params }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+
+			const sheet = await prisma.characterSheet.findUnique({
+				where: { id: params.id },
+				select: { id: true, userId: true, deletedAt: true },
+			});
+			if (!sheet || sheet.deletedAt) {
+				set.status = 404;
+				return { success: false as const, error: "Fiche introuvable" };
+			}
+			if (sheet.userId !== currentUser.id) {
+				set.status = 403;
+				return { success: false as const, error: "Accès refusé" };
+			}
+
+			await prisma.characterSheet.update({
+				where: { id: sheet.id },
+				data: { deletedAt: new Date() },
+			});
+
+			return { success: true as const };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			response: {
+				200: t.Object({ success: t.Literal(true) }),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["CharacterSheets"],
+				summary: "Supprimer une fiche de personnage",
+			},
+		},
+	)
+
+	/**
+	 * POST /character-sheets/:id/avatar - Téléverser l'avatar (token) de la fiche.
+	 *
+	 * Le token est recadré côté client ; on stocke l'image telle quelle. Réservé
+	 * au propriétaire. Renvoie l'id de fichier et une URL présignée d'affichage.
+	 */
+	.post(
+		"/:id/avatar",
+		async ({ set, currentUser, params, body }) => {
+			if (!currentUser) {
+				set.status = 401;
+				return { success: false as const, error: "Non authentifié" };
+			}
+
+			const file = body.avatar ?? body.file;
+			if (!file || !(file instanceof File)) {
+				set.status = 400;
+				return {
+					success: false as const,
+					error: "Fichier manquant. Envoyez un champ 'avatar' ou 'file'.",
+				};
+			}
+
+			const buffer = Buffer.from(await file.arrayBuffer());
+			const result = await uploadAvatarHandler({
+				sheetId: params.id,
+				userId: currentUser.id,
+				data: buffer,
+				contentType: file.type || "image/png",
+			});
+
+			if (!result.ok) {
+				set.status = result.status;
+				return { success: false as const, error: result.error };
+			}
+
+			set.status = 201;
+			return {
+				success: true as const,
+				fileId: result.fileId,
+				avatarUrl: result.avatarUrl,
+			};
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: t.Object({
+				avatar: t.Optional(t.File()),
+				file: t.Optional(t.File()),
+			}),
+			response: {
+				201: t.Object({
+					success: t.Literal(true),
+					fileId: t.String(),
+					avatarUrl: t.Union([t.String(), t.Null()]),
+				}),
+				400: ErrorResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["CharacterSheets"],
+				summary: "Téléverser l'avatar (token) d'une fiche de personnage",
 			},
 		},
 	);

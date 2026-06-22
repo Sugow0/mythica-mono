@@ -86,6 +86,19 @@ enum JoinRequestStatus {
   @@map("join_request_status")
 }
 
+// Types d'étapes génériques du parcours de création (alignés sur character-engine).
+enum CreationStepKind {
+  selection
+  repeatableSelection
+  pointAllocation
+  proficiencyChoice
+  spellSelection
+  inventory
+  loreForm
+
+  @@map("creation_step_kind")
+}
+
 // ------------------------------------------------------------
 // USER
 // Miroir léger de l'API plateforme.
@@ -134,6 +147,8 @@ model GameSystem {
   properties      GameSystemProperty[]
   campaigns       Campaign[]
   characterSheets CharacterSheet[]
+  content         SystemContent[]
+  creationSteps   GameSystemCreationStep[]
 
   @@map("game_systems")
 }
@@ -318,21 +333,25 @@ model CampaignMember {
 // ------------------------------------------------------------
 
 model CharacterSheet {
-  id           String    @id @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  gameSystemId String    @map("game_system_id") @db.Uuid
-  name         String    @db.VarChar(255)
-  avatarFileId String?   @map("avatar_file_id") @db.Uuid
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  id            String    @id @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  gameSystemId  String    @map("game_system_id") @db.Uuid
+  name          String    @db.VarChar(255)
+  avatarFileId  String?   @map("avatar_file_id") @db.Uuid
+  isActive      Boolean   @default(true) @map("is_active")
+  // Résultat du build : monnaie de départ et méthode de génération des caracs.
+  gold          Int?
+  abilityMethod String?   @map("ability_method") @db.VarChar(30)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
 
   // Relations
-  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gameSystem GameSystem               @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
-  avatarFile File?                    @relation("CharacterSheetAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  user       User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameSystem GameSystem                @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
+  avatarFile File?                     @relation("CharacterSheetAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
   values     CharacterSheetValue[]
+  selections CharacterSheetSelection[]
   campaigns  CampaignCharacterSheet[]
   tokens     SessionToken[]
 
@@ -494,9 +513,100 @@ model File {
   campaignCovers   Campaign[]       @relation("CampaignCover")
   characterAvatars CharacterSheet[] @relation("CharacterSheetAvatar")
   sessionTokens    SessionToken[]   @relation("TokenFile")
+  contentPortraits SystemContent[]  @relation("SystemContentPortrait")
 
   @@index([ownerId], name: "idx_files_owner")
   @@index([campaignId, domain], name: "idx_files_campaign_domain")
   @@index([deletedAt], name: "idx_files_deleted")
   @@map("files")
+}
+
+// ------------------------------------------------------------
+// SYSTEM CONTENT
+// Contenu d'un système, regroupé par collection générique
+// (collectionKey : "race", "classe", "background", "sort", "type"...).
+// `data` (JSONB) porte les champs propres à la collection ; il est validé à
+// l'écriture (seed) contre un schéma par collection — jamais saisi par
+// l'utilisateur. Ajouter une collection ne demande aucune migration.
+// ------------------------------------------------------------
+
+model SystemContent {
+  id             String   @id @db.Uuid
+  gameSystemId   String   @map("game_system_id") @db.Uuid
+  collectionKey  String   @map("collection_key") @db.VarChar(50)
+  slug           String   @db.VarChar(100)
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  data           Json     @default("{}")
+  sortOrder      Int      @default(0) @map("sort_order")
+  portraitFileId String?  @map("portrait_file_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  gameSystem   GameSystem                @relation(fields: [gameSystemId], references: [id], onDelete: Cascade)
+  portraitFile File?                     @relation("SystemContentPortrait", fields: [portraitFileId], references: [id], onDelete: SetNull)
+  selections   CharacterSheetSelection[]
+
+  @@unique([gameSystemId, collectionKey, slug])
+  @@index([gameSystemId, collectionKey], name: "idx_system_content_collection")
+  @@map("system_content")
+}
+
+// ------------------------------------------------------------
+// GAME SYSTEM CREATION STEP
+// Parcours de création data-driven : étapes ordonnées + config (JSONB) propre
+// au `kind`. Le front est un rendu générique piloté par ces données.
+// ------------------------------------------------------------
+
+model GameSystemCreationStep {
+  id           String           @id @db.Uuid
+  gameSystemId String           @map("game_system_id") @db.Uuid
+  stepKey      String           @map("step_key") @db.VarChar(100)
+  order        Int              @map("step_order")
+  kind         CreationStepKind
+  config       Json             @default("{}")
+  condition    String?          @db.VarChar(100)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  gameSystem GameSystem @relation(fields: [gameSystemId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSystemId, stepKey])
+  @@index([gameSystemId, order], name: "idx_creation_steps_order")
+  @@map("game_system_creation_steps")
+}
+
+// ------------------------------------------------------------
+// CHARACTER SHEET SELECTION
+// Résultat « build » d'une fiche : éléments de contenu choisis. Références et
+// scalaires stables = colonnes typées (intégrité forte) ; `extra` (JSONB) ne
+// porte que l'accessoire variable. Gère le multiclassage (plusieurs lignes
+// collectionKey="classe" avec `level`/`isPrimary`) et les sous-sélections
+// (sous-classe via `parentSelectionId`).
+// ------------------------------------------------------------
+
+model CharacterSheetSelection {
+  id                String   @id @db.Uuid
+  characterSheetId  String   @map("character_sheet_id") @db.Uuid
+  collectionKey     String   @map("collection_key") @db.VarChar(50)
+  contentId         String   @map("content_id") @db.Uuid
+  level             Int?
+  isPrimary         Boolean? @map("is_primary")
+  parentSelectionId String?  @map("parent_selection_id") @db.Uuid
+  qty               Int?
+  extra             Json?
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations — contentId en Restrict : impossible de pointer un contenu supprimé.
+  characterSheet  CharacterSheet            @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+  content         SystemContent             @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  parentSelection CharacterSheetSelection?  @relation("SelectionParent", fields: [parentSelectionId], references: [id], onDelete: Cascade)
+  childSelections CharacterSheetSelection[] @relation("SelectionParent")
+
+  @@index([characterSheetId], name: "idx_sheet_selections_sheet")
+  @@index([characterSheetId, collectionKey], name: "idx_sheet_selections_collection")
+  @@map("character_sheet_selections")
 }

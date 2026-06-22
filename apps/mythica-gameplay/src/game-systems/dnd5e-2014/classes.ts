@@ -1,0 +1,496 @@
+/**
+ * Classes D&D 5e (2014) — les 12 classes du PHB (chap. 3). Champs utilisés par le
+ * wizard : dé de vie, caracs primaires, jets de sauvegarde, maîtrises, choix de
+ * compétences, catégorie de lanceur, prérequis de multiclassage, équipement.
+ * Nomenclature FR du PHB (Ensorceleur = sorcerer, Sorcier = warlock).
+ */
+
+import { CANTRIPS_KNOWN, SPELLS_KNOWN } from "./spell-progression";
+import { STARTING_EQUIPMENT, STARTING_GOLD } from "./starting-gear";
+import type { ClassData, SpellcastingData, SystemContentSeed } from "./types";
+
+const klass = (
+	slug: string,
+	name: string,
+	description: string,
+	data: ClassData,
+	sortOrder: number,
+): SystemContentSeed => ({
+	collectionKey: "classe",
+	slug,
+	name,
+	description,
+	sortOrder,
+	data: data as unknown as Record<string, unknown>,
+});
+
+/** Les 18 compétences (pour les classes qui choisissent « parmi toutes »). */
+const ALL_SKILLS = [
+	"acrobaties",
+	"arcanes",
+	"athletisme",
+	"discretion",
+	"dressage",
+	"escamotage",
+	"histoire",
+	"intimidation",
+	"intuition",
+	"investigation",
+	"medecine",
+	"nature",
+	"perception",
+	"persuasion",
+	"religion",
+	"representation",
+	"survie",
+	"tromperie",
+];
+
+export const DND5E_CLASSES: SystemContentSeed[] = [
+	klass(
+		"barbare",
+		"Barbare",
+		"Guerrier primitif qui puise sa force dans une rage dévastatrice.",
+		{
+			hitDie: 12,
+			primaryAbility: ["force"],
+			savingThrows: ["force", "constitution"],
+			armorProficiencies: ["légères", "intermédiaires", "boucliers"],
+			weaponProficiencies: ["simples", "de guerre"],
+			toolProficiencies: [],
+			skillChoices: {
+				count: 2,
+				from: [
+					"dressage",
+					"athletisme",
+					"intimidation",
+					"nature",
+					"perception",
+					"survie",
+				],
+			},
+			casterType: "none",
+			multiclassPrereq: { force: 13 },
+			startingEquipment: ["hache-a-deux-mains", "javeline", "sac-a-dos"],
+		},
+		0,
+	),
+	klass(
+		"barde",
+		"Barde",
+		"Artiste dont la musique tisse une magie inspirante.",
+		{
+			hitDie: 8,
+			primaryAbility: ["charisme"],
+			savingThrows: ["dexterite", "charisme"],
+			armorProficiencies: ["légères"],
+			weaponProficiencies: [
+				"simples",
+				"arbalètes de poing",
+				"épées longues",
+				"rapières",
+				"épées courtes",
+			],
+			toolProficiencies: ["trois instruments de musique au choix"],
+			skillChoices: { count: 3, from: ALL_SKILLS },
+			casterType: "full",
+			spellcastingAbility: "charisme",
+			multiclassPrereq: { charisme: 13 },
+			startingEquipment: ["rapiere", "cuir", "dague", "luth"],
+		},
+		1,
+	),
+	klass(
+		"clerc",
+		"Clerc",
+		"Canal de la puissance divine, il soigne, protège et châtie.",
+		{
+			hitDie: 8,
+			primaryAbility: ["sagesse"],
+			savingThrows: ["sagesse", "charisme"],
+			armorProficiencies: ["légères", "intermédiaires", "boucliers"],
+			weaponProficiencies: ["simples"],
+			toolProficiencies: [],
+			skillChoices: {
+				count: 2,
+				from: ["histoire", "intuition", "medecine", "persuasion", "religion"],
+			},
+			casterType: "full",
+			spellcastingAbility: "sagesse",
+			multiclassPrereq: { sagesse: 13 },
+			startingEquipment: ["masse-darmes", "ecailles", "bouclier", "amulette"],
+		},
+		2,
+	),
+	klass(
+		"druide",
+		"Druide",
+		"Gardien de la nature, maître des formes sauvages et de la magie primordiale.",
+		{
+			hitDie: 8,
+			primaryAbility: ["sagesse"],
+			savingThrows: ["intelligence", "sagesse"],
+			armorProficiencies: [
+				"légères",
+				"intermédiaires",
+				"boucliers (non métalliques)",
+			],
+			weaponProficiencies: [
+				"bâtons",
+				"cimeterres",
+				"gourdins",
+				"dagues",
+				"javelines",
+				"masses d'armes",
+				"fléchettes",
+				"lances",
+				"frondes",
+				"serpes",
+			],
+			toolProficiencies: ["matériel d'herboriste"],
+			skillChoices: {
+				count: 2,
+				from: [
+					"arcanes",
+					"dressage",
+					"intuition",
+					"medecine",
+					"nature",
+					"perception",
+					"religion",
+					"survie",
+				],
+			},
+			casterType: "full",
+			spellcastingAbility: "sagesse",
+			multiclassPrereq: { sagesse: 13 },
+			startingEquipment: ["bouclier", "cimeterre", "cuir", "kit-dherboriste"],
+		},
+		3,
+	),
+	klass(
+		"ensorceleur",
+		"Ensorceleur",
+		"Lanceur inné dont la magie coule dans le sang.",
+		{
+			hitDie: 6,
+			primaryAbility: ["charisme"],
+			savingThrows: ["constitution", "charisme"],
+			armorProficiencies: [],
+			weaponProficiencies: [
+				"dagues",
+				"fléchettes",
+				"frondes",
+				"bâtons",
+				"arbalètes légères",
+			],
+			toolProficiencies: [],
+			skillChoices: {
+				count: 2,
+				from: [
+					"arcanes",
+					"tromperie",
+					"intuition",
+					"intimidation",
+					"persuasion",
+					"religion",
+				],
+			},
+			casterType: "full",
+			spellcastingAbility: "charisme",
+			multiclassPrereq: { charisme: 13 },
+			startingEquipment: ["arbalete-legere", "sacoche-a-composantes", "dague"],
+		},
+		4,
+	),
+	klass(
+		"guerrier",
+		"Guerrier",
+		"Maître des armes et des armures, il domine le champ de bataille.",
+		{
+			hitDie: 10,
+			primaryAbility: ["force", "dexterite"],
+			savingThrows: ["force", "constitution"],
+			armorProficiencies: ["légères", "intermédiaires", "lourdes", "boucliers"],
+			weaponProficiencies: ["simples", "de guerre"],
+			toolProficiencies: [],
+			skillChoices: {
+				count: 2,
+				from: [
+					"acrobaties",
+					"dressage",
+					"athletisme",
+					"histoire",
+					"intuition",
+					"intimidation",
+					"perception",
+					"survie",
+				],
+			},
+			casterType: "none",
+			multiclassPrereq: { force: 13 },
+			startingEquipment: ["cotte-de-mailles", "epee-longue", "bouclier"],
+		},
+		5,
+	),
+	klass(
+		"magicien",
+		"Magicien",
+		"Érudit de l'arcane, il façonne la réalité par ses sorts.",
+		{
+			hitDie: 6,
+			primaryAbility: ["intelligence"],
+			savingThrows: ["intelligence", "sagesse"],
+			armorProficiencies: [],
+			weaponProficiencies: [
+				"dagues",
+				"fléchettes",
+				"frondes",
+				"bâtons",
+				"arbalètes légères",
+			],
+			toolProficiencies: [],
+			skillChoices: {
+				count: 2,
+				from: [
+					"arcanes",
+					"histoire",
+					"intuition",
+					"investigation",
+					"medecine",
+					"religion",
+				],
+			},
+			casterType: "full",
+			spellcastingAbility: "intelligence",
+			multiclassPrereq: { intelligence: 13 },
+			startingEquipment: ["baton", "grimoire", "sacoche-a-composantes"],
+		},
+		6,
+	),
+	klass(
+		"moine",
+		"Moine",
+		"Maître des arts martiaux qui canalise l'énergie du ki.",
+		{
+			hitDie: 8,
+			primaryAbility: ["dexterite", "sagesse"],
+			savingThrows: ["force", "dexterite"],
+			armorProficiencies: [],
+			weaponProficiencies: ["simples", "épées courtes"],
+			toolProficiencies: [
+				"un type d'outils d'artisan ou un instrument de musique au choix",
+			],
+			skillChoices: {
+				count: 2,
+				from: [
+					"acrobaties",
+					"athletisme",
+					"histoire",
+					"intuition",
+					"religion",
+					"discretion",
+				],
+			},
+			casterType: "none",
+			multiclassPrereq: { dexterite: 13, sagesse: 13 },
+			startingEquipment: ["epee-courte", "sac-a-dos", "dague"],
+		},
+		7,
+	),
+	klass(
+		"paladin",
+		"Paladin",
+		"Guerrier sacré lié par un serment, alliant martialité et magie divine.",
+		{
+			hitDie: 10,
+			primaryAbility: ["force", "charisme"],
+			savingThrows: ["sagesse", "charisme"],
+			armorProficiencies: ["légères", "intermédiaires", "lourdes", "boucliers"],
+			weaponProficiencies: ["simples", "de guerre"],
+			toolProficiencies: [],
+			skillChoices: {
+				count: 2,
+				from: [
+					"athletisme",
+					"intimidation",
+					"intuition",
+					"medecine",
+					"persuasion",
+					"religion",
+				],
+			},
+			casterType: "half",
+			spellcastingAbility: "charisme",
+			multiclassPrereq: { force: 13, charisme: 13 },
+			startingEquipment: [
+				"epee-longue",
+				"cotte-de-mailles",
+				"bouclier",
+				"amulette",
+			],
+		},
+		8,
+	),
+	klass(
+		"rodeur",
+		"Rôdeur",
+		"Chasseur des marges, pisteur et lanceur de sorts naturels.",
+		{
+			hitDie: 10,
+			primaryAbility: ["dexterite", "sagesse"],
+			savingThrows: ["force", "dexterite"],
+			armorProficiencies: ["légères", "intermédiaires", "boucliers"],
+			weaponProficiencies: ["simples", "de guerre"],
+			toolProficiencies: [],
+			skillChoices: {
+				count: 3,
+				from: [
+					"dressage",
+					"athletisme",
+					"intuition",
+					"investigation",
+					"nature",
+					"perception",
+					"discretion",
+					"survie",
+				],
+			},
+			casterType: "half",
+			spellcastingAbility: "sagesse",
+			multiclassPrereq: { dexterite: 13, sagesse: 13 },
+			startingEquipment: ["ecailles", "epee-courte", "arc-long", "sac-a-dos"],
+		},
+		9,
+	),
+	klass(
+		"roublard",
+		"Roublard",
+		"Expert de la furtivité et des coups précis, il exploite chaque faille.",
+		{
+			hitDie: 8,
+			primaryAbility: ["dexterite"],
+			savingThrows: ["dexterite", "intelligence"],
+			armorProficiencies: ["légères"],
+			weaponProficiencies: [
+				"simples",
+				"arbalètes de poing",
+				"épées longues",
+				"rapières",
+				"épées courtes",
+			],
+			toolProficiencies: ["outils-de-voleur"],
+			skillChoices: {
+				count: 4,
+				from: [
+					"acrobaties",
+					"athletisme",
+					"tromperie",
+					"intuition",
+					"intimidation",
+					"investigation",
+					"perception",
+					"persuasion",
+					"escamotage",
+					"discretion",
+				],
+			},
+			casterType: "none",
+			multiclassPrereq: { dexterite: 13 },
+			startingEquipment: ["rapiere", "cuir", "outils-de-voleur", "dague"],
+		},
+		10,
+	),
+	klass(
+		"sorcier",
+		"Sorcier",
+		"Lié par un pacte à une entité d'outre-monde, il manie la magie de pacte.",
+		{
+			hitDie: 8,
+			primaryAbility: ["charisme"],
+			savingThrows: ["sagesse", "charisme"],
+			armorProficiencies: ["légères"],
+			weaponProficiencies: ["simples"],
+			toolProficiencies: [],
+			skillChoices: {
+				count: 2,
+				from: [
+					"arcanes",
+					"tromperie",
+					"histoire",
+					"intimidation",
+					"investigation",
+					"nature",
+					"religion",
+				],
+			},
+			casterType: "warlock",
+			spellcastingAbility: "charisme",
+			multiclassPrereq: { charisme: 13 },
+			startingEquipment: [
+				"cuir",
+				"arbalete-legere",
+				"sacoche-a-composantes",
+				"dague",
+			],
+		},
+		11,
+	),
+];
+
+/**
+ * Métadonnées de sélection de sorts par classe (cantrips/connus/préparés/pacte).
+ * Injectées dans `data.spellcasting` ; les non-lanceurs n'en ont pas. Les
+ * tiers-lanceurs (chevalier occulte, escroc arcanique) seront portés par leurs
+ * sous-classes (FEAT ultérieure).
+ */
+const SPELLCASTING: Record<string, SpellcastingData> = {
+	barde: {
+		kind: "known",
+		ability: "charisme",
+		cantripsKnown: CANTRIPS_KNOWN.barde,
+		spellsKnown: SPELLS_KNOWN.barde,
+	},
+	clerc: {
+		kind: "prepared",
+		ability: "sagesse",
+		cantripsKnown: CANTRIPS_KNOWN.clerc,
+	},
+	druide: {
+		kind: "prepared",
+		ability: "sagesse",
+		cantripsKnown: CANTRIPS_KNOWN.druide,
+	},
+	ensorceleur: {
+		kind: "known",
+		ability: "charisme",
+		cantripsKnown: CANTRIPS_KNOWN.ensorceleur,
+		spellsKnown: SPELLS_KNOWN.ensorceleur,
+	},
+	magicien: {
+		kind: "wizard",
+		ability: "intelligence",
+		cantripsKnown: CANTRIPS_KNOWN.magicien,
+	},
+	paladin: { kind: "prepared_half", ability: "charisme" },
+	rodeur: {
+		kind: "known_half",
+		ability: "sagesse",
+		spellsKnown: SPELLS_KNOWN.rodeur,
+	},
+	sorcier: {
+		kind: "pact",
+		ability: "charisme",
+		cantripsKnown: CANTRIPS_KNOWN.sorcier,
+		spellsKnown: SPELLS_KNOWN.sorcier,
+	},
+};
+
+for (const c of DND5E_CLASSES) {
+	const sc = SPELLCASTING[c.slug];
+	if (sc) (c.data as Record<string, unknown>).spellcasting = sc;
+	const gold = STARTING_GOLD[c.slug];
+	if (gold) (c.data as Record<string, unknown>).startingGoldRoll = gold;
+	const gear = STARTING_EQUIPMENT[c.slug];
+	if (gear) (c.data as Record<string, unknown>).startingEquipmentOptions = gear;
+}

@@ -20,7 +20,7 @@ enum RoleEnum {
 }
 
 model Users {
-  id                      String                    @id @default(uuid(7))
+  id                      String                    @id @default(uuid(7)) @db.Uuid
   firstName               String
   lastName                String
   pseudo                  String                    @unique
@@ -43,8 +43,8 @@ model Users {
 }
 
 model EmailVerificationTokens {
-  id        String   @id @default(uuid(7))
-  userId    String
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @db.Uuid
   token     String   @unique
   expiresAt DateTime
   user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -55,8 +55,8 @@ model EmailVerificationTokens {
 }
 
 model PasswordResetTokens {
-  id        String   @id @default(uuid(7))
-  userId    String
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @db.Uuid
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
@@ -68,10 +68,10 @@ model PasswordResetTokens {
 }
 
 model OAuthAccounts {
-  id             String @id @default(uuid(7))
+  id             String @id // id de type Lucia (entropie base32), pas un UUID
   providerId     String // "google" | "discord" | "apple"
   providerUserId String
-  userId         String
+  userId         String @db.Uuid
   user           Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([providerId, providerUserId])
@@ -80,8 +80,8 @@ model OAuthAccounts {
 }
 
 model Sessions {
-  id        String   @id
-  userId    String
+  id        String   @id // id de session Lucia (entropie), pas un UUID
+  userId    String   @db.Uuid
   expiresAt DateTime
 
   user Users @relation(references: [id], fields: [userId], onDelete: Cascade)

@@ -11,6 +11,13 @@
 	"nav_about": "About",
 	"nav_sign_in": "Sign in",
 	"nav_get_started": "Get started",
+	"nav_create_campaign": "Create a campaign",
+	"nav_create_campaign_desc": "Start a new adventure",
+	"nav_characters_menu": "Characters",
+	"nav_create_character": "Create a character",
+	"nav_create_character_desc": "New standalone sheet",
+	"nav_forum": "Forum",
+	"nav_shop": "Shop",
 
 	"hero_badge": "New: AI GM available in beta",
 	"hero_title_line1": "Tabletop RPG",
@@ -112,5 +119,28 @@
 	"admin_btn_delete": "Delete",
 
 	"admin_form_name_label": "Name",
-	"admin_form_description_label": "Description"
+	"admin_form_description_label": "Description",
+
+	"nav_characters": "Characters",
+	"nav_my_characters": "My characters",
+	"nav_my_characters_desc": "Your characters",
+	"characters_title": "My character sheets",
+	"characters_subtitle": "Create and manage your characters.",
+	"characters_create": "Create a sheet",
+	"characters_empty_title": "No sheet yet",
+	"characters_empty_desc": "Create your first character sheet to get started.",
+	"characters_load_error": "Could not load your sheets.",
+	"character_new_title": "New character sheet",
+	"character_new_system_label": "Game system",
+	"character_new_identity_label": "Identity",
+	"character_name_label": "Character name",
+	"character_name_placeholder": "e.g. Aragorn",
+	"character_create_submit": "Create sheet",
+	"character_create_error": "Could not create the sheet.",
+	"character_back": "Back",
+	"character_load_error": "Could not load the sheet.",
+	"character_not_found": "Sheet not found.",
+	"character_save_saved": "Saved",
+	"character_save_saving": "Saving…",
+	"character_save_error": "Save error"
 }
