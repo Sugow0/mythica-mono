@@ -182,6 +182,12 @@ const BuildBody = t.Object({
 	skillProficiencies: t.Optional(t.Array(t.String())),
 	/** Compétences avec expertise (double maîtrise) ; implique la maîtrise. */
 	expertise: t.Optional(t.Array(t.String())),
+	/** Améliorations de caractéristiques par palier d'ASI (ex. {force:2} ou {force:1,dexterite:1}). */
+	asiAllocations: t.Optional(
+		t.Array(t.Record(t.String(), t.Integer({ minimum: 1, maximum: 2 }))),
+	),
+	/** Dons choisis (slugs), pris à la place d'une amélioration de caractéristique. */
+	feats: t.Optional(t.Array(t.String())),
 	/** Sorts choisis, rattachés à leur classe et à leur rôle (multiclassage). */
 	spells: t.Optional(
 		t.Array(
@@ -707,6 +713,33 @@ export const characterSheetsController = new Elysia({
 
 			const totalLevel = body.classes.reduce((sum, c) => sum + c.level, 0);
 
+			// Améliorations de caractéristiques (ASI) + bonus de demi-dons, plafonnés
+			// à 20. Appliqués après la vérification des prérequis (qui portent sur le
+			// score de base + bonus raciaux).
+			const improvementBonuses: Record<string, number> = {};
+			const addBonus = (key: string, v: number) => {
+				improvementBonuses[key] = (improvementBonuses[key] ?? 0) + v;
+			};
+			for (const alloc of body.asiAllocations ?? []) {
+				for (const [key, v] of Object.entries(alloc)) addBonus(key, Number(v));
+			}
+			for (const slug of body.feats ?? []) {
+				const ab = (
+					getContent("don", slug)?.data as {
+						abilityBonuses?: Record<string, number>;
+					}
+				)?.abilityBonuses;
+				for (const [key, v] of Object.entries(ab ?? {}))
+					addBonus(key, Number(v));
+			}
+			const improvedScores: Record<string, number> = { ...finalScores };
+			for (const [key, v] of Object.entries(improvementBonuses)) {
+				improvedScores[key] = Math.min(
+					20,
+					(Number(improvedScores[key]) || 0) + v,
+				);
+			}
+
 			// Maîtrises fixes accordées par les sous-classes choisies.
 			const subclassSkills = (body.subclasses ?? []).flatMap(
 				(sc) =>
@@ -739,11 +772,14 @@ export const characterSheetsController = new Elysia({
 
 			// Valeurs directes (les dérivées restent calculées côté client).
 			const valueByKey: Record<string, unknown> = {};
-			for (const [key, score] of Object.entries(finalScores)) {
+			for (const [key, score] of Object.entries(improvedScores)) {
 				valueByKey[key] = score;
 			}
 			for (const skill of skills) valueByKey[skill] = true;
 			if (body.expertise?.length) valueByKey.expertises = body.expertise;
+			if (body.asiAllocations?.length) {
+				valueByKey.ameliorations = body.asiAllocations;
+			}
 			valueByKey.niveau = totalLevel;
 			if (raceData.speed != null) valueByKey.vitesse = raceData.speed;
 
@@ -753,7 +789,7 @@ export const characterSheetsController = new Elysia({
 				level: ref.input.level,
 				isPrimary: ref.input.isPrimary ?? false,
 			}));
-			const conMod = abilityModifier(Number(finalScores.constitution) || 10);
+			const conMod = abilityModifier(Number(improvedScores.constitution) || 10);
 			// PV : on fait confiance au total calculé au wizard (méthode choisie),
 			// sinon repli sur la moyenne fixe.
 			const maxHp =
@@ -822,6 +858,11 @@ export const characterSheetsController = new Elysia({
 				for (const f of data.features ?? []) {
 					if (f.level <= lvl) feats.push(`${item.name} : ${f.name}`);
 				}
+			}
+			// Dons choisis (collection "don").
+			for (const slug of body.feats ?? []) {
+				const item = getContent("don", slug);
+				if (item) feats.push(`Don : ${item.name}`);
 			}
 			if (feats.length) valueByKey.capacites_traits = feats.join(", ");
 
@@ -901,6 +942,17 @@ export const characterSheetsController = new Elysia({
 							collectionKey: "equipement",
 							contentId: eq.id,
 							qty: item.qty,
+						});
+					}
+				}
+				for (const slug of body.feats ?? []) {
+					const item = getContent("don", slug);
+					if (item) {
+						selections.push({
+							id: newId(),
+							characterSheetId: sheet.id,
+							collectionKey: "don",
+							contentId: item.id,
 						});
 					}
 				}

@@ -43,6 +43,7 @@ export type CreationStepKind =
 	| "repeatableSelection"
 	| "pointAllocation"
 	| "hitPoints"
+	| "abilityImprovement"
 	| "proficiencyChoice"
 	| "spellSelection"
 	| "inventory"
@@ -117,6 +118,19 @@ export type HitPointsStep = CreationStepBase & {
 	};
 };
 
+/** Étape « améliorations de caractéristiques ou dons » (paliers d'ASI). */
+export type AbilityImprovementStep = CreationStepBase & {
+	kind: "abilityImprovement";
+	config: {
+		/** Attributs améliorables (les 6 caractéristiques). */
+		attributes: string[];
+		/** Collection des dons (ex. `don`). */
+		collectionKey: string;
+		/** Score maximum atteignable via amélioration (défaut 20). */
+		maxScore?: number;
+	};
+};
+
 /** Étape « choisir N maîtrises parmi une liste ». */
 export type ProficiencyChoiceStep = CreationStepBase & {
 	kind: "proficiencyChoice";
@@ -160,6 +174,7 @@ export type CreationStep =
 	| RepeatableSelectionStep
 	| PointAllocationStep
 	| HitPointsStep
+	| AbilityImprovementStep
 	| ProficiencyChoiceStep
 	| SpellSelectionStep
 	| InventoryStep

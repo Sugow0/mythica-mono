@@ -297,6 +297,18 @@ export function wizardSpellbookSize(classLevel: number): number {
 	return 6 + 2 * (Math.max(1, classLevel) - 1);
 }
 
+/**
+ * Nombre d'améliorations de caractéristiques / dons disponibles pour une classe :
+ * nombre de paliers d'ASI (`asiLevels`, ex. 4/8/12/16/19) atteints au niveau donné.
+ */
+export function abilityImprovementSlots(
+	asiLevels: number[] | undefined,
+	classLevel: number,
+): number {
+	if (!asiLevels) return 0;
+	return asiLevels.filter((lvl) => classLevel >= lvl).length;
+}
+
 /** Une tranche d'expertise accordée à un niveau donné (classe). */
 export type ExpertiseGrant = { level: number; count: number };
 

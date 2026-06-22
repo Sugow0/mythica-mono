@@ -16,6 +16,7 @@ export type CreationStepSeed = {
 		| "repeatableSelection"
 		| "pointAllocation"
 		| "hitPoints"
+		| "abilityImprovement"
 		| "proficiencyChoice"
 		| "spellSelection"
 		| "inventory"
@@ -138,8 +139,28 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 		},
 	},
 	{
-		stepKey: "points-de-vie",
+		// Améliorations de caractéristiques / dons aux paliers d'ASI (par classe).
+		// Conditionnelle : visible seulement si le personnage a atteint un palier.
+		stepKey: "ameliorations",
 		order: 6,
+		kind: "abilityImprovement",
+		config: {
+			attributes: [
+				"force",
+				"dexterite",
+				"constitution",
+				"intelligence",
+				"sagesse",
+				"charisme",
+			],
+			collectionKey: "don",
+			maxScore: 20,
+		},
+		condition: "has_ability_improvement",
+	},
+	{
+		stepKey: "points-de-vie",
+		order: 7,
 		kind: "hitPoints",
 		config: {
 			// Lancer les dés ou prendre la moyenne fixe ; niveau 1 = max du dé.
@@ -150,7 +171,7 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 	},
 	{
 		stepKey: "maitrises",
-		order: 7,
+		order: 8,
 		kind: "proficiencyChoice",
 		config: {
 			// `from`/`count` résolus dynamiquement depuis la classe choisie
@@ -160,26 +181,26 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 	},
 	{
 		stepKey: "sorts",
-		order: 8,
+		order: 9,
 		kind: "spellSelection",
 		config: { collectionKey: "sort" },
 		condition: "has_caster_class",
 	},
 	{
 		stepKey: "inventaire",
-		order: 9,
+		order: 10,
 		kind: "inventory",
 		config: { collectionKey: "equipement", currencyKey: "gold" },
 	},
 	{
 		stepKey: "identite",
-		order: 10,
+		order: 11,
 		kind: "loreForm",
 		config: { fields: DND5E_IDENTITY_FIELDS },
 	},
 	{
 		stepKey: "lore",
-		order: 11,
+		order: 12,
 		kind: "loreForm",
 		config: { fields: DND5E_LORE_FIELDS },
 	},

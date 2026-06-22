@@ -92,6 +92,7 @@ enum CreationStepKind {
   repeatableSelection
   pointAllocation
   hitPoints
+  abilityImprovement
   proficiencyChoice
   spellSelection
   inventory

@@ -13,6 +13,7 @@
 		background: "Historique",
 		caracteristiques: "Caractéristiques",
 		"points-de-vie": "Points de vie",
+		ameliorations: "Améliorations",
 		maitrises: "Maîtrises",
 		sorts: "Sorts",
 		inventaire: "Équipement",

@@ -218,6 +218,12 @@ export const DND5E_PROPERTY_MAPPINGS: GameSystemPropertyMapping[] = [
 		groupName: "Compétences",
 		isRequired: false,
 	},
+	{
+		propertyKey: "ameliorations",
+		displayOrder: 76,
+		groupName: "Caractéristiques",
+		isRequired: false,
+	},
 
 	// — Sorts (9) — emplacements de sorts niveaux 1 à 9 —
 	{
