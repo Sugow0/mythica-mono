@@ -17,6 +17,7 @@ import {
 	validateAllocation,
 } from "@mythica/character-engine";
 import {
+	abilityImprovementSlots,
 	abilityModifier,
 	computeHitPoints,
 	computeSpellSlots,
@@ -39,6 +40,14 @@ import {
 
 /** Une classe sélectionnée dans le build. */
 export type SelectedClass = { slug: string; level: number; isPrimary: boolean };
+
+/** Paliers d'ASI par défaut (PHB) si la classe n'en déclare pas. */
+const DEFAULT_ASI_LEVELS = [4, 8, 12, 16, 19];
+
+/** Un choix de palier d'ASI : amélioration de caractéristiques ou don. */
+export type Improvement =
+	| { type: "asi"; abilities: Record<string, number> }
+	| { type: "feat"; slug: string };
 
 /** Rôle d'un sort sélectionné. */
 export type SpellRole = "cantrip" | "spell" | "book";
@@ -114,6 +123,8 @@ export class CharacterBuilder {
 	skillProficiencies = $state<string[]>([]);
 	/** Compétences choisies en expertise (double maîtrise). */
 	expertises = $state<string[]>([]);
+	/** Améliorations de caractéristiques / dons choisis (un par palier d'ASI). */
+	improvements = $state<Improvement[]>([]);
 	/** Sélection de sorts par classe : cantrips, sorts (connus/préparés), grimoire. */
 	spellSelections = $state<
 		Record<
@@ -299,10 +310,43 @@ export class CharacterBuilder {
 		applyAbilityBonuses(this.baseScores, this.raceBonuses)
 	);
 
-	/** Modificateurs dérivés des scores finaux. */
+	/** Bonus issus des améliorations (ASI) et des demi-dons choisis. */
+	improvementBonuses = $derived.by<Record<string, number>>(() => {
+		const bonuses: Record<string, number> = {};
+		const add = (k: string, v: number) => {
+			bonuses[k] = (bonuses[k] ?? 0) + v;
+		};
+		for (const imp of this.improvements) {
+			if (imp.type === "asi") {
+				for (const [k, v] of Object.entries(imp.abilities)) add(k, v);
+			} else {
+				const item = (this.content.don ?? []).find((d) => d.slug === imp.slug);
+				const ab = (contentData(item).abilityBonuses ?? {}) as Record<
+					string,
+					number
+				>;
+				for (const [k, v] of Object.entries(ab)) add(k, v);
+			}
+		}
+		return bonuses;
+	});
+
+	/** Scores effectifs = finaux + améliorations/dons, plafonnés à 20. */
+	effectiveScores = $derived.by<Record<string, number>>(() => {
+		const scores = { ...this.finalScores };
+		for (const [k, v] of Object.entries(this.improvementBonuses)) {
+			scores[k] = Math.min(20, (scores[k] ?? 0) + v);
+		}
+		return scores;
+	});
+
+	/** Modificateurs dérivés des scores effectifs (après améliorations/dons). */
 	modifiers = $derived(
 		Object.fromEntries(
-			Object.entries(this.finalScores).map(([k, v]) => [k, abilityModifier(v)])
+			Object.entries(this.effectiveScores).map(([k, v]) => [
+				k,
+				abilityModifier(v),
+			])
 		) as Record<string, number>
 	);
 
@@ -505,10 +549,38 @@ export class CharacterBuilder {
 	/** A-t-on des expertises à choisir ? */
 	hasExpertise = $derived(this.expertiseCount > 0);
 
+	/** Nombre d'emplacements d'amélioration/don (paliers d'ASI, par classe). */
+	improvementSlots = $derived.by(() => {
+		let n = 0;
+		for (const c of this.classes) {
+			const item = (this.content.classe ?? []).find((x) => x.slug === c.slug);
+			const asiLevels =
+				(contentData(item).asiLevels as number[] | undefined) ??
+				DEFAULT_ASI_LEVELS;
+			n += abilityImprovementSlots(asiLevels, c.level);
+		}
+		return n;
+	});
+
+	/** Y a-t-il au moins un palier d'amélioration/don ? */
+	hasAbilityImprovement = $derived(this.improvementSlots > 0);
+
+	/** Tous les emplacements sont-ils renseignés validement ? */
+	improvementsComplete = $derived.by(() => {
+		if (this.improvements.length !== this.improvementSlots) return false;
+		return this.improvements.every((imp) => {
+			if (imp.type === "feat") return Boolean(imp.slug);
+			const total = Object.values(imp.abilities).reduce((s, v) => s + v, 0);
+			return total === 2;
+		});
+	});
+
 	/** Évalue un prédicat d'étape conditionnelle. */
 	private conditionMet(condition: string): boolean {
 		if (condition === "has_caster_class") return this.hasSpellsToChoose;
 		if (condition === "has_subclass_choice") return this.hasSubclassChoice;
+		if (condition === "has_ability_improvement")
+			return this.hasAbilityImprovement;
 		return true;
 	}
 
@@ -571,17 +643,34 @@ export class CharacterBuilder {
 		const valueByKey: Record<string, unknown> = {};
 		for (const p of detail.properties) valueByKey[p.key] = p.value;
 
-		// Scores de base = scores finaux − bonus raciaux (inverse de la projection).
+		// Améliorations (ASI) + dons choisis, restaurés pour la ré-édition.
+		const asiImprovements: Improvement[] = Array.isArray(
+			valueByKey.ameliorations
+		)
+			? (valueByKey.ameliorations as Record<string, number>[]).map((a) => ({
+					type: "asi",
+					abilities: a,
+				}))
+			: [];
+		const featImprovements: Improvement[] = ofKey("don").map((s) => ({
+			type: "feat",
+			slug: s.slug,
+		}));
+		this.improvements = [...asiImprovements, ...featImprovements];
+
+		// Scores de base = scores finaux − bonus raciaux − améliorations/dons
+		// (inverse de la projection du build).
 		const allocStep = this.steps.find((s) => s.kind === "pointAllocation");
 		const attrs =
 			(allocStep?.config as { attributes?: string[] } | undefined)
 				?.attributes ?? [];
 		const bonuses = this.raceBonuses;
+		const improvements = this.improvementBonuses;
 		const base: Record<string, number> = {};
 		for (const a of attrs) {
 			const final = Number(valueByKey[a]);
 			if (Number.isFinite(final) && final > 0) {
-				base[a] = final - (bonuses[a] ?? 0);
+				base[a] = final - (bonuses[a] ?? 0) - (improvements[a] ?? 0);
 			}
 		}
 		if (Object.keys(base).length > 0) this.baseScores = base;
@@ -682,6 +771,8 @@ export class CharacterBuilder {
 			case "hitPoints":
 				// Méthode « lancer » : il faut avoir lancé les dés requis.
 				return this.hpMethod !== "roll" || this.hpRollsDone;
+			case "abilityImprovement":
+				return this.improvementsComplete;
 			case "inventory":
 				// En ré-édition, l'inventaire existant est conservé tant qu'on ne
 				// relance pas la bourse. Sinon : bourse lancée et non à découvert.
@@ -785,6 +876,12 @@ export class CharacterBuilder {
 				hpMax: this.maxHp,
 				skillProficiencies: this.skillProficiencies,
 				expertise: this.expertises,
+				asiAllocations: this.improvements
+					.filter((i) => i.type === "asi")
+					.map((i) => (i as { abilities: Record<string, number> }).abilities),
+				feats: this.improvements
+					.filter((i) => i.type === "feat")
+					.map((i) => (i as { slug: string }).slug),
 				spells,
 				inventory,
 				gold,
