@@ -12,15 +12,19 @@ import {
 	type AbilityScoreMethod,
 	applyAbilityBonuses,
 	type CasterType,
+	type HitPointsMethod,
 	rollStartingWealth,
 	validateAllocation,
 } from "@mythica/character-engine";
 import {
 	abilityModifier,
+	computeHitPoints,
 	computeSpellSlots,
 	maxSpellSlotLevel,
 	pactMagic,
-	preparedSpellsCount,
+	preparedSpellsForKind,
+	rolledHitDiceCount,
+	rollHitPointDice,
 	singleClassSlots,
 	wizardSpellbookSize,
 } from "@mythica/character-engine/dnd5e";
@@ -102,6 +106,10 @@ export class CharacterBuilder {
 	backgroundSlug = $state<string | null>(null);
 	abilityMethod = $state<AbilityScoreMethod>("standard_array");
 	baseScores = $state<Record<string, number>>({});
+	/** Méthode de détermination des PV (moyenne fixe par défaut). */
+	hpMethod = $state<HitPointsMethod>("average");
+	/** Valeurs des dés de vie lancées (méthode `roll`), hors tout premier niveau. */
+	hpRolls = $state<number[]>([]);
 	skillProficiencies = $state<string[]>([]);
 	/** Sélection de sorts par classe : cantrips, sorts (connus/préparés), grimoire. */
 	spellSelections = $state<
@@ -320,6 +328,45 @@ export class CharacterBuilder {
 		this.classes.reduce((sum, c) => sum + (c.level || 0), 0)
 	);
 
+	/** Classes enrichies de leur dé de vie (depuis le contenu). */
+	private hitDieBuilds = $derived(
+		this.classes.map((c) => {
+			const item = (this.content.classe ?? []).find((x) => x.slug === c.slug);
+			return {
+				hitDie: Number(contentData(item).hitDie) || 8,
+				level: c.level,
+				isPrimary: c.isPrimary,
+			};
+		})
+	);
+
+	/** Modificateur de Constitution (PV). */
+	conModifier = $derived(this.modifiers.constitution ?? 0);
+
+	/** Nombre de dés à lancer (tous les niveaux sauf le tout premier). */
+	hpRollsNeeded = $derived(rolledHitDiceCount(this.hitDieBuilds));
+
+	/** PV (preview) selon la méthode choisie ; détail par niveau pour l'UI. */
+	hitPoints = $derived(
+		computeHitPoints({
+			classes: this.hitDieBuilds,
+			conMod: this.conModifier,
+			method: this.hpMethod,
+			rolls: this.hpRolls,
+		})
+	);
+
+	/** PV maximum calculés. */
+	maxHp = $derived(this.hitPoints.maxHp);
+
+	/** Les dés de vie ont-ils été lancés pour la composition actuelle ? */
+	hpRollsDone = $derived(this.hpRolls.length >= this.hpRollsNeeded);
+
+	/** Lance tous les dés de vie (méthode `roll`), classe principale d'abord. */
+	rollHitPoints(): void {
+		this.hpRolls = rollHitPointDice(this.hitDieBuilds);
+	}
+
 	/** Infos de sélection de sorts par classe lanceuse (limites, niveau max). */
 	spellcastingClasses = $derived.by<SpellcastingClassInfo[]>(() => {
 		const out: SpellcastingClassInfo[] = [];
@@ -348,12 +395,7 @@ export class CharacterBuilder {
 				sc.kind === "pact"
 					? pactMagic(level).slotLevel
 					: maxSpellSlotLevel(singleClassSlots(casterType, level));
-			const prepared =
-				sc.kind === "prepared" || sc.kind === "wizard"
-					? preparedSpellsCount(abilityMod, level)
-					: sc.kind === "prepared_half"
-						? preparedSpellsCount(abilityMod, level, true)
-						: null;
+			const prepared = preparedSpellsForKind(sc.kind, abilityMod, level);
 			const spellsLimit = prepared ?? sc.spellsKnown?.[idx] ?? 0;
 			out.push({
 				slug: c.slug,
@@ -576,6 +618,9 @@ export class CharacterBuilder {
 			}
 			case "repeatableSelection":
 				return this.classes.length > 0 && this.totalLevel > 0;
+			case "hitPoints":
+				// Méthode « lancer » : il faut avoir lancé les dés requis.
+				return this.hpMethod !== "roll" || this.hpRollsDone;
 			case "inventory":
 				// En ré-édition, l'inventaire existant est conservé tant qu'on ne
 				// relance pas la bourse. Sinon : bourse lancée et non à découvert.
@@ -675,6 +720,8 @@ export class CharacterBuilder {
 				backgroundSlug: this.backgroundSlug ?? "",
 				abilityMethod: this.abilityMethod,
 				abilityScores: this.baseScores,
+				hpMethod: this.hpMethod,
+				hpMax: this.maxHp,
 				skillProficiencies: this.skillProficiencies,
 				spells,
 				inventory,
