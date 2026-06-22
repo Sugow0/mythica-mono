@@ -35,8 +35,8 @@ describe("DND5E_PROPERTY_MAPPINGS", () => {
 		expect(DND5E_SYSTEM_SLUG).toBe("dnd5e-2014");
 	});
 
-	it("contient exactement 75 mappings", () => {
-		expect(DND5E_PROPERTY_MAPPINGS).toHaveLength(75);
+	it("contient exactement 76 mappings", () => {
+		expect(DND5E_PROPERTY_MAPPINGS).toHaveLength(76);
 	});
 
 	it("couvre exactement les keys du catalogue (aucune orpheline)", () => {
@@ -72,7 +72,7 @@ describe("DND5E_PROPERTY_MAPPINGS", () => {
 			DND5E_PROPERTY_MAPPINGS.filter((m) => m.groupName === group).length;
 		expect(count("Caractéristiques")).toBe(6);
 		expect(count("Combat")).toBe(9);
-		expect(count("Compétences")).toBe(18);
+		expect(count("Compétences")).toBe(19);
 		expect(count("Sorts")).toBe(11);
 		expect(count("Ressources")).toBe(2);
 		expect(count("Lore")).toBe(15);

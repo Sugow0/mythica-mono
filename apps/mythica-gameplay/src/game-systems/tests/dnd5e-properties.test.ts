@@ -125,9 +125,9 @@ describe("DND5E_CHARACTER_SHEET_PROPERTIES", () => {
 	});
 
 	it("seede le nombre total attendu de propriétés", () => {
-		// 46 de base + 29 ajoutées (sauvegardes, dérivées, identité, maîtrises,
-		// monnaie, physique, lore additionnel).
-		expect(DND5E_CHARACTER_SHEET_PROPERTIES.length).toBe(46 + 29);
+		// 46 de base + 30 ajoutées (sauvegardes, dérivées, identité, maîtrises,
+		// monnaie, physique, lore additionnel, expertises).
+		expect(DND5E_CHARACTER_SHEET_PROPERTIES.length).toBe(46 + 30);
 	});
 
 	it("respecte la longueur max de clé du schéma (VarChar(100))", () => {

@@ -180,6 +180,8 @@ const BuildBody = t.Object({
 	/** PV maximum calculé côté front (cohérent avec hpMethod). */
 	hpMax: t.Optional(t.Integer({ minimum: 1 })),
 	skillProficiencies: t.Optional(t.Array(t.String())),
+	/** Compétences avec expertise (double maîtrise) ; implique la maîtrise. */
+	expertise: t.Optional(t.Array(t.String())),
 	/** Sorts choisis, rattachés à leur classe et à leur rôle (multiclassage). */
 	spells: t.Optional(
 		t.Array(
@@ -715,13 +717,15 @@ export const characterSheetsController = new Elysia({
 					)?.skillProficiencies ?? []) as string[],
 			);
 
-			// Maîtrises accordées (race + background + sous-classe) + choisies par le joueur.
+			// Maîtrises accordées (race + background + sous-classe) + choisies par le
+			// joueur. L'expertise implique la maîtrise (ex. Domaine de la Connaissance).
 			const bgData = background.data as { skillProficiencies?: string[] };
 			const skills = new Set<string>([
 				...(raceData.skillProficiencies ?? []),
 				...(bgData.skillProficiencies ?? []),
 				...subclassSkills,
 				...(body.skillProficiencies ?? []),
+				...(body.expertise ?? []),
 			]);
 
 			// Mapping clé de propriété -> propertyId pour la projection à plat.
@@ -739,6 +743,7 @@ export const characterSheetsController = new Elysia({
 				valueByKey[key] = score;
 			}
 			for (const skill of skills) valueByKey[skill] = true;
+			if (body.expertise?.length) valueByKey.expertises = body.expertise;
 			valueByKey.niveau = totalLevel;
 			if (raceData.speed != null) valueByKey.vitesse = raceData.speed;
 

@@ -260,6 +260,12 @@ const COMBAT_EXTRA: CharacterSheetPropertyData[] = [
 		type: "list",
 		description: "Attaques et sorts d'attaque (nom, bonus, dégâts/type).",
 	},
+	{
+		key: "expertises",
+		label: "Expertises",
+		type: "list",
+		description: "Compétences avec expertise (double bonus de maîtrise).",
+	},
 ];
 
 /** Valeurs d'incantation dérivées (caractéristique selon la classe). */
