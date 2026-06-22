@@ -319,6 +319,8 @@
 			"bonus_attaque_sort",
 			"attaques",
 			"expertises",
+			"ameliorations",
+			"pv_temporaires",
 			...Array.from({ length: 9 }, (_, i) => `spell_slots_${i + 1}`),
 			...coins.map((c) => c.key),
 		])
@@ -520,12 +522,18 @@
 	</button>
 {/snippet}
 
-{#snippet groupCard(groupName: string, fields: CharacterSheetField[])}
+{#snippet groupCard(
+	groupName: string,
+	fields: CharacterSheetField[],
+	wide = false
+)}
 	<Card.Root>
 		<Card.Header class="pb-2">
 			<Card.Title class="text-base">{groupName}</Card.Title>
 		</Card.Header>
-		<Card.Content class="grid grid-cols-1 gap-4 pt-0">
+		<Card.Content
+			class="grid grid-cols-1 gap-4 pt-0 {wide ? 'sm:grid-cols-2' : ''}"
+		>
 			{#each fields as field (field.propertyId)}
 				<FieldRenderer
 					property={field}
@@ -533,6 +541,33 @@
 					disabled={!editing}
 					onChange={(v) => onFieldChange(field.propertyId, v)}
 				/>
+			{/each}
+		</Card.Content>
+	</Card.Root>
+{/snippet}
+
+{#snippet bourseCard()}
+	<Card.Root>
+		<Card.Header class="pb-2">
+			<Card.Title class="text-base">Bourse</Card.Title>
+		</Card.Header>
+		<Card.Content class="flex flex-wrap gap-2 pt-0">
+			{#each coins as c (c.key)}
+				{#if has(c.key)}
+					<div class="flex w-14 flex-col items-center gap-1">
+						<input
+							type="number"
+							aria-label={c.abbr}
+							value={num(c.key)}
+							readonly={!editing}
+							oninput={(e) => setVal(c.key, Number(e.currentTarget.value))}
+							class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent w-full rounded-md border bg-background py-1 text-center text-sm outline-none focus-visible:ring-[3px]"
+						/>
+						<span class="text-muted-foreground text-[10px] font-semibold">
+							{c.abbr}
+						</span>
+					</div>
+				{/if}
 			{/each}
 		</Card.Content>
 	</Card.Root>
@@ -741,6 +776,20 @@
 					</span>
 				{/snippet}
 				{@render vital("Points de vie", hpVal)}
+			{/if}
+			{#if has("pv_temporaires")}
+				{#snippet tempVal()}
+					<input
+						type="number"
+						aria-label="PV temporaires"
+						value={num("pv_temporaires")}
+						readonly={!editing}
+						oninput={(e) =>
+							setVal("pv_temporaires", Number(e.currentTarget.value))}
+						class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-center outline-none focus-visible:ring-[3px]"
+					/>
+				{/snippet}
+				{@render vital("PV temporaires", tempVal)}
 			{/if}
 			{#snippet initVal()}{formatModifier(initiative)}{/snippet}
 			{@render vital("Initiative", initVal)}
@@ -1084,41 +1133,21 @@
 					</Card.Content>
 				</Card.Root>
 			{/if}
-
-			<Card.Root>
-				<Card.Header class="pb-2">
-					<Card.Title class="text-base">Bourse</Card.Title>
-				</Card.Header>
-				<Card.Content class="flex flex-wrap gap-2 pt-0">
-					{#each coins as c (c.key)}
-						{#if has(c.key)}
-							<div class="flex w-14 flex-col items-center gap-1">
-								<input
-									type="number"
-									aria-label={c.abbr}
-									value={num(c.key)}
-									readonly={!editing}
-									oninput={(e) => setVal(c.key, Number(e.currentTarget.value))}
-									class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent w-full rounded-md border bg-background py-1 text-center text-sm outline-none focus-visible:ring-[3px]"
-								/>
-								<span class="text-muted-foreground text-[10px] font-semibold">
-									{c.abbr}
-								</span>
-							</div>
-						{/if}
-					{/each}
-				</Card.Content>
-			</Card.Root>
 		</div>
 
-		<!-- Sections narratives (identité, maîtrises, lore…) en grille équilibrée -->
-		{#if asideGroups.length > 0 || detailGroups.length > 0}
-			<div class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{#each asideGroups as [groupName, fields] (groupName)}
-					{@render groupCard(groupName, fields)}
-				{/each}
+		<!-- Cartes courtes : bourse, identité, maîtrises -->
+		<div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{@render bourseCard()}
+			{#each asideGroups as [groupName, fields] (groupName)}
+				{@render groupCard(groupName, fields)}
+			{/each}
+		</div>
+
+		<!-- Lore : bloc dédié (champs narratifs) -->
+		{#if detailGroups.length > 0}
+			<div class="mt-4 grid gap-4">
 				{#each detailGroups as [groupName, fields] (groupName)}
-					{@render groupCard(groupName, fields)}
+					{@render groupCard(groupName, fields, true)}
 				{/each}
 			</div>
 		{/if}
