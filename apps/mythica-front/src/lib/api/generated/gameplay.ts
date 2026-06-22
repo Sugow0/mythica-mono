@@ -2722,6 +2722,8 @@ export interface operations {
                     abilityScores: {
                         [key: string]: string | number;
                     };
+                    hpMethod?: "average" | "roll" | "manual";
+                    hpMax?: string | number;
                     skillProficiencies?: string[];
                     spells?: {
                         slug: string;
@@ -2753,6 +2755,8 @@ export interface operations {
                     abilityScores: {
                         [key: string]: string | number;
                     };
+                    hpMethod?: "average" | "roll" | "manual";
+                    hpMax?: string | number;
                     skillProficiencies?: string[];
                     spells?: {
                         slug: string;
@@ -2784,6 +2788,8 @@ export interface operations {
                     abilityScores: {
                         [key: string]: string | number;
                     };
+                    hpMethod?: "average" | "roll" | "manual";
+                    hpMax?: string | number;
                     skillProficiencies?: string[];
                     spells?: {
                         slug: string;
