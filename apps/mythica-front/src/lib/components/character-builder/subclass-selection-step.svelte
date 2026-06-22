@@ -21,11 +21,10 @@
 		};
 	}
 
-	/** Aptitudes obtenues au niveau actuel de la classe. */
-	function features(item: ContentItem, classSlug: string) {
-		const lvl = classLevel(classSlug);
+	/** Toutes les aptitudes de la sous-classe (parcours complet), par niveau. */
+	function allFeatures(item: ContentItem) {
 		return (data(item).features ?? [])
-			.filter((f) => f.level <= lvl)
+			.slice()
 			.sort((a, b) => a.level - b.level);
 	}
 </script>
@@ -66,18 +65,23 @@
 					(s) => s.slug === builder.subclassSelections[group.classSlug]
 				)}
 				{#if chosen}
+					{@const lvl = classLevel(group.classSlug)}
 					<Card.Root>
-						<Card.Header>
+						<Card.Header class="pb-2">
 							<Card.Title class="font-display text-lg">{chosen.name}</Card.Title
 							>
+							<p class="text-muted-foreground text-xs">
+								Parcours complet — les aptitudes grisées s'obtiennent plus tard.
+							</p>
 						</Card.Header>
 						<Card.Content>
 							<ul class="space-y-2">
-								{#each features(chosen, group.classSlug) as f (f.name)}
-									<li class="text-sm">
+								{#each allFeatures(chosen) as f (f.name)}
+									{@const future = f.level > lvl}
+									<li class="text-sm {future ? 'opacity-50' : ''}">
 										<span class="font-medium">{f.name}</span>
 										<span class="text-muted-foreground text-xs">
-											(niv {f.level})</span
+											(niv {f.level}{future ? " — à venir" : ""})</span
 										>
 										<span class="text-muted-foreground">
 											— {f.description}</span
