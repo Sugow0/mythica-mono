@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	abilityImprovementSlots,
 	abilityModifier,
 	averageHitDie,
 	computeHitDice,
@@ -141,6 +142,24 @@ describe("preparedSpellsCount", () => {
 	test("demi-préparant : max(1, mod + floor(niveau/2))", () => {
 		expect(preparedSpellsCount(3, 5, true)).toBe(5); // paladin niv 5 (+2 eff) + 3
 		expect(preparedSpellsCount(0, 2, true)).toBe(1); // niv 2 → eff 1
+	});
+});
+
+describe("abilityImprovementSlots", () => {
+	const standard = [4, 8, 12, 16, 19];
+	const fighter = [4, 6, 8, 12, 14, 16, 19];
+	test("compte les paliers atteints", () => {
+		expect(abilityImprovementSlots(standard, 1)).toBe(0);
+		expect(abilityImprovementSlots(standard, 4)).toBe(1);
+		expect(abilityImprovementSlots(standard, 12)).toBe(3);
+		expect(abilityImprovementSlots(standard, 20)).toBe(5);
+	});
+	test("paliers supplémentaires du guerrier", () => {
+		expect(abilityImprovementSlots(fighter, 6)).toBe(2);
+		expect(abilityImprovementSlots(fighter, 14)).toBe(5);
+	});
+	test("aucun palier → 0", () => {
+		expect(abilityImprovementSlots(undefined, 20)).toBe(0);
 	});
 });
 
