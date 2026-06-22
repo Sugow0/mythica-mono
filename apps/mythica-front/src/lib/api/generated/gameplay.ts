@@ -2726,6 +2726,10 @@ export interface operations {
                     hpMax?: string | number;
                     skillProficiencies?: string[];
                     expertise?: string[];
+                    asiAllocations?: {
+                        [key: string]: string | number;
+                    }[];
+                    feats?: string[];
                     spells?: {
                         slug: string;
                         classSlug: string;
@@ -2760,6 +2764,10 @@ export interface operations {
                     hpMax?: string | number;
                     skillProficiencies?: string[];
                     expertise?: string[];
+                    asiAllocations?: {
+                        [key: string]: string | number;
+                    }[];
+                    feats?: string[];
                     spells?: {
                         slug: string;
                         classSlug: string;
@@ -2794,6 +2802,10 @@ export interface operations {
                     hpMax?: string | number;
                     skillProficiencies?: string[];
                     expertise?: string[];
+                    asiAllocations?: {
+                        [key: string]: string | number;
+                    }[];
+                    feats?: string[];
                     spells?: {
                         slug: string;
                         classSlug: string;
