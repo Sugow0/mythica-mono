@@ -172,6 +172,8 @@ export type FeatData = {
 	description: string;
 	/** Bonus de caractéristique fixe (demi-don, ex. Vif +1 CON). */
 	abilityBonuses?: AbilityBonusMap;
+	/** Maîtrises de jets de sauvegarde accordées (ex. Vif → Constitution). */
+	savingThrows?: string[];
 	/** Prérequis éventuel (texte). */
 	prerequisite?: string;
 };

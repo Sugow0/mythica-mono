@@ -1,13 +1,4 @@
-import {
-	applyAbilityBonuses,
-	validateAllocation,
-} from "@mythica/character-engine";
-import {
-	abilityModifier,
-	computeHitDice,
-	computeHitPoints,
-	type HitDieClass,
-} from "@mythica/character-engine/dnd5e";
+import { buildCharacter } from "@mythica/character-engine/dnd5e";
 import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
 import { getPresignedAvatarUrl } from "../lib/avatar-storage";
@@ -622,31 +613,21 @@ export const characterSheetsController = new Elysia({
 				return { success: false as const, error: "Accès refusé" };
 			}
 
-			// Contenu du système indexé par (collectionKey, slug).
+			// Contenu du système, indexé pour la résolution (collection, slug).
 			const content = await prisma.systemContent.findMany({
 				where: { gameSystemId: sheet.gameSystemId },
 			});
 			const byKeySlug = new Map(
 				content.map((c) => [`${c.collectionKey}:${c.slug}`, c]),
 			);
-			const getContent = (collectionKey: string, slug: string) =>
-				byKeySlug.get(`${collectionKey}:${slug}`);
+			const getContent = (collectionKey: string, slug: string) => {
+				const c = byKeySlug.get(`${collectionKey}:${slug}`);
+				return c
+					? { id: c.id, name: c.name, data: c.data as Record<string, unknown> }
+					: undefined;
+			};
 
-			const race = getContent("race", body.raceSlug);
-			const background = getContent("background", body.backgroundSlug);
-			const classRefs = body.classes.map((c) => ({
-				input: c,
-				content: getContent("classe", c.slug),
-			}));
-			if (!race || !background || classRefs.some((c) => !c.content)) {
-				set.status = 400;
-				return {
-					success: false as const,
-					error: "Référence de contenu invalide (race, classe ou background)",
-				};
-			}
-
-			// Validation de la répartition selon la méthode (config data-driven).
+			// Config de répartition (validation des caractéristiques par le moteur).
 			const allocStep = await prisma.gameSystemCreationStep.findFirst({
 				where: { gameSystemId: sheet.gameSystemId, kind: "pointAllocation" },
 			});
@@ -657,109 +638,26 @@ export const characterSheetsController = new Elysia({
 				maxScore?: number;
 				standardArray?: number[];
 			};
-			const allocResult = validateAllocation(
-				body.abilityMethod,
-				body.abilityScores,
+
+			// Toute la logique de règles D&D vit dans le moteur ; l'API ne fait que
+			// résoudre le contenu, déléguer, puis persister.
+			const result = buildCharacter(
 				{
-					pointBuy: alloc.pointBuyCostTable
-						? {
-								pool: alloc.pointBuyPool ?? 0,
-								costTable: alloc.pointBuyCostTable,
-								min: alloc.minScore ?? 0,
-								max: alloc.maxScore ?? 99,
-							}
-						: undefined,
-					standardArray: alloc.standardArray,
+					...body,
+					allocation: {
+						pool: alloc.pointBuyPool,
+						costTable: alloc.pointBuyCostTable,
+						min: alloc.minScore,
+						max: alloc.maxScore,
+						standardArray: alloc.standardArray,
+					},
 				},
+				getContent,
 			);
-			if (!allocResult.valid) {
+			if (result.error) {
 				set.status = 400;
-				return {
-					success: false as const,
-					error: `Répartition invalide : ${allocResult.errors.join(" ; ")}`,
-				};
+				return { success: false as const, error: result.error };
 			}
-
-			// Scores finaux = base + bonus raciaux (données de la race).
-			const raceData = race.data as {
-				abilityBonuses?: Record<string, number>;
-				skillProficiencies?: string[];
-				speed?: number;
-			};
-			const finalScores = applyAbilityBonuses(
-				body.abilityScores,
-				raceData.abilityBonuses ?? {},
-			);
-
-			// Prérequis de multiclassage (données de classe) si plusieurs classes.
-			if (body.classes.length > 1) {
-				for (const ref of classRefs) {
-					const data = ref.content?.data as {
-						multiclassPrereq?: Record<string, number>;
-					};
-					const prereq = data?.multiclassPrereq ?? {};
-					const ok = Object.entries(prereq).every(
-						([key, min]) => (finalScores[key] ?? 0) >= Number(min),
-					);
-					if (!ok) {
-						set.status = 400;
-						return {
-							success: false as const,
-							error: `Prérequis de multiclassage non respectés pour ${ref.content?.name}`,
-						};
-					}
-				}
-			}
-
-			const totalLevel = body.classes.reduce((sum, c) => sum + c.level, 0);
-
-			// Améliorations de caractéristiques (ASI) + bonus de demi-dons, plafonnés
-			// à 20. Appliqués après la vérification des prérequis (qui portent sur le
-			// score de base + bonus raciaux).
-			const improvementBonuses: Record<string, number> = {};
-			const addBonus = (key: string, v: number) => {
-				improvementBonuses[key] = (improvementBonuses[key] ?? 0) + v;
-			};
-			for (const alloc of body.asiAllocations ?? []) {
-				for (const [key, v] of Object.entries(alloc)) addBonus(key, Number(v));
-			}
-			for (const slug of body.feats ?? []) {
-				const ab = (
-					getContent("don", slug)?.data as {
-						abilityBonuses?: Record<string, number>;
-					}
-				)?.abilityBonuses;
-				for (const [key, v] of Object.entries(ab ?? {}))
-					addBonus(key, Number(v));
-			}
-			const improvedScores: Record<string, number> = { ...finalScores };
-			for (const [key, v] of Object.entries(improvementBonuses)) {
-				improvedScores[key] = Math.min(
-					20,
-					(Number(improvedScores[key]) || 0) + v,
-				);
-			}
-
-			// Maîtrises fixes accordées par les sous-classes choisies.
-			const subclassSkills = (body.subclasses ?? []).flatMap(
-				(sc) =>
-					((
-						getContent("sous-classe", sc.slug)?.data as {
-							skillProficiencies?: string[];
-						}
-					)?.skillProficiencies ?? []) as string[],
-			);
-
-			// Maîtrises accordées (race + background + sous-classe) + choisies par le
-			// joueur. L'expertise implique la maîtrise (ex. Domaine de la Connaissance).
-			const bgData = background.data as { skillProficiencies?: string[] };
-			const skills = new Set<string>([
-				...(raceData.skillProficiencies ?? []),
-				...(bgData.skillProficiencies ?? []),
-				...subclassSkills,
-				...(body.skillProficiencies ?? []),
-				...(body.expertise ?? []),
-			]);
 
 			// Mapping clé de propriété -> propertyId pour la projection à plat.
 			const mappings = await prisma.gameSystemProperty.findMany({
@@ -769,193 +667,21 @@ export const characterSheetsController = new Elysia({
 			const propIdByKey = new Map(
 				mappings.map((m) => [m.property.key, m.propertyId]),
 			);
-
-			// Valeurs directes (les dérivées restent calculées côté client).
-			const valueByKey: Record<string, unknown> = {};
-			for (const [key, score] of Object.entries(improvedScores)) {
-				valueByKey[key] = score;
-			}
-			for (const skill of skills) valueByKey[skill] = true;
-			if (body.expertise?.length) valueByKey.expertises = body.expertise;
-			if (body.asiAllocations?.length) {
-				valueByKey.ameliorations = body.asiAllocations;
-			}
-			valueByKey.niveau = totalLevel;
-			if (raceData.speed != null) valueByKey.vitesse = raceData.speed;
-
-			// Points de vie & dés de vie (data-driven : dé de vie issu de la classe).
-			const hitDieClasses: HitDieClass[] = classRefs.map((ref) => ({
-				hitDie: Number((ref.content?.data as { hitDie?: number })?.hitDie) || 8,
-				level: ref.input.level,
-				isPrimary: ref.input.isPrimary ?? false,
-			}));
-			const conMod = abilityModifier(Number(improvedScores.constitution) || 10);
-			// PV : on fait confiance au total calculé au wizard (méthode choisie),
-			// sinon repli sur la moyenne fixe.
-			const maxHp =
-				body.hpMax ??
-				computeHitPoints({
-					classes: hitDieClasses,
-					conMod,
-					method: "average",
-				}).maxHp;
-			valueByKey.hp = { current: maxHp, max: maxHp };
-			valueByKey.des_de_vie = computeHitDice(hitDieClasses);
-			for (const [key, text] of Object.entries(body.lore ?? {})) {
-				valueByKey[key] = text;
-			}
-
-			// Jets de sauvegarde : maîtrises de la classe principale (le
-			// multiclassage n'accorde pas de nouvelles maîtrises de sauvegarde).
-			const primaryRef =
-				classRefs.find((r) => r.input.isPrimary) ?? classRefs[0];
-			const primaryData = (primaryRef?.content?.data ?? {}) as {
-				savingThrows?: string[];
-				toolProficiencies?: string[];
-			};
-			for (const ab of primaryData.savingThrows ?? []) {
-				valueByKey[`sauvegarde_${ab}`] = true;
-			}
-
-			// Or de départ → pièces d'or.
-			if (body.gold != null) valueByKey.pieces_or = body.gold;
-
-			// Autres maîtrises & langues (race + classe principale + historique).
-			const raceExtra = race.data as {
-				languages?: string[];
-				traits?: { name?: string }[];
-			};
-			const bgExtra = background.data as {
-				toolProficiencies?: string[];
-				feature?: { name?: string };
-			};
-			const langs = raceExtra.languages ?? [];
-			const tools = [
-				...(primaryData.toolProficiencies ?? []),
-				...(bgExtra.toolProficiencies ?? []),
-			];
-			const profLines: string[] = [];
-			if (langs.length) profLines.push(`Langues : ${langs.join(", ")}`);
-			if (tools.length) profLines.push(`Outils : ${tools.join(", ")}`);
-			if (profLines.length) {
-				valueByKey.maitrises_langues = profLines.join("\n");
-			}
-
-			// Capacités & traits (traits raciaux + aptitude d'historique +
-			// aptitudes de sous-classe obtenues au niveau actuel).
-			const feats = [
-				...(raceExtra.traits ?? []).map((t) => t.name).filter(Boolean),
-				...(bgExtra.feature?.name ? [bgExtra.feature.name] : []),
-			];
-			for (const sc of body.subclasses ?? []) {
-				const item = getContent("sous-classe", sc.slug);
-				if (!item) continue;
-				const lvl =
-					body.classes.find((c) => c.slug === sc.classSlug)?.level ?? 0;
-				const data = item.data as {
-					features?: { level: number; name: string }[];
-				};
-				for (const f of data.features ?? []) {
-					if (f.level <= lvl) feats.push(`${item.name} : ${f.name}`);
-				}
-			}
-			// Dons choisis (collection "don").
-			for (const slug of body.feats ?? []) {
-				const item = getContent("don", slug);
-				if (item) feats.push(`Don : ${item.name}`);
-			}
-			if (feats.length) valueByKey.capacites_traits = feats.join(", ");
-
-			const valueEntries = Object.entries(valueByKey).filter(([key]) =>
+			const valueEntries = Object.entries(result.values).filter(([key]) =>
 				propIdByKey.has(key),
 			);
-
 			await prisma.$transaction(async (tx) => {
 				// Build idempotent : on repart des sélections à zéro.
 				await tx.characterSheetSelection.deleteMany({
 					where: { characterSheetId: sheet.id },
 				});
 
-				const selections: {
-					id: string;
-					characterSheetId: string;
-					collectionKey: string;
-					contentId: string;
-					level?: number;
-					isPrimary?: boolean;
-					qty?: number;
-					extra?: Record<string, unknown>;
-				}[] = [
-					{
-						id: newId(),
-						characterSheetId: sheet.id,
-						collectionKey: "race",
-						contentId: race.id,
-					},
-					{
-						id: newId(),
-						characterSheetId: sheet.id,
-						collectionKey: "background",
-						contentId: background.id,
-					},
-					...classRefs.map((ref) => ({
-						id: newId(),
-						characterSheetId: sheet.id,
-						collectionKey: "classe",
-						// biome-ignore lint/style/noNonNullAssertion: présence garantie par le garde ci-dessus.
-						contentId: ref.content!.id,
-						level: ref.input.level,
-						isPrimary: ref.input.isPrimary ?? false,
-					})),
-				];
-				for (const s of body.spells ?? []) {
-					const sp = getContent("sort", s.slug);
-					if (sp) {
-						selections.push({
-							id: newId(),
-							characterSheetId: sheet.id,
-							collectionKey: "sort",
-							contentId: sp.id,
-							// classe d'origine + rôle (cantrip / sort / grimoire) en multiclasse.
-							extra: { classSlug: s.classSlug, role: s.role },
-						});
-					}
-				}
-				for (const sc of body.subclasses ?? []) {
-					const item = getContent("sous-classe", sc.slug);
-					if (item) {
-						selections.push({
-							id: newId(),
-							characterSheetId: sheet.id,
-							collectionKey: "sous-classe",
-							contentId: item.id,
-							extra: { classSlug: sc.classSlug },
-						});
-					}
-				}
-				for (const item of body.inventory ?? []) {
-					const eq = getContent("equipement", item.slug);
-					if (eq) {
-						selections.push({
-							id: newId(),
-							characterSheetId: sheet.id,
-							collectionKey: "equipement",
-							contentId: eq.id,
-							qty: item.qty,
-						});
-					}
-				}
-				for (const slug of body.feats ?? []) {
-					const item = getContent("don", slug);
-					if (item) {
-						selections.push({
-							id: newId(),
-							characterSheetId: sheet.id,
-							collectionKey: "don",
-							contentId: item.id,
-						});
-					}
-				}
+				// Sélections projetées par le moteur (on ajoute id + fiche).
+				const selections = result.selections.map((s) => ({
+					id: newId(),
+					characterSheetId: sheet.id,
+					...s,
+				}));
 				await tx.characterSheetSelection.createMany({ data: selections });
 
 				await tx.characterSheet.update({

@@ -82,6 +82,7 @@ export const DND5E_FEATS: SystemContentSeed[] = [
 			description:
 				"+1 en Constitution et maîtrise des jets de sauvegarde de Constitution.",
 			abilityBonuses: { constitution: 1 },
+			savingThrows: ["constitution"],
 		},
 		6,
 	),
