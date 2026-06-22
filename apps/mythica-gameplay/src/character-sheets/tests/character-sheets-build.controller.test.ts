@@ -138,6 +138,7 @@ const PROP_KEYS = [
 	"des_de_vie",
 	"perception",
 	"discretion",
+	"expertises",
 	"arcanes",
 	"histoire",
 	"apparence",
@@ -350,5 +351,26 @@ describe("POST /character-sheets/:id/build", () => {
 			);
 		}
 		expect(valByProp.get("pid-discretion")).toBe(true);
+	});
+
+	it("écrit les expertises et implique la maîtrise", async () => {
+		const r = await build(
+			{ ...singleClassBody, expertise: ["discretion"] },
+			USER,
+		);
+		expect(r.status).toBe(200);
+		const valByProp = new Map<string, unknown>();
+		for (const c of p.characterSheetValue.upsert.mock.calls) {
+			const a = c[0] as {
+				where: { characterSheetId_propertyId: { propertyId: string } };
+				create: { value: unknown };
+			};
+			valByProp.set(
+				a.where.characterSheetId_propertyId.propertyId,
+				a.create.value,
+			);
+		}
+		expect(valByProp.get("pid-expertises")).toEqual(["discretion"]);
+		expect(valByProp.get("pid-discretion")).toBe(true); // expertise ⇒ maîtrise
 	});
 });

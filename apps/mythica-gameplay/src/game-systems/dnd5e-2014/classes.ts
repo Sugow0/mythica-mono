@@ -93,6 +93,10 @@ export const DND5E_CLASSES: SystemContentSeed[] = [
 			],
 			toolProficiencies: ["trois instruments de musique au choix"],
 			skillChoices: { count: 3, from: ALL_SKILLS },
+			expertise: [
+				{ level: 3, count: 2 },
+				{ level: 10, count: 2 },
+			],
 			casterType: "full",
 			spellcastingAbility: "charisme",
 			multiclassPrereq: { charisme: 13 },
@@ -395,6 +399,10 @@ export const DND5E_CLASSES: SystemContentSeed[] = [
 					"discretion",
 				],
 			},
+			expertise: [
+				{ level: 1, count: 2 },
+				{ level: 6, count: 2 },
+			],
 			casterType: "none",
 			multiclassPrereq: { dexterite: 13 },
 			startingEquipment: ["rapiere", "cuir", "outils-de-voleur", "dague"],

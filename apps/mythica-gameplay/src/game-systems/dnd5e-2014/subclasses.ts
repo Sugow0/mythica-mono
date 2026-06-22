@@ -195,6 +195,10 @@ export const DND5E_SUBCLASSES: SystemContentSeed[] = [
 		{
 			parentClass: "clerc",
 			acquisitionLevel: 1,
+			expertise: {
+				count: 2,
+				from: ["arcanes", "histoire", "nature", "religion"],
+			},
 			features: [
 				{
 					level: 1,

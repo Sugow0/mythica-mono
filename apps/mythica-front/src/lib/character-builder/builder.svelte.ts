@@ -20,6 +20,7 @@ import {
 	abilityModifier,
 	computeHitPoints,
 	computeSpellSlots,
+	expertiseSlots,
 	maxSpellSlotLevel,
 	pactMagic,
 	preparedSpellsForKind,
@@ -111,6 +112,8 @@ export class CharacterBuilder {
 	/** Valeurs des dés de vie lancées (méthode `roll`), hors tout premier niveau. */
 	hpRolls = $state<number[]>([]);
 	skillProficiencies = $state<string[]>([]);
+	/** Compétences choisies en expertise (double maîtrise). */
+	expertises = $state<string[]>([]);
 	/** Sélection de sorts par classe : cantrips, sorts (connus/préparés), grimoire. */
 	spellSelections = $state<
 		Record<
@@ -449,6 +452,59 @@ export class CharacterBuilder {
 	/** Au moins une sous-classe à choisir au niveau actuel ? */
 	hasSubclassChoice = $derived(this.subclassChoices.length > 0);
 
+	/** Sous-classes effectivement choisies (slugs). */
+	private chosenSubclasses = $derived(
+		Object.values(this.subclassSelections).filter(Boolean)
+	);
+
+	/** Nombre total d'expertises à choisir (classes + sous-classes). */
+	expertiseCount = $derived.by(() => {
+		let n = 0;
+		for (const c of this.classes) {
+			const item = (this.content.classe ?? []).find((x) => x.slug === c.slug);
+			n += expertiseSlots(
+				contentData(item).expertise as
+					| { level: number; count: number }[]
+					| undefined,
+				c.level
+			);
+		}
+		for (const slug of this.chosenSubclasses) {
+			const item = (this.content["sous-classe"] ?? []).find(
+				(x) => x.slug === slug
+			);
+			const exp = contentData(item).expertise as
+				| { count: number; from: string[] }
+				| undefined;
+			n += exp?.count ?? 0;
+		}
+		return n;
+	});
+
+	/** Compétences éligibles à l'expertise (maîtrisées + listes de sous-classe). */
+	expertiseOptions = $derived.by<string[]>(() => {
+		const opts: string[] = [...this.skillProficiencies];
+		opts.push(
+			...((contentData(this.raceContent).skillProficiencies ?? []) as string[]),
+			...((contentData(this.backgroundContent).skillProficiencies ??
+				[]) as string[])
+		);
+		for (const slug of this.chosenSubclasses) {
+			const item = (this.content["sous-classe"] ?? []).find(
+				(x) => x.slug === slug
+			);
+			opts.push(
+				...((contentData(item).skillProficiencies ?? []) as string[]),
+				...(((contentData(item).expertise as { from?: string[] } | undefined)
+					?.from ?? []) as string[])
+			);
+		}
+		return opts.filter((s, i) => opts.indexOf(s) === i);
+	});
+
+	/** A-t-on des expertises à choisir ? */
+	hasExpertise = $derived(this.expertiseCount > 0);
+
 	/** Évalue un prédicat d'étape conditionnelle. */
 	private conditionMet(condition: string): boolean {
 		if (condition === "has_caster_class") return this.hasSpellsToChoose;
@@ -545,6 +601,11 @@ export class CharacterBuilder {
 				([k, v]) => v === true && fromList.includes(k) && !granted.includes(k)
 			)
 			.map(([k]) => k);
+
+		// Expertises déjà choisies (liste de clés de compétences).
+		if (Array.isArray(valueByKey.expertises)) {
+			this.expertises = valueByKey.expertises as string[];
+		}
 
 		// Lore = valeurs des champs des étapes loreForm.
 		const lore: Record<string, string> = {};
@@ -723,6 +784,7 @@ export class CharacterBuilder {
 				hpMethod: this.hpMethod,
 				hpMax: this.maxHp,
 				skillProficiencies: this.skillProficiencies,
+				expertise: this.expertises,
 				spells,
 				inventory,
 				gold,

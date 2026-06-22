@@ -117,6 +117,33 @@
 			builder.skillProficiencies = [...builder.skillProficiencies, skill];
 		}
 	}
+
+	// — Expertise (double maîtrise) —
+	const expertiseRemaining = $derived(
+		builder.expertiseCount - builder.expertises.length
+	);
+
+	// Purge l'expertise hors options (ex. si une maîtrise est dé-sélectionnée).
+	$effect(() => {
+		const trimmed = builder.expertises
+			.filter((s) => builder.expertiseOptions.includes(s))
+			.slice(0, builder.expertiseCount);
+		if (
+			trimmed.length !== builder.expertises.length ||
+			trimmed.some((s, i) => s !== builder.expertises[i])
+		) {
+			builder.expertises = trimmed;
+		}
+	});
+
+	function toggleExpertise(skill: string) {
+		const has = builder.expertises.includes(skill);
+		if (has) {
+			builder.expertises = builder.expertises.filter((s) => s !== skill);
+		} else if (builder.expertises.length < builder.expertiseCount) {
+			builder.expertises = [...builder.expertises, skill];
+		}
+	}
 </script>
 
 <div class="mx-auto max-w-2xl space-y-5">
@@ -159,4 +186,42 @@
 			</label>
 		{/each}
 	</div>
+
+	{#if builder.expertiseCount > 0}
+		<div class="space-y-3 border-t pt-5">
+			<div class="flex items-center justify-between">
+				<p class="text-sm text-muted-foreground">
+					Choisissez <span class="text-foreground font-medium"
+						>{builder.expertiseCount}</span
+					>
+					expertise{builder.expertiseCount > 1 ? "s" : ""} (double maîtrise).
+				</p>
+				<Badge
+					class={expertiseRemaining === 0
+						? "border-transparent bg-amber-500/15 text-amber-700"
+						: "border-amber-500 bg-amber-500/10 text-amber-700"}
+				>
+					{expertiseRemaining} restante{expertiseRemaining > 1 ? "s" : ""}
+				</Badge>
+			</div>
+			<div class="grid gap-2 sm:grid-cols-2">
+				{#each builder.expertiseOptions as skill (skill)}
+					{@const checked = builder.expertises.includes(skill)}
+					{@const disabled = !checked && expertiseRemaining === 0}
+					<label
+						class="flex items-center gap-3 rounded-lg border p-3 text-sm transition-colors
+							{checked ? 'border-amber-500 bg-amber-500/5' : 'border-border'}
+							{disabled ? 'opacity-50' : 'cursor-pointer hover:bg-muted/40'}"
+					>
+						<Checkbox
+							{checked}
+							{disabled}
+							onCheckedChange={() => toggleExpertise(skill)}
+						/>
+						{SKILL_LABELS[skill] ?? skill}
+					</label>
+				{/each}
+			</div>
+		</div>
+	{/if}
 </div>

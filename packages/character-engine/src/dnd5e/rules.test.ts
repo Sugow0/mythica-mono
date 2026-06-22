@@ -5,6 +5,7 @@ import {
 	computeHitDice,
 	computeHitPoints,
 	computeSpellSlots,
+	expertiseSlots,
 	maxSpellSlotLevel,
 	meetsMulticlassPrereq,
 	multiclassCasterLevel,
@@ -140,6 +141,23 @@ describe("preparedSpellsCount", () => {
 	test("demi-préparant : max(1, mod + floor(niveau/2))", () => {
 		expect(preparedSpellsCount(3, 5, true)).toBe(5); // paladin niv 5 (+2 eff) + 3
 		expect(preparedSpellsCount(0, 2, true)).toBe(1); // niv 2 → eff 1
+	});
+});
+
+describe("expertiseSlots", () => {
+	const rogue = [
+		{ level: 1, count: 2 },
+		{ level: 6, count: 2 },
+	];
+	test("somme les tranches atteintes", () => {
+		expect(expertiseSlots(rogue, 1)).toBe(2);
+		expect(expertiseSlots(rogue, 5)).toBe(2);
+		expect(expertiseSlots(rogue, 6)).toBe(4);
+		expect(expertiseSlots(rogue, 20)).toBe(4);
+	});
+	test("aucune tranche → 0", () => {
+		expect(expertiseSlots(undefined, 10)).toBe(0);
+		expect(expertiseSlots([], 10)).toBe(0);
 	});
 });
 

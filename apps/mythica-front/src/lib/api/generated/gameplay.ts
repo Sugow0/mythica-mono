@@ -2725,6 +2725,7 @@ export interface operations {
                     hpMethod?: "average" | "roll" | "manual";
                     hpMax?: string | number;
                     skillProficiencies?: string[];
+                    expertise?: string[];
                     spells?: {
                         slug: string;
                         classSlug: string;
@@ -2758,6 +2759,7 @@ export interface operations {
                     hpMethod?: "average" | "roll" | "manual";
                     hpMax?: string | number;
                     skillProficiencies?: string[];
+                    expertise?: string[];
                     spells?: {
                         slug: string;
                         classSlug: string;
@@ -2791,6 +2793,7 @@ export interface operations {
                     hpMethod?: "average" | "roll" | "manual";
                     hpMax?: string | number;
                     skillProficiencies?: string[];
+                    expertise?: string[];
                     spells?: {
                         slug: string;
                         classSlug: string;

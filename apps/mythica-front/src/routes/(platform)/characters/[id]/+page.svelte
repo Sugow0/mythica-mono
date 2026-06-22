@@ -131,6 +131,13 @@
 		10 + skillBonus(num("sagesse"), boolv("perception"), prof)
 	);
 
+	// — Expertise (double maîtrise) : liste de clés de compétences —
+	const expertSkills = $derived.by<string[]>(() => {
+		const raw = val("expertises");
+		return Array.isArray(raw) ? (raw as string[]) : [];
+	});
+	const isExpert = (key: string) => expertSkills.includes(key);
+
 	// — Dés de vie (groupés par taille, multiclasse compris) —
 	const hitDice = $derived(hitDiceEntries(val("des_de_vie")));
 	function setHitDie(size: number, part: "current" | "max", raw: string) {
@@ -311,6 +318,7 @@
 			"dd_sorts",
 			"bonus_attaque_sort",
 			"attaques",
+			"expertises",
 			...Array.from({ length: 9 }, (_, i) => `spell_slots_${i + 1}`),
 			...coins.map((c) => c.key),
 		])
@@ -480,7 +488,8 @@
 	total: number,
 	active: boolean,
 	onToggle: () => void,
-	sub?: string
+	sub?: string,
+	expert = false
 )}
 	<button
 		type="button"
@@ -491,9 +500,12 @@
 			: 'cursor-default'}"
 	>
 		<span
-			class="h-3 w-3 shrink-0 rounded-full border-2 transition-colors {active
-				? 'border-primary bg-primary'
-				: 'border-muted-foreground/40'}"
+			title={expert ? "Expertise (double maîtrise)" : undefined}
+			class="h-3 w-3 shrink-0 rounded-full border-2 transition-colors {expert
+				? 'border-amber-500 bg-amber-500'
+				: active
+					? 'border-primary bg-primary'
+					: 'border-muted-foreground/40'}"
 			aria-hidden="true"
 		></span>
 		<span
@@ -941,10 +953,16 @@
 					{#each DND5E_SKILLS as sk (sk.key)}
 						{@render profRow(
 							sk.label,
-							skillBonus(num(sk.ability), boolv(sk.key), prof),
+							skillBonus(
+								num(sk.ability),
+								boolv(sk.key),
+								prof,
+								isExpert(sk.key)
+							),
 							boolv(sk.key),
 							() => setVal(sk.key, !boolv(sk.key)),
-							DND5E_ABILITIES.find((a) => a.key === sk.ability)?.abbr
+							DND5E_ABILITIES.find((a) => a.key === sk.ability)?.abbr,
+							isExpert(sk.key)
 						)}
 					{/each}
 				</Card.Content>

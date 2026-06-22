@@ -109,6 +109,8 @@ export type ClassData = {
 	toolProficiencies: string[];
 	/** Choix de compétences de classe à la création. */
 	skillChoices: { count: number; from: string[] };
+	/** Tranches d'expertise (double maîtrise) accordées par niveau (roublard, barde). */
+	expertise?: { level: number; count: number }[];
 	casterType: CasterType;
 	spellcastingAbility?: string;
 	/** Sélection de sorts (cantrips/connus/préparés) ; absent si non-lanceur. */
@@ -153,6 +155,8 @@ export type SubclassData = {
 	skillProficiencies?: string[];
 	/** Choix de compétences supplémentaires accordés (ex. Collège du Savoir). */
 	skillChoices?: { count: number; from: string[] };
+	/** Expertise accordée par la sous-classe (ex. Domaine de la Connaissance). */
+	expertise?: { count: number; from: string[] };
 	/** Sorts toujours préparés (domaines, serments...) : slugs. */
 	alwaysPrepared?: string[];
 	/** Lanceur conféré par la sous-classe (tiers-lanceur : chevalier occulte...). */
