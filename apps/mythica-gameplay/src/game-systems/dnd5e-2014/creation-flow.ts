@@ -86,8 +86,18 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 		},
 	},
 	{
-		stepKey: "background",
+		// Choisie juste après le niveau : certaines sous-classes influent sur les
+		// maîtrises (Collège du Savoir : 3 compétences au choix), donc avant l'étape
+		// « maîtrises ».
+		stepKey: "sous-classe",
 		order: 3,
+		kind: "selection",
+		config: { collectionKey: "sous-classe", min: 1, max: 1, showGrants: true },
+		condition: "has_subclass_choice",
+	},
+	{
+		stepKey: "background",
+		order: 4,
 		kind: "selection",
 		config: {
 			collectionKey: "background",
@@ -99,7 +109,7 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 	},
 	{
 		stepKey: "caracteristiques",
-		order: 4,
+		order: 5,
 		kind: "pointAllocation",
 		config: {
 			attributes: [
@@ -129,7 +139,7 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 	},
 	{
 		stepKey: "points-de-vie",
-		order: 5,
+		order: 6,
 		kind: "hitPoints",
 		config: {
 			// Lancer les dés ou prendre la moyenne fixe ; niveau 1 = max du dé.
@@ -140,20 +150,13 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 	},
 	{
 		stepKey: "maitrises",
-		order: 6,
+		order: 7,
 		kind: "proficiencyChoice",
 		config: {
 			// `from`/`count` résolus dynamiquement depuis la classe choisie
-			// (skillChoices) et le background (maîtrises accordées).
+			// (skillChoices), la sous-classe et le background.
 			source: "class-skills",
 		},
-	},
-	{
-		stepKey: "sous-classe",
-		order: 7,
-		kind: "selection",
-		config: { collectionKey: "sous-classe", min: 1, max: 1, showGrants: true },
-		condition: "has_subclass_choice",
 	},
 	{
 		stepKey: "sorts",
