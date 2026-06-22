@@ -77,14 +77,18 @@ const CONTENT = [
 		collectionKey: "classe",
 		slug: "magicien",
 		name: "Magicien",
-		data: { casterType: "full", multiclassPrereq: { intelligence: 13 } },
+		data: {
+			hitDie: 6,
+			casterType: "full",
+			multiclassPrereq: { intelligence: 13 },
+		},
 	},
 	{
 		id: "c-gue",
 		collectionKey: "classe",
 		slug: "guerrier",
 		name: "Guerrier",
-		data: { casterType: "none", multiclassPrereq: { force: 13 } },
+		data: { hitDie: 10, casterType: "none", multiclassPrereq: { force: 13 } },
 	},
 	{
 		id: "b-sage",
@@ -118,6 +122,8 @@ const PROP_KEYS = [
 	"charisme",
 	"niveau",
 	"vitesse",
+	"hp",
+	"des_de_vie",
 	"perception",
 	"arcanes",
 	"histoire",
@@ -298,6 +304,12 @@ describe("POST /character-sheets/:id/build", () => {
 		expect(valByProp.get("pid-intelligence")).toBe(16); // 15 + 1
 		expect(valByProp.get("pid-niveau")).toBe(3);
 		expect(valByProp.get("pid-vitesse")).toBe(9);
+		// PV (moyenne) : magicien d6 niv 3, Con 12 (+1) → (6+1)+(4+1)+(4+1) = 17
+		expect(valByProp.get("pid-hp")).toEqual({ current: 17, max: 17 });
+		// Dés de vie : 3d6
+		expect(valByProp.get("pid-des_de_vie")).toEqual({
+			"6": { current: 3, max: 3 },
+		});
 		expect(valByProp.get("pid-perception")).toBe(true); // accordée par la race
 		expect(valByProp.get("pid-arcanes")).toBe(true); // background + choix
 		expect(valByProp.get("pid-histoire")).toBe(true); // background

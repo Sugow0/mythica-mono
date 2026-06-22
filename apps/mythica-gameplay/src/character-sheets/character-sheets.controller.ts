@@ -2,6 +2,12 @@ import {
 	applyAbilityBonuses,
 	validateAllocation,
 } from "@mythica/character-engine";
+import {
+	abilityModifier,
+	computeHitDice,
+	computeHitPoints,
+	type HitDieClass,
+} from "@mythica/character-engine/dnd5e";
 import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
 import { getPresignedAvatarUrl } from "../lib/avatar-storage";
@@ -167,6 +173,12 @@ const BuildBody = t.Object({
 	]),
 	/** Scores de base choisis (avant bonus raciaux), indexés par clé de carac. */
 	abilityScores: t.Record(t.String(), t.Integer()),
+	/** Méthode de détermination des PV (défaut : moyenne fixe). */
+	hpMethod: t.Optional(
+		t.Union([t.Literal("average"), t.Literal("roll"), t.Literal("manual")]),
+	),
+	/** PV maximum calculé côté front (cohérent avec hpMethod). */
+	hpMax: t.Optional(t.Integer({ minimum: 1 })),
 	skillProficiencies: t.Optional(t.Array(t.String())),
 	/** Sorts choisis, rattachés à leur classe et à leur rôle (multiclassage). */
 	spells: t.Optional(
@@ -718,6 +730,25 @@ export const characterSheetsController = new Elysia({
 			for (const skill of skills) valueByKey[skill] = true;
 			valueByKey.niveau = totalLevel;
 			if (raceData.speed != null) valueByKey.vitesse = raceData.speed;
+
+			// Points de vie & dés de vie (data-driven : dé de vie issu de la classe).
+			const hitDieClasses: HitDieClass[] = classRefs.map((ref) => ({
+				hitDie: Number((ref.content?.data as { hitDie?: number })?.hitDie) || 8,
+				level: ref.input.level,
+				isPrimary: ref.input.isPrimary ?? false,
+			}));
+			const conMod = abilityModifier(Number(finalScores.constitution) || 10);
+			// PV : on fait confiance au total calculé au wizard (méthode choisie),
+			// sinon repli sur la moyenne fixe.
+			const maxHp =
+				body.hpMax ??
+				computeHitPoints({
+					classes: hitDieClasses,
+					conMod,
+					method: "average",
+				}).maxHp;
+			valueByKey.hp = { current: maxHp, max: maxHp };
+			valueByKey.des_de_vie = computeHitDice(hitDieClasses);
 			for (const [key, text] of Object.entries(body.lore ?? {})) {
 				valueByKey[key] = text;
 			}
