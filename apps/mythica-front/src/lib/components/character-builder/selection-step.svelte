@@ -85,6 +85,31 @@
 	);
 	const skills = $derived((data(active).skillProficiencies ?? []) as string[]);
 	const languages = $derived((data(active).languages ?? []) as string[]);
+
+	const isClass = $derived(config.collectionKey === "classe");
+	const CASTER_LABELS: Record<string, string> = {
+		full: "Lanceur de sorts complet",
+		half: "Demi-lanceur de sorts",
+		third: "Tiers-lanceur de sorts",
+		warlock: "Magie de pacte",
+	};
+	/** Profil mécanique d'une classe (pour se projeter dès le niveau 1). */
+	const profile = $derived.by(() => {
+		if (!isClass) return null;
+		const d = data(active);
+		return {
+			hitDie: d.hitDie as number | undefined,
+			saves: (d.savingThrows ?? []) as string[],
+			armor: (d.armorProficiencies ?? []) as string[],
+			weapons: (d.weaponProficiencies ?? []) as string[],
+			skillCount: (d.skillChoices as { count?: number })?.count ?? 0,
+			caster: (d.casterType ?? "none") as string,
+			asiLevels: ((d.asiLevels as number[] | undefined) ?? [
+				4, 8, 12, 16, 19,
+			]) as number[],
+			expertise: (d.expertise ?? []) as { level: number; count: number }[],
+		};
+	});
 </script>
 
 <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
@@ -147,6 +172,57 @@
 							</p>
 						{/if}
 					</div>
+
+					{#if profile}
+						<!-- Profil de classe : repères pour se projeter (niveau 1 → 20) -->
+						<div class="space-y-2.5 rounded-lg border p-3">
+							<div class="flex flex-wrap gap-1.5">
+								{#if profile.hitDie}
+									<Badge variant="secondary">Dé de vie d{profile.hitDie}</Badge>
+								{/if}
+								{#if CASTER_LABELS[profile.caster]}
+									<Badge variant="secondary"
+										>{CASTER_LABELS[profile.caster]}</Badge
+									>
+								{/if}
+								<Badge variant="outline">{profile.skillCount} compétences</Badge
+								>
+							</div>
+							{#if profile.saves.length}
+								<p class="text-sm">
+									<span class="text-muted-foreground">Jets de sauvegarde :</span
+									>
+									{profile.saves.map((s) => ABBR[s] ?? s).join(", ")}
+								</p>
+							{/if}
+							{#if profile.armor.length}
+								<p class="text-sm">
+									<span class="text-muted-foreground">Armures :</span>
+									{profile.armor.join(", ")}
+								</p>
+							{/if}
+							{#if profile.weapons.length}
+								<p class="text-sm">
+									<span class="text-muted-foreground">Armes :</span>
+									{profile.weapons.join(", ")}
+								</p>
+							{/if}
+							<p class="text-sm">
+								<span class="text-muted-foreground"
+									>Améliorations / dons aux niveaux :</span
+								>
+								{profile.asiLevels.join(", ")}
+							</p>
+							{#if profile.expertise.length}
+								<p class="text-sm">
+									<span class="text-muted-foreground"
+										>Expertise aux niveaux :</span
+									>
+									{profile.expertise.map((e) => e.level).join(", ")}
+								</p>
+							{/if}
+						</div>
+					{/if}
 
 					{#if config.showGrants !== false}
 						<!-- Le « grimoire » se remplit : ce que la sélection accorde -->

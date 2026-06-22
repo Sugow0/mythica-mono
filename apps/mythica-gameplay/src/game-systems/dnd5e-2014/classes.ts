@@ -446,6 +446,40 @@ export const DND5E_CLASSES: SystemContentSeed[] = [
 		},
 		11,
 	),
+	klass(
+		"artificier",
+		"Artificier",
+		"Inventeur de génie qui infuse la magie dans objets et mécanismes (Arcanes Révélées).",
+		{
+			hitDie: 8,
+			primaryAbility: ["intelligence"],
+			savingThrows: ["constitution", "intelligence"],
+			armorProficiencies: ["légères", "intermédiaires", "boucliers"],
+			weaponProficiencies: ["simples"],
+			toolProficiencies: [
+				"outils de voleur",
+				"outils de bricoleur",
+				"outils d'artisan (au choix)",
+			],
+			skillChoices: {
+				count: 2,
+				from: [
+					"arcanes",
+					"histoire",
+					"investigation",
+					"medecine",
+					"nature",
+					"perception",
+					"escamotage",
+				],
+			},
+			casterType: "half",
+			spellcastingAbility: "intelligence",
+			multiclassPrereq: { intelligence: 13 },
+			startingEquipment: ["cuir", "dague", "arbalete-legere"],
+		},
+		12,
+	),
 ];
 
 /**
@@ -455,6 +489,11 @@ export const DND5E_CLASSES: SystemContentSeed[] = [
  * sous-classes (FEAT ultérieure).
  */
 const SPELLCASTING: Record<string, SpellcastingData> = {
+	artificier: {
+		kind: "prepared_half",
+		ability: "intelligence",
+		cantripsKnown: CANTRIPS_KNOWN.artificier,
+	},
 	barde: {
 		kind: "known",
 		ability: "charisme",
