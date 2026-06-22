@@ -34,11 +34,15 @@ export type AbilityScoreMethod =
 	| "dice_roll"
 	| "manual";
 
+/** Méthodes de détermination des points de vie. */
+export type HitPointsMethod = "average" | "roll" | "manual";
+
 /** Discriminant des types d'étapes génériques du wizard. */
 export type CreationStepKind =
 	| "selection"
 	| "repeatableSelection"
 	| "pointAllocation"
+	| "hitPoints"
 	| "proficiencyChoice"
 	| "spellSelection"
 	| "inventory"
@@ -100,6 +104,19 @@ export type PointAllocationStep = CreationStepBase & {
 	};
 };
 
+/** Étape « déterminer les points de vie » (lancer les dés ou moyenne fixe). */
+export type HitPointsStep = CreationStepBase & {
+	kind: "hitPoints";
+	config: {
+		/** Méthodes de calcul autorisées. */
+		methods: HitPointsMethod[];
+		/** Clé de propriété recevant les PV (ex. `hp`). */
+		hpKey?: string;
+		/** Clé de propriété recevant les dés de vie (ex. `des_de_vie`). */
+		hitDiceKey?: string;
+	};
+};
+
 /** Étape « choisir N maîtrises parmi une liste ». */
 export type ProficiencyChoiceStep = CreationStepBase & {
 	kind: "proficiencyChoice";
@@ -142,6 +159,7 @@ export type CreationStep =
 	| SelectionStep
 	| RepeatableSelectionStep
 	| PointAllocationStep
+	| HitPointsStep
 	| ProficiencyChoiceStep
 	| SpellSelectionStep
 	| InventoryStep

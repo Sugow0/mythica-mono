@@ -6,12 +6,17 @@ import {
 	DND5E_CHARACTER_STATES,
 	DND5E_SKILLS,
 	formatModifier,
-	proficiencyBonusForLevel,
 	groupSpellsByLevel,
+	hitDiceEntries,
+	parseWeaponDamage,
+	proficiencyBonusForLevel,
 	rollD20,
 	skillBonus,
+	spellAttackBonus,
 	spellLevelLabel,
+	spellSaveDc,
 	totalWeight,
+	weaponAbilityKey,
 } from "./dnd5e";
 
 describe("DND5E_ABILITIES", () => {
@@ -150,6 +155,77 @@ describe("spellLevelLabel", () => {
 	it("nomme les tours de magie et les niveaux", () => {
 		expect(spellLevelLabel(0)).toBe("Tours de magie");
 		expect(spellLevelLabel(3)).toBe("Niveau 3");
+	});
+});
+
+describe("spellSaveDc / spellAttackBonus", () => {
+	it("calcule le DD et le bonus d'attaque de sort", () => {
+		// mod +3, maîtrise +2
+		expect(spellSaveDc(3, 2)).toBe(13);
+		expect(spellAttackBonus(3, 2)).toBe(5);
+	});
+});
+
+describe("parseWeaponDamage", () => {
+	it("décompose dé et type de dégâts", () => {
+		expect(parseWeaponDamage("1d8 perforant")).toEqual({
+			dice: "1d8",
+			type: "perforant",
+		});
+		expect(parseWeaponDamage("2d6 tranchant")).toEqual({
+			dice: "2d6",
+			type: "tranchant",
+		});
+	});
+	it("tolère les entrées vides ou inattendues", () => {
+		expect(parseWeaponDamage(undefined)).toEqual({ dice: "", type: "" });
+		expect(parseWeaponDamage("spécial")).toEqual({ dice: "", type: "spécial" });
+	});
+});
+
+describe("weaponAbilityKey", () => {
+	const scores = { force: 16, dexterite: 12 };
+	it("Force par défaut", () => {
+		expect(weaponAbilityKey("", scores)).toBe("force");
+	});
+	it("Dextérité pour les armes à distance", () => {
+		expect(weaponAbilityKey("Munitions, distance 24/96", scores)).toBe(
+			"dexterite"
+		);
+	});
+	it("finesse : meilleur des deux modificateurs", () => {
+		expect(weaponAbilityKey("Finesse, légère", scores)).toBe("force"); // FOR 16 > DEX 12
+		expect(weaponAbilityKey("Finesse", { force: 10, dexterite: 18 })).toBe(
+			"dexterite"
+		);
+	});
+});
+
+describe("hitDiceEntries", () => {
+	it("nouveau format : map taille → {current, max}", () => {
+		expect(
+			hitDiceEntries({
+				"6": { current: 3, max: 3 },
+				"12": { current: 2, max: 2 },
+			})
+		).toEqual([
+			{ size: 6, current: 3, max: 3 },
+			{ size: 12, current: 2, max: 2 },
+		]);
+	});
+	it("ancien format resource unique (taille inconnue)", () => {
+		expect(hitDiceEntries({ current: 2, max: 3 })).toEqual([
+			{ size: 0, current: 2, max: 3 },
+		]);
+	});
+	it("valeurs vides", () => {
+		expect(hitDiceEntries(null)).toEqual([]);
+		expect(hitDiceEntries({})).toEqual([]);
+	});
+	it("conserve une taille si max vidé mais dés restants (édition)", () => {
+		expect(hitDiceEntries({ "6": { current: 2, max: 0 } })).toEqual([
+			{ size: 6, current: 2, max: 0 },
+		]);
 	});
 });
 

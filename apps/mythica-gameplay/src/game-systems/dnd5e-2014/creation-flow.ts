@@ -15,6 +15,7 @@ export type CreationStepSeed = {
 		| "selection"
 		| "repeatableSelection"
 		| "pointAllocation"
+		| "hitPoints"
 		| "proficiencyChoice"
 		| "spellSelection"
 		| "inventory"
@@ -127,8 +128,19 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 		},
 	},
 	{
-		stepKey: "maitrises",
+		stepKey: "points-de-vie",
 		order: 5,
+		kind: "hitPoints",
+		config: {
+			// Lancer les dés ou prendre la moyenne fixe ; niveau 1 = max du dé.
+			methods: ["average", "roll"],
+			hpKey: "hp",
+			hitDiceKey: "des_de_vie",
+		},
+	},
+	{
+		stepKey: "maitrises",
+		order: 6,
 		kind: "proficiencyChoice",
 		config: {
 			// `from`/`count` résolus dynamiquement depuis la classe choisie
@@ -138,33 +150,33 @@ export const DND5E_CREATION_FLOW: CreationStepSeed[] = [
 	},
 	{
 		stepKey: "sous-classe",
-		order: 6,
+		order: 7,
 		kind: "selection",
 		config: { collectionKey: "sous-classe", min: 1, max: 1, showGrants: true },
 		condition: "has_subclass_choice",
 	},
 	{
 		stepKey: "sorts",
-		order: 7,
+		order: 8,
 		kind: "spellSelection",
 		config: { collectionKey: "sort" },
 		condition: "has_caster_class",
 	},
 	{
 		stepKey: "inventaire",
-		order: 8,
+		order: 9,
 		kind: "inventory",
 		config: { collectionKey: "equipement", currencyKey: "gold" },
 	},
 	{
 		stepKey: "identite",
-		order: 9,
+		order: 10,
 		kind: "loreForm",
 		config: { fields: DND5E_IDENTITY_FIELDS },
 	},
 	{
 		stepKey: "lore",
-		order: 10,
+		order: 11,
 		kind: "loreForm",
 		config: { fields: DND5E_LORE_FIELDS },
 	},

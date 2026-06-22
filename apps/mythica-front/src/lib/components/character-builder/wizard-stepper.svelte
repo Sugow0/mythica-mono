@@ -12,6 +12,7 @@
 		"sous-classe": "Sous-classe",
 		background: "Historique",
 		caracteristiques: "Caractéristiques",
+		"points-de-vie": "Points de vie",
 		maitrises: "Maîtrises",
 		sorts: "Sorts",
 		inventaire: "Équipement",

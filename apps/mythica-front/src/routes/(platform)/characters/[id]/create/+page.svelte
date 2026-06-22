@@ -9,6 +9,7 @@
 	import { page } from "$app/state";
 	import { CharacterBuilder } from "$lib/character-builder/builder.svelte";
 	import AvatarCropper from "$lib/components/character-builder/avatar-cropper.svelte";
+	import HitPointsStep from "$lib/components/character-builder/hit-points-step.svelte";
 	import InventoryStep from "$lib/components/character-builder/inventory-step.svelte";
 	import LoreFormStep from "$lib/components/character-builder/lore-form-step.svelte";
 	import PointAllocationStep from "$lib/components/character-builder/point-allocation-step.svelte";
@@ -38,6 +39,7 @@
 		"sous-classe": "Choisissez votre sous-classe",
 		background: "Choisissez votre historique",
 		caracteristiques: "Répartissez vos caractéristiques",
+		"points-de-vie": "Déterminez vos points de vie",
 		maitrises: "Choisissez vos maîtrises",
 		sorts: "Sélectionnez vos sorts",
 		inventaire: "Équipement et or",
@@ -123,6 +125,8 @@
 				<RepeatableSelectionStep {builder} {step} />
 			{:else if step.kind === "pointAllocation"}
 				<PointAllocationStep {builder} {step} />
+			{:else if step.kind === "hitPoints"}
+				<HitPointsStep {builder} />
 			{:else if step.kind === "proficiencyChoice"}
 				<ProficiencyChoiceStep {builder} />
 			{:else if step.kind === "spellSelection"}

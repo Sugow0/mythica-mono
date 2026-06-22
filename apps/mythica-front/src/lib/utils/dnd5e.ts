@@ -137,6 +137,87 @@ export function totalWeight(
 	);
 }
 
+/** DD d'un sort : 8 + bonus de maîtrise + modificateur de caractéristique. */
+export function spellSaveDc(
+	abilityMod: number,
+	proficiencyBonus: number
+): number {
+	return 8 + proficiencyBonus + abilityMod;
+}
+
+/** Bonus d'attaque de sort : bonus de maîtrise + modificateur de caractéristique. */
+export function spellAttackBonus(
+	abilityMod: number,
+	proficiencyBonus: number
+): number {
+	return proficiencyBonus + abilityMod;
+}
+
+export type WeaponDamage = { dice: string; type: string };
+
+/**
+ * Décompose une chaîne de dégâts d'arme (« 1d8 perforant ») en dé + type.
+ * Tolérant : renvoie des chaînes vides si le format est inattendu.
+ */
+export function parseWeaponDamage(degats: string | undefined): WeaponDamage {
+	if (!degats) return { dice: "", type: "" };
+	const match = degats.match(/(\d+\s*d\s*\d+)/i);
+	const dice = match ? match[1].replace(/\s+/g, "") : "";
+	const type = (match ? degats.replace(match[1], "") : degats).trim();
+	return { dice, type };
+}
+
+/**
+ * Caractéristique d'attaque d'une arme selon ses propriétés :
+ * finesse → meilleur entre Force et Dextérité ; arme à distance → Dextérité ;
+ * sinon Force.
+ */
+export function weaponAbilityKey(
+	properties: string | undefined,
+	scores: { force?: number; dexterite?: number }
+): "force" | "dexterite" {
+	const p = (properties ?? "").toLowerCase();
+	const isRanged = /distance|munitions/.test(p);
+	const isFinesse = /finesse/.test(p);
+	if (isRanged) return "dexterite";
+	if (isFinesse) {
+		const str = abilityModifier(scores.force ?? DEFAULT_ABILITY_SCORE);
+		const dex = abilityModifier(scores.dexterite ?? DEFAULT_ABILITY_SCORE);
+		return dex > str ? "dexterite" : "force";
+	}
+	return "force";
+}
+
+export type HitDieEntry = { size: number; current: number; max: number };
+
+/**
+ * Normalise une valeur de dés de vie en entrées par taille de dé. Tolère le
+ * nouveau format (map `{ "6": {current,max} }`) et l'ancien resource unique
+ * (`{ current, max }`, taille inconnue → 0).
+ */
+export function hitDiceEntries(value: unknown): HitDieEntry[] {
+	if (!value || typeof value !== "object") return [];
+	const obj = value as Record<string, unknown>;
+	// Ancien format resource : { current, max } scalaires.
+	if (typeof obj.current === "number" || typeof obj.max === "number") {
+		return [
+			{ size: 0, current: Number(obj.current) || 0, max: Number(obj.max) || 0 },
+		];
+	}
+	// Nouveau format : map taille → { current, max }.
+	return Object.entries(obj)
+		.map(([size, v]) => {
+			const r = (v ?? {}) as { current?: unknown; max?: unknown };
+			return {
+				size: Number(size) || 0,
+				current: Number(r.current) || 0,
+				max: Number(r.max) || 0,
+			};
+		})
+		.filter((e) => e.max > 0 || e.current > 0)
+		.sort((a, b) => a.size - b.size);
+}
+
 /** Libellé d'un niveau de sort (0 = tours de magie). */
 export function spellLevelLabel(level: number): string {
 	return level === 0 ? "Tours de magie" : `Niveau ${level}`;

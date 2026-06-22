@@ -1,13 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import {
 	abilityModifier,
+	averageHitDie,
+	computeHitDice,
+	computeHitPoints,
 	computeSpellSlots,
 	maxSpellSlotLevel,
 	meetsMulticlassPrereq,
 	multiclassCasterLevel,
 	pactMagic,
 	preparedSpellsCount,
+	preparedSpellsForKind,
 	proficiencyBonus,
+	rolledHitDiceCount,
+	rollHitPointDice,
 	singleClassSlots,
 	wizardSpellbookSize,
 } from "./rules";
@@ -137,11 +143,167 @@ describe("preparedSpellsCount", () => {
 	});
 });
 
+describe("preparedSpellsForKind", () => {
+	test("préparant complet (prepared / wizard)", () => {
+		expect(preparedSpellsForKind("prepared", 3, 3)).toBe(6);
+		expect(preparedSpellsForKind("wizard", 3, 3)).toBe(6);
+	});
+	test("demi-préparant (paladin)", () => {
+		expect(preparedSpellsForKind("prepared_half", 3, 5)).toBe(5);
+	});
+	test("lanceurs non préparants → null", () => {
+		expect(preparedSpellsForKind("known", 3, 5)).toBeNull();
+		expect(preparedSpellsForKind("pact", 3, 5)).toBeNull();
+		expect(preparedSpellsForKind(undefined, 3, 5)).toBeNull();
+	});
+});
+
 describe("wizardSpellbookSize", () => {
 	test("6 au niveau 1, +2 par niveau", () => {
 		expect(wizardSpellbookSize(1)).toBe(6);
 		expect(wizardSpellbookSize(3)).toBe(10);
 		expect(wizardSpellbookSize(20)).toBe(44);
+	});
+});
+
+describe("averageHitDie", () => {
+	test("moyenne fixe par dé", () => {
+		expect(averageHitDie(6)).toBe(4);
+		expect(averageHitDie(8)).toBe(5);
+		expect(averageHitDie(10)).toBe(6);
+		expect(averageHitDie(12)).toBe(7);
+	});
+});
+
+describe("computeHitPoints", () => {
+	test("magicien niveau 1 : max du dé + Constitution", () => {
+		const res = computeHitPoints({
+			classes: [{ hitDie: 6, level: 1, isPrimary: true }],
+			conMod: 2,
+			method: "average",
+		});
+		// niveau 1 = 6 (max) + 2 = 8
+		expect(res.maxHp).toBe(8);
+		expect(res.breakdown).toEqual([{ hitDie: 6, base: 6, source: "max" }]);
+	});
+
+	test("magicien niveau 3 (moyenne) : 6 + 4 + 4, +2 Con par niveau", () => {
+		const res = computeHitPoints({
+			classes: [{ hitDie: 6, level: 3, isPrimary: true }],
+			conMod: 2,
+			method: "average",
+		});
+		// (6+2) + (4+2) + (4+2) = 8 + 6 + 6 = 20
+		expect(res.maxHp).toBe(20);
+		expect(res.breakdown.map((e) => e.source)).toEqual([
+			"max",
+			"average",
+			"average",
+		]);
+	});
+
+	test("multiclasse : niveau 1 max sur la classe principale uniquement", () => {
+		// magicien 3 (principal, d6) / barbare 2 (d12), Con +1
+		const res = computeHitPoints({
+			classes: [
+				{ hitDie: 6, level: 3, isPrimary: true },
+				{ hitDie: 12, level: 2 },
+			],
+			conMod: 1,
+			method: "average",
+		});
+		// magicien : 6 + 4 + 4 ; barbare : 7 + 7 ; + 1 Con × 5 niveaux
+		// (6+1)+(4+1)+(4+1) + (7+1)+(7+1) = 7+5+5+8+8 = 33
+		expect(res.maxHp).toBe(33);
+		expect(res.breakdown[0]).toEqual({ hitDie: 6, base: 6, source: "max" });
+	});
+
+	test("méthode lancer : utilise les valeurs fournies dans l'ordre", () => {
+		const res = computeHitPoints({
+			classes: [{ hitDie: 8, level: 3, isPrimary: true }],
+			conMod: 0,
+			method: "roll",
+			rolls: [5, 3],
+		});
+		// 8 (max) + 5 + 3 = 16
+		expect(res.maxHp).toBe(16);
+		expect(res.breakdown.map((e) => e.base)).toEqual([8, 5, 3]);
+	});
+
+	test("plancher de 1 PV par niveau avec Constitution négative", () => {
+		const res = computeHitPoints({
+			classes: [{ hitDie: 6, level: 2, isPrimary: true }],
+			conMod: -5,
+			method: "average",
+		});
+		// (6-5)=1 ; (4-5)=-1 → plancher 1 ; total 2
+		expect(res.maxHp).toBe(2);
+	});
+
+	test("méthode manuelle : renvoie le total fourni", () => {
+		const res = computeHitPoints({
+			classes: [{ hitDie: 6, level: 3, isPrimary: true }],
+			conMod: 2,
+			method: "manual",
+			manualTotal: 42,
+		});
+		expect(res.maxHp).toBe(42);
+		expect(res.breakdown).toEqual([]);
+	});
+});
+
+describe("rolledHitDiceCount", () => {
+	test("tous les niveaux sauf le premier", () => {
+		expect(rolledHitDiceCount([{ hitDie: 6, level: 3, isPrimary: true }])).toBe(
+			2,
+		);
+		expect(
+			rolledHitDiceCount([
+				{ hitDie: 6, level: 3, isPrimary: true },
+				{ hitDie: 12, level: 2 },
+			]),
+		).toBe(4);
+		expect(rolledHitDiceCount([{ hitDie: 8, level: 1 }])).toBe(0);
+	});
+});
+
+describe("rollHitPointDice", () => {
+	test("tire un dé par niveau hors premier, RNG injecté", () => {
+		// rng renvoyant 0.99 → toujours la face max
+		const rolls = rollHitPointDice(
+			[{ hitDie: 6, level: 3, isPrimary: true }],
+			() => 0.99,
+		);
+		expect(rolls).toEqual([6, 6]);
+	});
+});
+
+describe("computeHitDice", () => {
+	test("mono-classe : un seul type de dé", () => {
+		expect(computeHitDice([{ hitDie: 6, level: 3, isPrimary: true }])).toEqual({
+			"6": { current: 3, max: 3 },
+		});
+	});
+
+	test("multiclasse : regroupe par taille de dé (3d6 + 2d12)", () => {
+		expect(
+			computeHitDice([
+				{ hitDie: 6, level: 3, isPrimary: true },
+				{ hitDie: 12, level: 2 },
+			]),
+		).toEqual({
+			"6": { current: 3, max: 3 },
+			"12": { current: 2, max: 2 },
+		});
+	});
+
+	test("additionne les classes de même dé", () => {
+		expect(
+			computeHitDice([
+				{ hitDie: 8, level: 2, isPrimary: true },
+				{ hitDie: 8, level: 3 },
+			]),
+		).toEqual({ "8": { current: 5, max: 5 } });
 	});
 });
 

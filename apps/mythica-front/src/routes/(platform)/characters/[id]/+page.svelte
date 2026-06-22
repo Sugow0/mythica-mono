@@ -3,9 +3,13 @@
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import LoaderIcon from "@lucide/svelte/icons/loader-circle";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
+	import PlusIcon from "@lucide/svelte/icons/plus";
 	import SparkleIcon from "@lucide/svelte/icons/sparkles";
+	import SquarePenIcon from "@lucide/svelte/icons/square-pen";
+	import SwordsIcon from "@lucide/svelte/icons/swords";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+	import WandSparklesIcon from "@lucide/svelte/icons/wand-sparkles";
 	import { onMount, type Snippet } from "svelte";
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
@@ -23,13 +27,21 @@
 	import { ApiError, characterService } from "$lib/index.js";
 	import * as m from "$lib/paraglide/messages.js";
 	import { debounce } from "$lib/utils/debounce";
+	import { preparedSpellsForKind } from "@mythica/character-engine/dnd5e";
 	import {
 		abilityModifier,
 		DND5E_ABILITIES,
 		DND5E_SKILLS,
 		formatModifier,
+		groupSpellsByLevel,
+		hitDiceEntries,
+		parseWeaponDamage,
 		proficiencyBonusForLevel,
 		skillBonus,
+		type Spell,
+		spellAttackBonus,
+		spellSaveDc,
+		weaponAbilityKey,
 	} from "$lib/utils/dnd5e";
 
 	const sheetId = $derived(page.params.id ?? "");
@@ -43,6 +55,22 @@
 	let avatarUploading = $state(false);
 	let deleteOpen = $state(false);
 	let deleting = $state(false);
+	/** Fiche en lecture seule par défaut ; le bouton « Modifier » déverrouille. */
+	let editing = $state(false);
+
+	/** Contenu joint (par slug) : sorts, classes, équipement — pour l'affichage. */
+	type SpellData = { name: string; level: number; school?: string };
+	type ClassData = {
+		spellcastingAbility?: string;
+		spellcasting?: { kind?: string; ability?: string };
+	};
+	type EquipData = {
+		category?: string;
+		properties?: { degats?: string; proprietes?: string };
+	};
+	let spellContent = $state<Record<string, SpellData>>({});
+	let classContent = $state<Record<string, ClassData>>({});
+	let equipContent = $state<Record<string, EquipData>>({});
 
 	/** Sélections de build résolues (race, classe, sous-classe, historique…). */
 	const selections = $derived(sheet?.selections ?? []);
@@ -103,6 +131,153 @@
 		10 + skillBonus(num("sagesse"), boolv("perception"), prof)
 	);
 
+	// — Dés de vie (groupés par taille, multiclasse compris) —
+	const hitDice = $derived(hitDiceEntries(val("des_de_vie")));
+	function setHitDie(size: number, part: "current" | "max", raw: string) {
+		const cur = (val("des_de_vie") ?? {}) as Record<
+			string,
+			{ current?: number; max?: number }
+		>;
+		const key = String(size);
+		const entry = { current: 0, max: 0, ...(cur[key] ?? {}) };
+		entry[part] = raw === "" ? 0 : Number(raw);
+		setVal("des_de_vie", { ...cur, [key]: entry });
+	}
+
+	// — Sorts connus/préparés (join sélections ↔ contenu), groupés par niveau —
+	const spellRole = $derived.by(() => {
+		const map: Record<string, string> = {};
+		for (const s of selections) {
+			if (s.collectionKey !== "sort") continue;
+			const role = (s.extra as { role?: string } | null)?.role;
+			if (role) map[s.slug] = role;
+		}
+		return map;
+	});
+	const spellList = $derived.by<Spell[]>(() =>
+		selections
+			.filter((s) => s.collectionKey === "sort")
+			.map((s) => {
+				const c = spellContent[s.slug];
+				return {
+					id: s.slug,
+					name: s.name ?? c?.name ?? s.slug,
+					level: Number(c?.level ?? 0),
+				};
+			})
+	);
+	const spellGroups = $derived(groupSpellsByLevel(spellList));
+	const roleLabel: Record<string, string> = {
+		cantrip: "Tour",
+		spell: "Préparé",
+		book: "Grimoire",
+	};
+
+	// — Magie : DD, bonus d'attaque, sorts à préparer par classe lanceuse —
+	type CasterInfo = {
+		name: string;
+		abbr: string;
+		dc: number;
+		attack: number;
+		prepared: number | null;
+	};
+	const casterClasses = $derived.by<CasterInfo[]>(() => {
+		const out: CasterInfo[] = [];
+		for (const s of selections.filter((c) => c.collectionKey === "classe")) {
+			const data = classContent[s.slug];
+			const sc = data?.spellcasting;
+			const ability = data?.spellcastingAbility ?? sc?.ability;
+			if (!ability) continue;
+			const mod = abilityModifier(num(ability));
+			const lvl = Number(s.level ?? 1);
+			const prepared = preparedSpellsForKind(sc?.kind, mod, lvl);
+			out.push({
+				name: s.name ?? s.slug,
+				abbr: DND5E_ABILITIES.find((a) => a.key === ability)?.abbr ?? "",
+				dc: spellSaveDc(mod, prof),
+				attack: spellAttackBonus(mod, prof),
+				prepared,
+			});
+		}
+		return out;
+	});
+
+	// — Attaques (hybride : armes équipées pré-remplies + entrées custom) —
+	type Attack = {
+		name: string;
+		ability: string;
+		proficient: boolean;
+		damageDice: string;
+		damageType: string;
+		magicBonus: number;
+		custom?: boolean;
+	};
+	const weaponDefaults = $derived.by<Attack[]>(() =>
+		selections
+			.filter((s) => s.collectionKey === "equipement")
+			.flatMap((s) => {
+				const data = equipContent[s.slug];
+				if (!data || data.category !== "arme") return [];
+				const props = data.properties ?? {};
+				const dmg = parseWeaponDamage(props.degats);
+				const ability = weaponAbilityKey(props.proprietes, {
+					force: num("force"),
+					dexterite: num("dexterite"),
+				});
+				return [
+					{
+						name: s.name ?? s.slug,
+						ability,
+						proficient: true,
+						damageDice: dmg.dice,
+						damageType: dmg.type,
+						magicBonus: 0,
+					},
+				];
+			})
+	);
+	const storedAttacks = $derived.by<Attack[]>(() => {
+		const raw = val("attaques");
+		return Array.isArray(raw) ? (raw as Attack[]) : [];
+	});
+	/** Attaques affichées : valeur enregistrée si présente, sinon armes équipées. */
+	const attacks = $derived(
+		storedAttacks.length > 0 ? storedAttacks : weaponDefaults
+	);
+	function saveAttacks(list: Attack[]) {
+		setVal("attaques", list);
+	}
+	function updateAttack(i: number, patch: Partial<Attack>) {
+		saveAttacks(attacks.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
+	}
+	function addCustomAttack() {
+		saveAttacks([
+			...attacks,
+			{
+				name: "Nouvelle attaque",
+				ability: "",
+				proficient: false,
+				damageDice: "",
+				damageType: "",
+				magicBonus: 0,
+				custom: true,
+			},
+		]);
+	}
+	function removeAttack(i: number) {
+		saveAttacks(attacks.filter((_, idx) => idx !== i));
+	}
+	/** Bonus d'attaque = mod. de carac (si définie) + maîtrise + bonus magique. */
+	function attackBonus(a: Attack): number {
+		const mod = a.ability ? abilityModifier(num(a.ability)) : 0;
+		return mod + (a.proficient ? prof : 0) + (Number(a.magicBonus) || 0);
+	}
+	/** Modificateur de dégâts = mod. de carac + bonus magique. */
+	function damageMod(a: Attack): number {
+		const mod = a.ability ? abilityModifier(num(a.ability)) : 0;
+		return mod + (Number(a.magicBonus) || 0);
+	}
+
 	/** Niveaux d'emplacements de sorts réellement possédés. */
 	const spellSlots = $derived(
 		Array.from({ length: 9 }, (_, i) => i + 1)
@@ -135,13 +310,17 @@
 			"inspiration",
 			"dd_sorts",
 			"bonus_attaque_sort",
+			"attaques",
 			...Array.from({ length: 9 }, (_, i) => `spell_slots_${i + 1}`),
 			...coins.map((c) => c.key),
 		])
 	);
 
-	/** Sections narratives restantes (groupes, hors clés déjà rendues). */
-	const detailGroups = $derived.by(() => {
+	/** Groupes affichés dans la colonne latérale (sous la bourse) plutôt que dans la grille narrative. */
+	const asideGroupNames = ["Identité", "Maîtrises"];
+
+	/** Groupes restants (hors clés déjà rendues), indexés et ordonnés. */
+	const remainingGroups = $derived.by(() => {
 		const order: string[] = [];
 		const byGroup: Record<string, CharacterSheetField[]> = {};
 		for (const p of sheet?.properties ?? []) {
@@ -153,8 +332,22 @@
 			}
 			byGroup[g].push(p);
 		}
-		return order.map((g) => [g, byGroup[g]] as const);
+		return { order, byGroup };
 	});
+
+	/** Cartes Identité / Maîtrises, rangées dans la colonne latérale. */
+	const asideGroups = $derived(
+		asideGroupNames
+			.map((g) => [g, remainingGroups.byGroup[g]] as const)
+			.filter(([, fields]) => fields && fields.length > 0)
+	);
+
+	/** Sections narratives restantes (hors colonne latérale). */
+	const detailGroups = $derived(
+		remainingGroups.order
+			.filter((g) => !asideGroupNames.includes(g))
+			.map((g) => [g, remainingGroups.byGroup[g]] as const)
+	);
 
 	const identityLine = $derived(
 		[sheet?.gameSystem.nom, `Niveau ${level}`, val("alignement")]
@@ -172,6 +365,7 @@
 			values = Object.fromEntries(
 				(response?.properties ?? []).map((p) => [p.propertyId, p.value])
 			);
+			if (response) await loadContent(response.gameSystemId);
 		} catch (err) {
 			if (err instanceof ApiError && err.statusCode === 404) {
 				error = m.character_not_found();
@@ -181,6 +375,28 @@
 			}
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	/** Charge le contenu (sorts, classes, équipement) pour la jointure d'affichage. */
+	async function loadContent(gameSystemId: string) {
+		try {
+			const [spells, classes, equip] = await Promise.all([
+				characterService.getContent(gameSystemId, "sort"),
+				characterService.getContent(gameSystemId, "classe"),
+				characterService.getContent(gameSystemId, "equipement"),
+			]);
+			spellContent = Object.fromEntries(
+				spells.items.map((i) => [i.slug, (i.data ?? {}) as SpellData])
+			);
+			classContent = Object.fromEntries(
+				classes.items.map((i) => [i.slug, (i.data ?? {}) as ClassData])
+			);
+			equipContent = Object.fromEntries(
+				equip.items.map((i) => [i.slug, (i.data ?? {}) as EquipData])
+			);
+		} catch {
+			// L'échec de chargement du contenu n'empêche pas l'affichage de la fiche.
 		}
 	}
 
@@ -252,8 +468,9 @@
 			type="number"
 			aria-label={label}
 			value={score}
+			readonly={!editing}
 			oninput={(e) => setVal(key, Number(e.currentTarget.value))}
-			class="focus-visible:ring-ring/50 mt-2 w-12 rounded-md border bg-background py-0.5 text-center text-sm font-medium outline-none focus-visible:ring-[3px]"
+			class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent mt-2 w-12 rounded-md border bg-background py-0.5 text-center text-sm font-medium outline-none focus-visible:ring-[3px]"
 		/>
 	</div>
 {/snippet}
@@ -267,9 +484,11 @@
 )}
 	<button
 		type="button"
-		onclick={onToggle}
+		onclick={() => editing && onToggle()}
 		aria-pressed={active}
-		class="hover:bg-muted/50 flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition-colors"
+		class="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left text-sm transition-colors {editing
+			? 'hover:bg-muted/50'
+			: 'cursor-default'}"
 	>
 		<span
 			class="h-3 w-3 shrink-0 rounded-full border-2 transition-colors {active
@@ -287,6 +506,24 @@
 			<span class="text-muted-foreground text-[10px] uppercase">{sub}</span>
 		{/if}
 	</button>
+{/snippet}
+
+{#snippet groupCard(groupName: string, fields: CharacterSheetField[])}
+	<Card.Root>
+		<Card.Header class="pb-2">
+			<Card.Title class="text-base">{groupName}</Card.Title>
+		</Card.Header>
+		<Card.Content class="grid grid-cols-1 gap-4 pt-0">
+			{#each fields as field (field.propertyId)}
+				<FieldRenderer
+					property={field}
+					value={values[field.propertyId]}
+					disabled={!editing}
+					onChange={(v) => onFieldChange(field.propertyId, v)}
+				/>
+			{/each}
+		</Card.Content>
+	</Card.Root>
 {/snippet}
 
 {#snippet vital(label: string, content: Snippet)}
@@ -362,23 +599,38 @@
 					{#if has("inspiration")}
 						<button
 							type="button"
-							onclick={() => setVal("inspiration", !boolv("inspiration"))}
+							onclick={() =>
+								editing && setVal("inspiration", !boolv("inspiration"))}
 							aria-pressed={boolv("inspiration")}
 							class="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors {boolv(
 								'inspiration'
 							)
 								? 'border-primary bg-primary/10 text-primary'
-								: 'text-muted-foreground hover:bg-muted'}"
+								: 'text-muted-foreground'} {editing
+								? 'hover:bg-muted'
+								: 'cursor-default'}"
 						>
 							<SparkleIcon class="h-4 w-4" /> Inspiration
 						</button>
 					{/if}
 					<Button
-						variant="outline"
+						variant={editing ? "default" : "outline"}
+						size="sm"
+						onclick={() => (editing = !editing)}
+					>
+						{#if editing}
+							<CheckIcon class="h-4 w-4" /> Terminer
+						{:else}
+							<PencilIcon class="h-4 w-4" /> Modifier
+						{/if}
+					</Button>
+					<Button
+						variant="ghost"
 						size="sm"
 						href="/characters/{sheetId}/create"
+						title="Modifier la race, la classe, les caractéristiques…"
 					>
-						<PencilIcon class="h-4 w-4" /> Modifier
+						<SquarePenIcon class="h-4 w-4" /> Modifier le build
 					</Button>
 					<Button
 						variant="ghost"
@@ -444,6 +696,7 @@
 						type="number"
 						aria-label="Classe d'armure"
 						value={num("ca")}
+						readonly={!editing}
 						oninput={(e) => setVal("ca", Number(e.currentTarget.value))}
 						class="focus-visible:ring-ring/50 w-16 rounded-md bg-transparent text-center outline-none focus-visible:ring-[3px]"
 					/>
@@ -457,6 +710,7 @@
 							type="number"
 							aria-label="PV actuels"
 							value={resource("hp").current}
+							readonly={!editing}
 							oninput={(e) =>
 								setResource("hp", "current", e.currentTarget.value)}
 							class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-right outline-none focus-visible:ring-[3px]"
@@ -466,6 +720,7 @@
 							type="number"
 							aria-label="PV max"
 							value={resource("hp").max}
+							readonly={!editing}
 							oninput={(e) => setResource("hp", "max", e.currentTarget.value)}
 							class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-left outline-none focus-visible:ring-[3px]"
 						/>
@@ -486,6 +741,7 @@
 							type="number"
 							aria-label="Vitesse"
 							value={num("vitesse")}
+							readonly={!editing}
 							oninput={(e) => setVal("vitesse", Number(e.currentTarget.value))}
 							class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-center outline-none focus-visible:ring-[3px]"
 						/>
@@ -494,31 +750,151 @@
 				{/snippet}
 				{@render vital("Vitesse", spdVal)}
 			{/if}
-			{#if has("des_de_vie")}
-				{#snippet hdVal()}
-					<span class="flex items-center justify-center gap-1 text-xl">
-						<input
-							type="number"
-							aria-label="Dés de vie disponibles"
-							value={resource("des_de_vie").current}
-							oninput={(e) =>
-								setResource("des_de_vie", "current", e.currentTarget.value)}
-							class="focus-visible:ring-ring/50 w-10 rounded-md bg-transparent text-right outline-none focus-visible:ring-[3px]"
-						/>
-						<span class="text-muted-foreground text-base">/</span>
-						<input
-							type="number"
-							aria-label="Dés de vie max"
-							value={resource("des_de_vie").max}
-							oninput={(e) =>
-								setResource("des_de_vie", "max", e.currentTarget.value)}
-							class="focus-visible:ring-ring/50 w-10 rounded-md bg-transparent text-left outline-none focus-visible:ring-[3px]"
-						/>
+			{#each hitDice as hd (hd.size)}
+				<div
+					class="bg-card flex flex-col items-center justify-center rounded-xl border px-3 py-3 text-center shadow-xs"
+				>
+					<span
+						class="text-muted-foreground text-[10px] font-semibold uppercase tracking-widest"
+					>
+						{hd.size > 0 ? `Dés de vie d${hd.size}` : "Dés de vie"}
 					</span>
-				{/snippet}
-				{@render vital("Dés de vie", hdVal)}
-			{/if}
+					<div class="font-display mt-1 text-2xl font-bold leading-none">
+						<span class="flex items-center justify-center gap-1 text-xl">
+							<input
+								type="number"
+								aria-label="Dés de vie d{hd.size} disponibles"
+								value={hd.current}
+								readonly={!editing}
+								oninput={(e) =>
+									setHitDie(hd.size, "current", e.currentTarget.value)}
+								class="focus-visible:ring-ring/50 w-10 rounded-md bg-transparent text-right outline-none focus-visible:ring-[3px]"
+							/>
+							<span class="text-muted-foreground text-base">/</span>
+							<input
+								type="number"
+								aria-label="Dés de vie d{hd.size} max"
+								value={hd.max}
+								readonly={!editing}
+								oninput={(e) =>
+									setHitDie(hd.size, "max", e.currentTarget.value)}
+								class="focus-visible:ring-ring/50 w-10 rounded-md bg-transparent text-left outline-none focus-visible:ring-[3px]"
+							/>
+						</span>
+					</div>
+				</div>
+			{/each}
 		</div>
+
+		<!-- Attaques (armes équipées pré-remplies + entrées personnalisées) -->
+		<Card.Root class="mb-6">
+			<Card.Header class="flex-row items-center justify-between pb-2">
+				<Card.Title class="flex items-center gap-2 text-base">
+					<SwordsIcon class="text-primary h-4 w-4" /> Attaques
+				</Card.Title>
+				{#if editing}
+					<Button variant="outline" size="sm" onclick={addCustomAttack}>
+						<PlusIcon class="h-4 w-4" /> Ajouter
+					</Button>
+				{/if}
+			</Card.Header>
+			<Card.Content class="pt-0">
+				{#if attacks.length === 0}
+					<p class="text-muted-foreground text-sm">
+						Aucune arme équipée. Ajoutez une attaque (sort, capacité…) au
+						besoin.
+					</p>
+				{:else}
+					<!-- En-têtes -->
+					<div
+						class="text-muted-foreground hidden grid-cols-[1fr_5rem_4rem_4rem_5rem_2rem] gap-2 px-1 pb-1 text-[10px] font-semibold uppercase tracking-wider sm:grid"
+					>
+						<span>Nom</span>
+						<span>Carac.</span>
+						<span class="text-center">Maîtrise</span>
+						<span class="text-center">Magie</span>
+						<span class="text-right">Attaque</span>
+						<span></span>
+					</div>
+					<ul class="space-y-2">
+						{#each attacks as a, i (i)}
+							<li
+								class="grid grid-cols-2 items-center gap-2 rounded-lg border p-2 sm:grid-cols-[1fr_5rem_4rem_4rem_5rem_2rem]"
+							>
+								<input
+									type="text"
+									aria-label="Nom de l'attaque"
+									value={a.name}
+									readonly={!editing}
+									oninput={(e) =>
+										updateAttack(i, { name: e.currentTarget.value })}
+									class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent col-span-2 rounded-md border bg-background px-2 py-1 text-sm outline-none focus-visible:ring-[3px] sm:col-span-1"
+								/>
+								<select
+									aria-label="Caractéristique"
+									value={a.ability}
+									disabled={!editing}
+									onchange={(e) =>
+										updateAttack(i, { ability: e.currentTarget.value })}
+									class="focus-visible:ring-ring/50 disabled:opacity-100 rounded-md border bg-background px-1 py-1 text-sm outline-none focus-visible:ring-[3px] disabled:border-transparent disabled:bg-transparent disabled:appearance-none"
+								>
+									<option value="">—</option>
+									{#each DND5E_ABILITIES as ab (ab.key)}
+										<option value={ab.key}>{ab.abbr}</option>
+									{/each}
+								</select>
+								<button
+									type="button"
+									aria-label="Maîtrise"
+									aria-pressed={a.proficient}
+									onclick={() =>
+										editing && updateAttack(i, { proficient: !a.proficient })}
+									class="mx-auto h-4 w-4 shrink-0 rounded-full border-2 transition-colors {a.proficient
+										? 'border-primary bg-primary'
+										: 'border-muted-foreground/40'} {editing
+										? ''
+										: 'cursor-default'}"
+								></button>
+								<input
+									type="number"
+									aria-label="Bonus magique"
+									value={a.magicBonus}
+									readonly={!editing}
+									oninput={(e) =>
+										updateAttack(i, {
+											magicBonus: Number(e.currentTarget.value),
+										})}
+									class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent w-full rounded-md border bg-background px-1 py-1 text-center text-sm outline-none focus-visible:ring-[3px]"
+								/>
+								<div class="text-right">
+									<span class="font-display font-semibold tabular-nums">
+										{formatModifier(attackBonus(a))}
+									</span>
+									{#if a.damageDice}
+										<span class="text-muted-foreground block text-[11px]">
+											{a.damageDice}{formatModifier(damageMod(a))}
+											{a.damageType}
+										</span>
+									{/if}
+								</div>
+								{#if editing}
+									<button
+										type="button"
+										aria-label="Supprimer l'attaque"
+										onclick={() => removeAttack(i)}
+										class="text-muted-foreground hover:text-destructive mx-auto"
+									>
+										<Trash2Icon class="h-4 w-4" />
+									</button>
+								{:else}
+									<span></span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</Card.Content>
+		</Card.Root>
 
 		<!-- Corps 3 colonnes -->
 		<div class="grid gap-4 lg:grid-cols-3">
@@ -576,6 +952,89 @@
 
 			<!-- Colonne 3 : sorts + bourse -->
 			<div class="flex flex-col gap-4">
+				{#if casterClasses.length > 0}
+					<Card.Root>
+						<Card.Header class="pb-2">
+							<Card.Title class="flex items-center gap-2 text-base">
+								<WandSparklesIcon class="text-primary h-4 w-4" /> Magie
+							</Card.Title>
+						</Card.Header>
+						<Card.Content class="space-y-3 pt-0">
+							{#each casterClasses as c (c.name)}
+								<div class="rounded-lg border p-3">
+									<p class="mb-2 text-sm font-semibold">
+										{c.name}
+										<span class="text-muted-foreground font-normal"
+											>· {c.abbr}</span
+										>
+									</p>
+									<div class="grid grid-cols-3 gap-2 text-center">
+										<div>
+											<p
+												class="font-display text-primary text-2xl font-bold leading-none"
+											>
+												{c.dc}
+											</p>
+											<p class="text-muted-foreground text-[10px] uppercase">
+												DD des sorts
+											</p>
+										</div>
+										<div>
+											<p
+												class="font-display text-primary text-2xl font-bold leading-none"
+											>
+												{formatModifier(c.attack)}
+											</p>
+											<p class="text-muted-foreground text-[10px] uppercase">
+												Attaque
+											</p>
+										</div>
+										<div>
+											<p class="font-display text-2xl font-bold leading-none">
+												{c.prepared ?? "—"}
+											</p>
+											<p class="text-muted-foreground text-[10px] uppercase">
+												À préparer
+											</p>
+										</div>
+									</div>
+								</div>
+							{/each}
+						</Card.Content>
+					</Card.Root>
+				{/if}
+
+				{#if spellGroups.length > 0}
+					<Card.Root>
+						<Card.Header class="pb-2">
+							<Card.Title class="text-base">Sorts</Card.Title>
+						</Card.Header>
+						<Card.Content class="space-y-3 pt-0">
+							{#each spellGroups as group (group.level)}
+								<div>
+									<h3
+										class="text-muted-foreground mb-1 text-[10px] font-semibold uppercase tracking-widest"
+									>
+										{group.label}
+									</h3>
+									<ul class="space-y-0.5">
+										{#each group.spells as spell (spell.id)}
+											<li class="flex items-center gap-2 text-sm">
+												<span class="flex-1 truncate">{spell.name}</span>
+												{#if roleLabel[spellRole[spell.id]]}
+													<Badge variant="outline" class="text-[10px]">
+														{roleLabel[spellRole[spell.id]]}
+													</Badge>
+												{/if}
+											</li>
+										{/each}
+									</ul>
+								</div>
+							{/each}
+						</Card.Content>
+					</Card.Root>
+				{/if}
+
 				{#if spellSlots.length > 0}
 					<Card.Root>
 						<Card.Header class="pb-2">
@@ -591,13 +1050,14 @@
 										type="number"
 										aria-label="Emplacements niv {s.lvl} disponibles"
 										value={s.current}
+										readonly={!editing}
 										oninput={(e) =>
 											setResource(
 												`spell_slots_${s.lvl}`,
 												"current",
 												e.currentTarget.value
 											)}
-										class="focus-visible:ring-ring/50 ml-auto w-10 rounded-md border bg-background text-center text-sm outline-none focus-visible:ring-[3px]"
+										class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent ml-auto w-10 rounded-md border bg-background text-center text-sm outline-none focus-visible:ring-[3px]"
 									/>
 									<span class="text-muted-foreground text-sm">/ {s.max}</span>
 								</div>
@@ -618,9 +1078,10 @@
 										type="number"
 										aria-label={c.abbr}
 										value={num(c.key)}
+										readonly={!editing}
 										oninput={(e) =>
 											setVal(c.key, Number(e.currentTarget.value))}
-										class="focus-visible:ring-ring/50 w-full rounded-md border bg-background py-1 text-center text-sm outline-none focus-visible:ring-[3px]"
+										class="focus-visible:ring-ring/50 read-only:border-transparent read-only:bg-transparent w-full rounded-md border bg-background py-1 text-center text-sm outline-none focus-visible:ring-[3px]"
 									/>
 									<span class="text-muted-foreground text-[10px] font-semibold">
 										{c.abbr}
@@ -630,6 +1091,10 @@
 						{/each}
 					</Card.Content>
 				</Card.Root>
+
+				{#each asideGroups as [groupName, fields] (groupName)}
+					{@render groupCard(groupName, fields)}
+				{/each}
 			</div>
 		</div>
 
@@ -637,20 +1102,7 @@
 		{#if detailGroups.length > 0}
 			<div class="mt-4 grid gap-4 md:grid-cols-2">
 				{#each detailGroups as [groupName, fields] (groupName)}
-					<Card.Root>
-						<Card.Header class="pb-2">
-							<Card.Title class="text-base">{groupName}</Card.Title>
-						</Card.Header>
-						<Card.Content class="grid grid-cols-1 gap-4 pt-0">
-							{#each fields as field (field.propertyId)}
-								<FieldRenderer
-									property={field}
-									value={values[field.propertyId]}
-									onChange={(v) => onFieldChange(field.propertyId, v)}
-								/>
-							{/each}
-						</Card.Content>
-					</Card.Root>
+					{@render groupCard(groupName, fields)}
 				{/each}
 			</div>
 		{/if}
