@@ -95,7 +95,9 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 		try {
 			const body = await res.clone().json();
 			if (body.error) msg = body.error;
-		} catch {}
+		} catch (_) {
+			// réponse non-JSON : on garde le message HTTP par défaut
+		}
 		throw new ApiError(msg, res.status);
 	}
 	return res.json() as Promise<T>;
@@ -199,7 +201,9 @@ export const contentImportService = {
 		es.onmessage = (e) => {
 			try {
 				onEvent(JSON.parse(e.data) as ScanProgress);
-			} catch {}
+			} catch (_) {
+				// événement SSE non-JSON : ignoré
+			}
 		};
 		es.onerror = () => es.close();
 		return () => es.close();
