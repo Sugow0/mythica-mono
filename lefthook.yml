@@ -11,6 +11,10 @@ pre-commit:
       root: "apps/mythica-front/"
       glob: "*.{ts,js,svelte,json,css,html}"
       run: bunx prettier --check {staged_files}
+    eslint-front:
+      root: "apps/mythica-front/"
+      glob: "*.{ts,js,svelte}"
+      run: bunx eslint --format pretty {staged_files}
 
 commit-msg:
   commands:
