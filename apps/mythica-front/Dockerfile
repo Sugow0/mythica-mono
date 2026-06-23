@@ -6,6 +6,7 @@ COPY apps/mythica-api/package.json ./apps/mythica-api/
 COPY apps/mythica-gameplay/package.json ./apps/mythica-gameplay/
 COPY apps/mythica-gateway/package.json ./apps/mythica-gateway/
 COPY apps/mythica-mobile/package.json ./apps/mythica-mobile/
+COPY packages/character-engine/package.json ./packages/character-engine/
 RUN bun install --frozen-lockfile
 COPY apps/mythica-front ./apps/mythica-front
 WORKDIR /app/apps/mythica-front
