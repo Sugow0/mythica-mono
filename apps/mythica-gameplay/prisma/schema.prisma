@@ -94,6 +94,24 @@ enum JoinRequestStatus {
   @@map("join_request_status")
 }
 
+enum ContentImportJobStatus {
+  scanning
+  ready
+  applying
+  applied
+  failed
+
+  @@map("content_import_job_status")
+}
+
+enum ContentImportItemStatus {
+  pending
+  approved
+  rejected
+
+  @@map("content_import_item_status")
+}
+
 // Types d'étapes génériques du parcours de création (alignés sur character-engine).
 enum CreationStepKind {
   selection
@@ -159,6 +177,7 @@ model GameSystem {
   characterSheets CharacterSheet[]
   content         SystemContent[]
   creationSteps   GameSystemCreationStep[]
+  importJobs      ContentImportJob[]
 
   @@map("game_systems")
 }
@@ -621,4 +640,49 @@ model CharacterSheetSelection {
   @@index([characterSheetId], name: "idx_sheet_selections_sheet")
   @@index([characterSheetId, collectionKey], name: "idx_sheet_selections_collection")
   @@map("character_sheet_selections")
+}
+
+// ------------------------------------------------------------
+// CONTENT IMPORT
+// Workflow de révision : scan aidedd → staging → approbation → prod.
+// ------------------------------------------------------------
+
+model ContentImportJob {
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  gameSystemId  String                 @map("game_system_id") @db.Uuid
+  collection    String                 @db.VarChar(50)
+  status        ContentImportJobStatus @default(scanning)
+  totalFound    Int                    @default(0) @map("total_found")
+  totalFetched  Int                    @default(0) @map("total_fetched")
+  totalNew      Int                    @default(0) @map("total_new")
+  totalUpdated  Int                    @default(0) @map("total_updated")
+  errorMessage  String?                @map("error_message") @db.Text
+  createdAt     DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  completedAt   DateTime?              @map("completed_at") @db.Timestamptz
+  appliedAt     DateTime?              @map("applied_at") @db.Timestamptz
+
+  gameSystem GameSystem          @relation(fields: [gameSystemId], references: [id], onDelete: Cascade)
+  items      ContentImportItem[]
+
+  @@index([gameSystemId], name: "idx_import_jobs_game_system")
+  @@map("content_import_jobs")
+}
+
+model ContentImportItem {
+  id            String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId         String                  @map("job_id") @db.Uuid
+  slug          String                  @db.VarChar(150)
+  name          String?                 @db.VarChar(255)
+  description   String?                 @db.Text
+  rawData       Json?                   @map("raw_data")
+  isNew         Boolean                 @default(true) @map("is_new")
+  existingId    String?                 @map("existing_id") @db.Uuid
+  status        ContentImportItemStatus @default(pending)
+  reviewedAt    DateTime?               @map("reviewed_at") @db.Timestamptz
+
+  job ContentImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, slug])
+  @@index([jobId, status], name: "idx_import_items_job_status")
+  @@map("content_import_items")
 }

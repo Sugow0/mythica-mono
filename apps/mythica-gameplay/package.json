@@ -11,7 +11,8 @@
 		"db:push": "prisma db push",
 		"db:seed": "prisma db seed",
 		"lint": "biome check --write",
-		"lint:ci": "biome ci"
+		"lint:ci": "biome ci",
+		"fetch:descriptions": "bun run scripts/fetch-descriptions.ts"
 	},
 	"dependencies": {
 		"@bogeychan/elysia-logger": "^0.1.10",
