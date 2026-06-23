@@ -2,6 +2,7 @@ import { logger as elysiaLogger } from "@bogeychan/elysia-logger";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
 import { authContext } from "./auth/context";
+import { campaignCharacterSheetsController } from "./campaigns/campaign-character-sheets.controller";
 import { campaignsController } from "./campaigns/campaigns.controller";
 import { sessionsController } from "./campaigns/sessions.controller";
 import { sessionsWs } from "./campaigns/sessions.ws";
@@ -56,6 +57,7 @@ const app = new Elysia()
 	.use(characterContentController)
 	.use(characterSheetsController)
 	.use(campaignsController)
+	.use(campaignCharacterSheetsController)
 	.use(sessionsController)
 	.use(contentImportController)
 	.listen(env.PORT);

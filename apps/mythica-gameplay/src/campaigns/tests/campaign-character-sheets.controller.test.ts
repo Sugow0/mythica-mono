@@ -12,6 +12,27 @@ const p = {
 	characterSheet: {
 		findFirst: mock(async () => null as unknown),
 		findUnique: mock(async () => null as unknown),
+		findUniqueOrThrow: mock(
+			async () =>
+				({
+					id: "55555555-5555-5555-5555-555555555555",
+					userId: "22222222-2222-2222-2222-222222222222",
+					gameSystemId: "33333333-3333-3333-3333-333333333333",
+					name: "Aragorn",
+					avatarFileId: null,
+					gold: null,
+					abilityMethod: null,
+					values: [],
+					selections: [],
+				}) as unknown,
+		),
+		create: mock(async () => ({}) as unknown),
+	},
+	characterSheetValue: {
+		createMany: mock(async () => ({ count: 0 }) as unknown),
+	},
+	characterSheetSelection: {
+		createMany: mock(async () => ({ count: 0 }) as unknown),
 	},
 	campaignCharacterSheet: {
 		findFirst: mock(async () => null as unknown),
@@ -23,6 +44,12 @@ const p = {
 	gameSystem: {
 		findUnique: mock(async () => null as unknown),
 	},
+	$transaction: mock(async (arg: unknown) => {
+		if (typeof arg === "function") {
+			return (arg as (tx: unknown) => Promise<unknown>)(p);
+		}
+		return Promise.all(arg as Promise<unknown>[]);
+	}),
 };
 
 mock.module("../../lib/prisma", () => ({ prisma: p }));
@@ -98,6 +125,7 @@ function activeCampaign(extra: Record<string, unknown> = {}) {
 		status: "active",
 		tags: [],
 		coverFileId: null,
+		characterCreationLocked: false,
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		deletedAt: null,
@@ -123,7 +151,11 @@ function member(role: string, extra: Record<string, unknown> = {}) {
 
 beforeEach(() => {
 	for (const model of Object.values(p)) {
-		for (const fn of Object.values(model)) {
+		if (typeof model === "function") {
+			(model as ReturnType<typeof mock>).mockReset();
+			continue;
+		}
+		for (const fn of Object.values(model as Record<string, unknown>)) {
 			(fn as ReturnType<typeof mock>).mockReset();
 		}
 	}
@@ -131,12 +163,34 @@ beforeEach(() => {
 	p.campaignMember.findFirst.mockResolvedValue(null as unknown);
 	p.characterSheet.findFirst.mockResolvedValue(null as unknown);
 	p.characterSheet.findUnique.mockResolvedValue(null as unknown);
+	p.characterSheet.findUniqueOrThrow.mockResolvedValue({
+		id: SHEET,
+		userId: PLAYER,
+		gameSystemId: GS,
+		name: "Aragorn",
+		avatarFileId: null,
+		gold: null,
+		abilityMethod: null,
+		values: [],
+		selections: [],
+	} as unknown);
+	p.characterSheet.create.mockResolvedValue({} as unknown);
+	p.characterSheetValue.createMany.mockResolvedValue({ count: 0 } as unknown);
+	p.characterSheetSelection.createMany.mockResolvedValue({
+		count: 0,
+	} as unknown);
 	p.campaignCharacterSheet.findFirst.mockResolvedValue(null as unknown);
 	p.campaignCharacterSheet.findUnique.mockResolvedValue(null as unknown);
 	p.campaignCharacterSheet.findMany.mockResolvedValue([] as unknown);
 	p.campaignCharacterSheet.create.mockResolvedValue({ id: LINK } as unknown);
 	p.campaignCharacterSheet.delete.mockResolvedValue({} as unknown);
 	p.gameSystem.findUnique.mockResolvedValue(null as unknown);
+	p.$transaction.mockImplementation(async (arg: unknown) => {
+		if (typeof arg === "function") {
+			return (arg as (tx: unknown) => Promise<unknown>)(p);
+		}
+		return Promise.all(arg as Promise<unknown>[]);
+	});
 });
 
 // ==================== FEAT-178 : importer une fiche ====================
@@ -329,11 +383,13 @@ describe("GET /campaigns/:id/character-sheets (FEAT-179)", () => {
 			{
 				id: LINK,
 				characterSheetId: SHEET,
+				status: "inactive",
 				characterSheet: { userId: PLAYER, name: "Aragorn" },
 			},
 			{
 				id: "77777777-7777-7777-7777-777777777777",
 				characterSheetId: "88888888-8888-8888-8888-888888888888",
+				status: "active",
 				characterSheet: { userId: OUTSIDER, name: "Legolas" },
 			},
 		] as unknown);
@@ -360,6 +416,7 @@ describe("GET /campaigns/:id/character-sheets (FEAT-179)", () => {
 			{
 				id: LINK,
 				characterSheetId: SHEET,
+				status: "active",
 				characterSheet: { userId: PLAYER, name: "Aragorn" },
 			},
 		] as unknown);

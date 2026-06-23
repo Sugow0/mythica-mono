@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
+import { duplicateCharacterSheet } from "../character-sheets/character-sheets.service";
 import { getPresignedCoverUrl } from "../lib/cover-storage";
 import { ErrorResponse, SuccessMessageResponse } from "../lib/http";
 import { newId } from "../lib/id";
@@ -46,6 +47,7 @@ const CampaignSchema = t.Object({
 	tags: t.Array(t.String()),
 	coverFileId: t.Union([t.String(), t.Null()]),
 	coverUrl: t.Union([t.String(), t.Null()]),
+	characterCreationLocked: t.Boolean(),
 	createdAt: t.Date(),
 	updatedAt: t.Date(),
 });
@@ -190,12 +192,19 @@ async function coverUrlFor(c: {
 /** Code d'erreur Prisma pour violation de contrainte d'unicité. */
 const PRISMA_UNIQUE_VIOLATION = "P2002";
 
+const CampaignSheetStatus = t.Union([
+	t.Literal("active"),
+	t.Literal("inactive"),
+	t.Literal("disabled"),
+]);
+
 /** Schéma d'une fiche liée à une campagne (vue allégée). */
 const CampaignCharacterSheetSchema = t.Object({
 	id: t.String({ format: "uuid" }),
 	characterSheetId: t.String({ format: "uuid" }),
 	userId: t.String({ format: "uuid" }),
 	name: t.String(),
+	status: CampaignSheetStatus,
 });
 
 /** Durée de validité d'un lien d'invitation. */
@@ -313,6 +322,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 						tags: c.tags,
 						coverFileId: c.coverFileId,
 						coverUrl: await coverUrlFor(c),
+						characterCreationLocked: c.characterCreationLocked,
 						createdAt: c.createdAt,
 						updatedAt: c.updatedAt,
 						gameSystemName: c.gameSystem.nom,
@@ -1290,7 +1300,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 
 	// ==================== FICHES DE PERSONNAGE ====================
 
-	/** POST /campaigns/:id/character-sheets/:sheetId - Importer une fiche (FEAT-178) */
+	/** POST /campaigns/:id/character-sheets/:sheetId - Importer une fiche comme snapshot (FEAT-178) */
 	.post(
 		"/:id/character-sheets/:sheetId",
 		async ({ set, currentUser, params }) => {
@@ -1306,6 +1316,13 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 			if (campaign.status === "archived") {
 				set.status = 409;
 				return { success: false as const, error: "Campagne archivée" };
+			}
+			if (campaign.characterCreationLocked) {
+				set.status = 403;
+				return {
+					success: false as const,
+					error: "Création/import de fiche désactivé par le MJ",
+				};
 			}
 
 			// (1) La fiche doit exister et appartenir à l'utilisateur courant.
@@ -1354,12 +1371,20 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				}
 			}
 
+			// (4) Créer un snapshot indépendant de la fiche source.
+			const snapshotId = await duplicateCharacterSheet(
+				params.sheetId,
+				currentUser.id,
+				prisma,
+			);
+
 			try {
 				const created = await prisma.campaignCharacterSheet.create({
 					data: {
 						id: newId(),
 						campaignId: params.id,
-						characterSheetId: params.sheetId,
+						characterSheetId: snapshotId,
+						status: "inactive",
 					},
 				});
 				set.status = 201;
@@ -1384,7 +1409,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				404: ErrorResponse,
 				409: ErrorResponse,
 			},
-			detail: { tags: ["Campaigns"], summary: "Importer une fiche" },
+			detail: { tags: ["Campaigns"], summary: "Importer une fiche (snapshot)" },
 		},
 	)
 
@@ -1424,6 +1449,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				characterSheetId: row.characterSheetId,
 				userId: row.characterSheet.userId,
 				name: row.characterSheet.name,
+				status: row.status,
 			}));
 			return { success: true as const, sheets };
 		},

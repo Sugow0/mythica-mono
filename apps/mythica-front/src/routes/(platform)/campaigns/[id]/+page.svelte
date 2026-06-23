@@ -31,6 +31,7 @@
 	import { Skeleton } from "$lib/components/ui/skeleton";
 	import { Textarea } from "$lib/components/ui/textarea";
 	import { ApiError, campaignService } from "$lib/index.js";
+	import CampaignCharactersTab from "$lib/components/campaign/CampaignCharactersTab.svelte";
 	import type { PageData } from "./$types";
 
 	let { data }: { data: PageData } = $props();
@@ -1038,6 +1039,25 @@
 									</div>
 								</div>
 							{/each}
+						</Card.Content>
+					</Card.Root>
+				{/if}
+
+				<!-- Personnages -->
+				{#if isMember && campaign}
+					<Card.Root>
+						<Card.Header>
+							<Card.Title>Personnages</Card.Title>
+						</Card.Header>
+						<Card.Content>
+							<CampaignCharactersTab
+								campaignId={campaign.id}
+								{isGm}
+								characterCreationLocked={!!(
+									campaign as Record<string, unknown>
+								)["characterCreationLocked"]}
+								currentUserId={data.user?.id ?? ""}
+							/>
 						</Card.Content>
 					</Card.Root>
 				{/if}

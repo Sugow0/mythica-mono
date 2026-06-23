@@ -112,6 +112,30 @@ enum ContentImportItemStatus {
   @@map("content_import_item_status")
 }
 
+enum CampaignSheetStatus {
+  active
+  inactive
+  disabled
+
+  @@map("campaign_sheet_status")
+}
+
+enum CampaignPoolRequestStatus {
+  pending
+  confirmed
+  rejected
+
+  @@map("campaign_pool_request_status")
+}
+
+enum CampaignChangeRequestStatus {
+  pending
+  approved
+  rejected
+
+  @@map("campaign_change_request_status")
+}
+
 // Types d'étapes génériques du parcours de création (alignés sur character-engine).
 enum CreationStepKind {
   selection
@@ -250,19 +274,22 @@ model Campaign {
   isPublic     Boolean        @default(false)
   status       CampaignStatus @default(active)
   tags         String[]       @default([])
-  coverFileId  String?        @map("cover_file_id") @db.Uuid
-  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt    DateTime?      @map("deleted_at") @db.Timestamptz
+  coverFileId             String?        @map("cover_file_id") @db.Uuid
+  characterCreationLocked Boolean        @default(false) @map("character_creation_locked")
+  createdAt               DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt               DateTime?      @map("deleted_at") @db.Timestamptz
 
   // Relations
-  owner           User                     @relation("CampaignOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  gameSystem      GameSystem               @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
-  coverFile       File?                    @relation("CampaignCover", fields: [coverFileId], references: [id], onDelete: SetNull)
+  owner           User                              @relation("CampaignOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  gameSystem      GameSystem                        @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
+  coverFile       File?                             @relation("CampaignCover", fields: [coverFileId], references: [id], onDelete: SetNull)
   members         CampaignMember[]
   characterSheets CampaignCharacterSheet[]
+  poolSheets      CampaignPoolSheet[]
+  changeRequests  CampaignCharacterChangeRequest[]
   sessions        Session[]
-  files           File[]                   @relation("CampaignFiles")
+  files           File[]                            @relation("CampaignFiles")
   invites         CampaignInvite[]
   messages        Message[]
   joinRequests    CampaignJoinRequest[]
@@ -385,6 +412,8 @@ model CharacterSheet {
   selections CharacterSheetSelection[]
   campaigns  CampaignCharacterSheet[]
   tokens     SessionToken[]
+  poolSheet            CampaignPoolSheet?   @relation("PoolSheetCharacter")
+  poolRequestAssignment CampaignPoolRequest? @relation("PoolRequestAssignment")
 
   @@index([userId], name: "idx_character_sheets_user")
   @@index([gameSystemId], name: "idx_character_sheets_system")
@@ -421,18 +450,87 @@ model CharacterSheetValue {
 // ------------------------------------------------------------
 
 model CampaignCharacterSheet {
+  id               String              @id @db.Uuid
+  campaignId       String              @map("campaign_id") @db.Uuid
+  characterSheetId String              @map("character_sheet_id") @db.Uuid
+  status           CampaignSheetStatus @default(inactive)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  campaign       Campaign                         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  characterSheet CharacterSheet                   @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+  changeRequests CampaignCharacterChangeRequest[]
+
+  @@unique([campaignId, characterSheetId])
+  @@index([campaignId, status], name: "idx_campaign_sheets_status")
+  @@map("campaign_character_sheets")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN POOL SHEETS
+// Fiches pré-construites par le MJ, proposées aux joueurs.
+// Chaque entrée pointe vers un snapshot CharacterSheet appartenant au MJ.
+// ------------------------------------------------------------
+
+model CampaignPoolSheet {
   id               String   @id @db.Uuid
   campaignId       String   @map("campaign_id") @db.Uuid
-  characterSheetId String   @map("character_sheet_id") @db.Uuid
+  characterSheetId String   @unique @map("character_sheet_id") @db.Uuid
+  visibleToPlayers Boolean  @default(false) @map("visible_to_players")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  // Relations
-  campaign       Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  characterSheet CharacterSheet @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+  campaign       Campaign              @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  characterSheet CharacterSheet        @relation("PoolSheetCharacter", fields: [characterSheetId], references: [id], onDelete: Cascade)
+  requests       CampaignPoolRequest[]
 
-  @@unique([campaignId, characterSheetId])
-  @@map("campaign_character_sheets")
+  @@index([campaignId], name: "idx_pool_sheets_campaign")
+  @@map("campaign_pool_sheets")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN POOL REQUESTS
+// Demande d'un joueur pour obtenir une fiche du pool MJ.
+// ------------------------------------------------------------
+
+model CampaignPoolRequest {
+  id                String                    @id @db.Uuid
+  poolSheetId       String                    @map("pool_sheet_id") @db.Uuid
+  requestedByUserId String                    @map("requested_by_user_id") @db.Uuid
+  status            CampaignPoolRequestStatus @default(pending)
+  assignedSheetId   String?                   @unique @map("assigned_sheet_id") @db.Uuid
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz
+
+  poolSheet     CampaignPoolSheet @relation(fields: [poolSheetId], references: [id], onDelete: Cascade)
+  assignedSheet CharacterSheet?   @relation("PoolRequestAssignment", fields: [assignedSheetId], references: [id], onDelete: SetNull)
+
+  @@unique([poolSheetId, requestedByUserId])
+  @@index([poolSheetId, status], name: "idx_pool_requests_status")
+  @@map("campaign_pool_requests")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN CHARACTER CHANGE REQUESTS
+// Demande d'un joueur pour changer de personnage actif.
+// Requiert validation du MJ ; ancienne fiche → disabled à l'approbation.
+// ------------------------------------------------------------
+
+model CampaignCharacterChangeRequest {
+  id            String                      @id @db.Uuid
+  campaignId    String                      @map("campaign_id") @db.Uuid
+  playerId      String                      @map("player_id") @db.Uuid
+  targetSheetId String                      @map("target_sheet_id") @db.Uuid
+  status        CampaignChangeRequestStatus @default(pending)
+  createdAt     DateTime                    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime                    @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign    Campaign               @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  targetSheet CampaignCharacterSheet @relation(fields: [targetSheetId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status], name: "idx_change_requests_campaign_status")
+  @@map("campaign_character_change_requests")
 }
 
 // ------------------------------------------------------------
