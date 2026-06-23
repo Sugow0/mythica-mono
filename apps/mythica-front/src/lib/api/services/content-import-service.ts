@@ -84,10 +84,7 @@ function gameplayBase(): string {
 	return `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay`;
 }
 
-async function apiFetch<T>(
-	path: string,
-	init: RequestInit = {},
-): Promise<T> {
+async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 	const res = await fetch(`${gameplayBase()}${path}`, {
 		credentials: "include",
 		headers: { "Content-Type": "application/json", ...init.headers },
@@ -110,11 +107,11 @@ export const contentImportService = {
 	/** Créer un job de scan (démarre immédiatement en background). */
 	async startScan(
 		gameSystemId: string,
-		collection: string,
+		collection: string
 	): Promise<{ jobId: string }> {
 		const res = await apiFetch<{ success: true; jobId: string }>(
 			"/admin/content-imports",
-			{ method: "POST", body: JSON.stringify({ gameSystemId, collection }) },
+			{ method: "POST", body: JSON.stringify({ gameSystemId, collection }) }
 		);
 		return { jobId: res.jobId };
 	},
@@ -123,7 +120,7 @@ export const contentImportService = {
 	async listJobs(gameSystemId?: string): Promise<ContentImportJob[]> {
 		const qs = gameSystemId ? `?gameSystemId=${gameSystemId}` : "";
 		const res = await apiFetch<{ success: true; jobs: ContentImportJob[] }>(
-			`/admin/content-imports${qs}`,
+			`/admin/content-imports${qs}`
 		);
 		return res.jobs;
 	},
@@ -131,7 +128,7 @@ export const contentImportService = {
 	/** Détail d'un job. */
 	async getJob(jobId: string): Promise<ContentImportJob> {
 		const res = await apiFetch<{ success: true; job: ContentImportJob }>(
-			`/admin/content-imports/${jobId}`,
+			`/admin/content-imports/${jobId}`
 		);
 		return res.job;
 	},
@@ -144,7 +141,7 @@ export const contentImportService = {
 			isNew?: boolean;
 			page?: number;
 			perPage?: number;
-		} = {},
+		} = {}
 	): Promise<{
 		items: ContentImportItem[];
 		total: number;
@@ -164,7 +161,7 @@ export const contentImportService = {
 	async reviewItem(
 		jobId: string,
 		itemId: string,
-		status: "approved" | "rejected",
+		status: "approved" | "rejected"
 	): Promise<void> {
 		await apiFetch(`/admin/content-imports/${jobId}/items/${itemId}`, {
 			method: "PATCH",
@@ -176,7 +173,7 @@ export const contentImportService = {
 	async batchReview(
 		jobId: string,
 		action: "approve" | "reject",
-		ids?: string[],
+		ids?: string[]
 	): Promise<{ count: number }> {
 		return apiFetch(`/admin/content-imports/${jobId}/items/batch`, {
 			method: "POST",
@@ -195,7 +192,7 @@ export const contentImportService = {
 	/** Ouvrir un flux SSE pour la progression du scan. */
 	streamProgress(
 		jobId: string,
-		onEvent: (p: ScanProgress) => void,
+		onEvent: (p: ScanProgress) => void
 	): () => void {
 		const url = `${gameplayBase()}/admin/content-imports/${jobId}/stream`;
 		const es = new EventSource(url, { withCredentials: true });

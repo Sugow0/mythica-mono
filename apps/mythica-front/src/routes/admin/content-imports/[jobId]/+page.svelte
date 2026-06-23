@@ -63,7 +63,10 @@
 	onMount(() => load());
 
 	// ── Review individuelle ────────────────────────────────────────────────────
-	async function review(item: ContentImportItem, status: "approved" | "rejected") {
+	async function review(
+		item: ContentImportItem,
+		status: "approved" | "rejected"
+	) {
 		await contentImportService.reviewItem(jobId, item.id, status);
 		item.status = status;
 	}
@@ -88,16 +91,23 @@
 			applyResult = `${applied} item(s) importé(s) en production.`;
 			await load(currentPage);
 		} catch (e) {
-			applyResult = e instanceof Error ? e.message : "Erreur lors de l'application";
+			applyResult =
+				e instanceof Error ? e.message : "Erreur lors de l'application";
 		} finally {
 			applying = false;
 		}
 	}
 
 	// ── Helpers ────────────────────────────────────────────────────────────────
-	const pendingCount = $derived(items.filter((i) => i.status === "pending").length);
-	const approvedCount = $derived(items.filter((i) => i.status === "approved").length);
-	const rejectedCount = $derived(items.filter((i) => i.status === "rejected").length);
+	const pendingCount = $derived(
+		items.filter((i) => i.status === "pending").length
+	);
+	const approvedCount = $derived(
+		items.filter((i) => i.status === "approved").length
+	);
+	const rejectedCount = $derived(
+		items.filter((i) => i.status === "rejected").length
+	);
 </script>
 
 <div class="p-8">
@@ -113,7 +123,8 @@
 		<div>
 			<h1 class="text-xl font-bold text-white">
 				Review — {job
-					? (COLLECTION_LABELS[job.collection as AideddCollection] ?? job.collection)
+					? (COLLECTION_LABELS[job.collection as AideddCollection] ??
+						job.collection)
 					: "…"}
 			</h1>
 			<p class="text-xs text-slate-500">{jobId}</p>
@@ -156,7 +167,9 @@
 
 	<!-- Résultat apply -->
 	{#if applyResult}
-		<div class="mb-4 rounded-lg border border-green-800 bg-green-950 px-4 py-3 text-sm text-green-300">
+		<div
+			class="mb-4 rounded-lg border border-green-800 bg-green-950 px-4 py-3 text-sm text-green-300"
+		>
 			{applyResult}
 		</div>
 	{/if}
@@ -201,27 +214,46 @@
 						<th class="px-4 py-3 text-left font-medium text-slate-400">Slug</th>
 						<th class="px-4 py-3 text-left font-medium text-slate-400">Nom</th>
 						<th class="px-4 py-3 text-left font-medium text-slate-400">Type</th>
-						<th class="px-4 py-3 text-left font-medium text-slate-400">Aperçu</th>
-						<th class="px-4 py-3 text-left font-medium text-slate-400">Statut</th>
+						<th class="px-4 py-3 text-left font-medium text-slate-400"
+							>Aperçu</th
+						>
+						<th class="px-4 py-3 text-left font-medium text-slate-400"
+							>Statut</th
+						>
 						<th class="px-4 py-3"></th>
 					</tr>
 				</thead>
 				<tbody class="divide-y divide-slate-800 bg-slate-950">
 					{#each items as item (item.id)}
 						<tr class="group hover:bg-slate-900/30">
-							<td class="px-4 py-3 font-mono text-xs text-slate-400">{item.slug}</td>
-							<td class="px-4 py-3 font-medium text-white">{item.name ?? "—"}</td>
+							<td class="px-4 py-3 font-mono text-xs text-slate-400"
+								>{item.slug}</td
+							>
+							<td class="px-4 py-3 font-medium text-white"
+								>{item.name ?? "—"}</td
+							>
 							<td class="px-4 py-3">
 								{#if item.isNew}
-									<Badge class="bg-green-900/50 text-green-400 border-green-800">Nouveau</Badge>
+									<Badge class="bg-green-900/50 text-green-400 border-green-800"
+										>Nouveau</Badge
+									>
 								{:else}
-									<Badge variant="outline" class="text-amber-400 border-amber-800">Mise à jour</Badge>
+									<Badge
+										variant="outline"
+										class="text-amber-400 border-amber-800">Mise à jour</Badge
+									>
 								{/if}
 							</td>
 							<td class="max-w-xs px-4 py-3">
 								{#if item.description}
-									<p class="truncate text-xs text-slate-400" title={item.description}>
-										{item.description.slice(0, 120)}{item.description.length > 120 ? "…" : ""}
+									<p
+										class="truncate text-xs text-slate-400"
+										title={item.description}
+									>
+										{item.description.slice(0, 120)}{item.description.length >
+										120
+											? "…"
+											: ""}
 									</p>
 								{:else}
 									<span class="text-xs text-slate-600">—</span>
@@ -242,7 +274,9 @@
 							</td>
 							<td class="px-4 py-3">
 								{#if job?.status === "ready"}
-									<div class="flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+									<div
+										class="flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100"
+									>
 										{#if item.status !== "approved"}
 											<button
 												type="button"

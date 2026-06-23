@@ -640,7 +640,8 @@
 					aria-label="{field.label} actuels"
 					value={resource(field.key).current}
 					readonly={!editing}
-					oninput={(e) => setResource(field.key, "current", e.currentTarget.value)}
+					oninput={(e) =>
+						setResource(field.key, "current", e.currentTarget.value)}
 					class="focus-visible:ring-ring/50 w-12 rounded-md bg-transparent text-right outline-none focus-visible:ring-[3px]"
 				/>
 				<span class="text-muted-foreground text-base">/</span>
