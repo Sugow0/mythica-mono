@@ -1,5 +1,6 @@
 <script lang="ts">
 	import SparklesIcon from "@lucide/svelte/icons/sparkles";
+	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import { onMount } from "svelte";
 	import { Badge } from "$lib/components/ui/badge";
 	import * as Select from "$lib/components/ui/select";
@@ -10,15 +11,15 @@
 		nom: string;
 		version: string;
 		isOfficial: boolean;
+		parentSystemId: string | null;
 	};
 
+	type TreeNode = GameSystem & { children: GameSystem[] };
+
 	type Props = {
-		/** Identifiant du système sélectionné (liaison bidirectionnelle). */
 		value?: string;
-		/** Id du déclencheur, pour l'association `<label for>`. */
 		id?: string;
 		disabled?: boolean;
-		/** Marque le champ en erreur (aria-invalid). */
 		invalid?: boolean;
 	};
 
@@ -33,9 +34,18 @@
 	let loading = $state(true);
 	let loadError = $state(false);
 
-	const official = $derived(systems.filter((s) => s.isOfficial));
-	const custom = $derived(systems.filter((s) => !s.isOfficial));
+	/** Roots with their direct children. Only 2 levels needed for current data. */
+	const officialTree = $derived(buildTree(systems.filter((s) => s.isOfficial)));
+	const customTree = $derived(buildTree(systems.filter((s) => !s.isOfficial)));
 	const selected = $derived(systems.find((s) => s.id === value));
+
+	function buildTree(flat: GameSystem[]): TreeNode[] {
+		const roots = flat.filter((s) => !s.parentSystemId);
+		return roots.map((root) => ({
+			...root,
+			children: systems.filter((s) => s.parentSystemId === root.id),
+		}));
+	}
 
 	onMount(async () => {
 		try {
@@ -74,39 +84,84 @@
 	</Select.Trigger>
 
 	<Select.Content>
-		{#if official.length > 0}
-			<Select.Group>
-				<Select.GroupHeading>Systèmes officiels</Select.GroupHeading>
-				{#each official as system (system.id)}
-					{@render systemItem(system)}
-				{/each}
-			</Select.Group>
+		{#if officialTree.length > 0}
+			{#each officialTree as root (root.id)}
+				{#if root.children.length > 0}
+					<!-- Parent avec enfants : en-tête de groupe, non sélectionnable -->
+					<Select.Group>
+						<Select.GroupHeading class="flex items-center gap-1.5">
+							<SparklesIcon class="h-3 w-3 text-primary/70" />
+							<span>{root.nom}</span>
+							<span class="text-xs font-normal text-muted-foreground"
+								>v{root.version}</span
+							>
+						</Select.GroupHeading>
+						{#each root.children as child (child.id)}
+							<Select.Item value={child.id} label={child.nom}>
+								<span class="flex w-full items-center gap-2 pl-2">
+									<ChevronRightIcon
+										class="h-3 w-3 shrink-0 text-muted-foreground/50"
+									/>
+									<span class="font-medium">{child.nom}</span>
+									<span class="text-xs text-muted-foreground"
+										>v{child.version}</span
+									>
+								</span>
+							</Select.Item>
+						{/each}
+					</Select.Group>
+				{:else}
+					<!-- Feuille officielle sans enfants : directement sélectionnable -->
+					<Select.Item value={root.id} label={root.nom}>
+						<span class="flex w-full items-center gap-2">
+							<SparklesIcon class="h-3.5 w-3.5 text-primary/70" />
+							<span class="font-medium">{root.nom}</span>
+							<span class="text-xs text-muted-foreground">v{root.version}</span>
+							<Badge variant="default" class="ml-auto">Officiel</Badge>
+						</span>
+					</Select.Item>
+				{/if}
+			{/each}
 		{/if}
-		{#if custom.length > 0}
+
+		{#if customTree.length > 0}
 			<Select.Group>
 				<Select.GroupHeading>Systèmes personnalisés</Select.GroupHeading>
-				{#each custom as system (system.id)}
-					{@render systemItem(system)}
+				{#each customTree as root (root.id)}
+					{#if root.children.length > 0}
+						<!-- Groupe custom avec sous-versions -->
+						<Select.Group>
+							<Select.GroupHeading class="pl-2 text-xs font-normal">
+								{root.nom}
+								<span class="text-muted-foreground">v{root.version}</span>
+							</Select.GroupHeading>
+							{#each root.children as child (child.id)}
+								<Select.Item value={child.id} label={child.nom}>
+									<span class="flex w-full items-center gap-2 pl-4">
+										<ChevronRightIcon
+											class="h-3 w-3 shrink-0 text-muted-foreground/50"
+										/>
+										<span class="font-medium">{child.nom}</span>
+										<span class="text-xs text-muted-foreground"
+											>v{child.version}</span
+										>
+									</span>
+								</Select.Item>
+							{/each}
+						</Select.Group>
+					{:else}
+						<Select.Item value={root.id} label={root.nom}>
+							<span class="flex w-full items-center gap-2">
+								<span class="font-medium">{root.nom}</span>
+								<span class="text-xs text-muted-foreground"
+									>v{root.version}</span
+								>
+								<Badge variant="secondary" class="ml-auto">Custom</Badge>
+							</span>
+						</Select.Item>
+					{/if}
 				{/each}
 			</Select.Group>
 		{/if}
 	</Select.Content>
 </Select.Root>
-
-{#snippet systemItem(system: GameSystem)}
-	<Select.Item value={system.id} label={system.nom}>
-		<span class="flex w-full items-center gap-2">
-			{#if system.isOfficial}
-				<SparklesIcon class="h-3.5 w-3.5 text-primary/70" />
-			{/if}
-			<span class="font-medium">{system.nom}</span>
-			<span class="text-xs text-muted-foreground">v{system.version}</span>
-			<Badge
-				variant={system.isOfficial ? "default" : "secondary"}
-				class="ml-auto"
-			>
-				{system.isOfficial ? "Officiel" : "Custom"}
-			</Badge>
-		</span>
-	</Select.Item>
-{/snippet}

@@ -117,9 +117,16 @@
 	"admin_btn_cancel": "Cancelar",
 	"admin_btn_create": "Crear",
 	"admin_btn_delete": "Eliminar",
+	"admin_btn_edit": "Editar",
+	"admin_btn_save": "Guardar",
 
 	"admin_form_name_label": "Nombre",
+	"admin_form_version_label": "Versión",
+	"admin_form_slug_label": "Slug",
 	"admin_form_description_label": "Descripción",
+	"admin_form_parent_label": "Sistema padre",
+	"admin_form_official_label": "Sistema oficial",
+	"admin_form_no_parent": "Sin padre",
 
 	"nav_characters": "Fichas",
 	"nav_my_characters": "Mis fichas",
