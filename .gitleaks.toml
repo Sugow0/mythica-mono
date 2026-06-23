@@ -11,3 +11,15 @@ paths = [
   '''.*\.env\.[^/]+$''',
   '''.*/config/.*\.env$''',
 ]
+
+# Faux positifs : clés TypeScript (collectionKey, propertyKey…) détectées
+# comme "generic-api-key" à cause de leur entropie et du suffixe Key.
+stopwords = [
+  "collectionKey",
+  "propertyKey",
+  "displayKey",
+  "sortKey",
+  "skillKey",
+  "abilityKey",
+  "groupKey",
+]

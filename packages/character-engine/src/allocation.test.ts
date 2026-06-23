@@ -85,9 +85,9 @@ describe("lancer de dés", () => {
 	});
 
 	test("rollDice somme `count` dés", () => {
-		expect(rollDice(5, 4, makeSequenceRng([0.99, 0.99, 0.99, 0.99, 0.99]))).toBe(
-			20,
-		);
+		expect(
+			rollDice(5, 4, makeSequenceRng([0.99, 0.99, 0.99, 0.99, 0.99])),
+		).toBe(20);
 		expect(rollDice(2, 4, makeSequenceRng([0.0, 0.0]))).toBe(2);
 	});
 

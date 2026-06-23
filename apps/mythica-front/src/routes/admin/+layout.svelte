@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
+	import DownloadIcon from "@lucide/svelte/icons/download";
 	import LayoutDashboardIcon from "@lucide/svelte/icons/layout-dashboard";
 	import ScrollIcon from "@lucide/svelte/icons/scroll";
 	import SwordsIcon from "@lucide/svelte/icons/swords";
@@ -27,6 +28,12 @@
 			href: "/admin/game-systems",
 			label: () => m.admin_nav_game_systems(),
 			icon: SwordsIcon,
+			exact: false,
+		},
+		{
+			href: "/admin/content-imports",
+			label: () => "Import contenu",
+			icon: DownloadIcon,
 			exact: false,
 		},
 	];

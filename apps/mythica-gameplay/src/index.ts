@@ -7,6 +7,7 @@ import { sessionsController } from "./campaigns/sessions.controller";
 import { sessionsWs } from "./campaigns/sessions.ws";
 import { characterContentController } from "./character-content/character-content.controller";
 import { characterSheetsController } from "./character-sheets/character-sheets.controller";
+import { contentImportController } from "./content-import/content-import.controller";
 import { env } from "./env";
 import { startUserSync } from "./events/user-sync";
 import { characterSheetPropertiesController } from "./game-systems/character-sheet-properties.controller";
@@ -56,6 +57,7 @@ const app = new Elysia()
 	.use(characterSheetsController)
 	.use(campaignsController)
 	.use(sessionsController)
+	.use(contentImportController)
 	.listen(env.PORT);
 
 // Serveur WebSocket dédié (le gateway proxifie ws://…/gameplay/* vers ce port).

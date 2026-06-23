@@ -117,9 +117,16 @@
 	"admin_btn_cancel": "Cancel",
 	"admin_btn_create": "Create",
 	"admin_btn_delete": "Delete",
+	"admin_btn_edit": "Edit",
+	"admin_btn_save": "Save",
 
 	"admin_form_name_label": "Name",
+	"admin_form_version_label": "Version",
+	"admin_form_slug_label": "Slug",
 	"admin_form_description_label": "Description",
+	"admin_form_parent_label": "Parent system",
+	"admin_form_official_label": "Official system",
+	"admin_form_no_parent": "No parent",
 
 	"nav_characters": "Characters",
 	"nav_my_characters": "My characters",

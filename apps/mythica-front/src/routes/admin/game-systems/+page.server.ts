@@ -1,7 +1,6 @@
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
 
-/** URL de base du service gameplay (sans slash final parasite). */
 function gameplayUrl(): string {
 	const base = (
 		import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"
@@ -33,6 +32,8 @@ export const actions: Actions = {
 		const version = formData.get("version")?.toString().trim();
 		const slug = formData.get("slug")?.toString().trim();
 		const description = formData.get("description")?.toString().trim();
+		const parentSystemId = formData.get("parentSystemId")?.toString().trim();
+		const isOfficial = formData.get("isOfficial") === "on";
 
 		if (!nom || !version || !slug) {
 			return fail(400, {
@@ -49,6 +50,8 @@ export const actions: Actions = {
 				version,
 				slug,
 				description: description || undefined,
+				parentSystemId: parentSystemId || undefined,
+				isOfficial: isOfficial || undefined,
 			}),
 		});
 
@@ -61,6 +64,52 @@ export const actions: Actions = {
 		}
 
 		return { success: true, action: "create" };
+	},
+
+	update: async ({ request, fetch }) => {
+		const cookieHeader = request.headers.get("cookie") ?? "";
+		const formData = await request.formData();
+
+		const id = formData.get("id")?.toString();
+		const nom = formData.get("nom")?.toString().trim();
+		const version = formData.get("version")?.toString().trim();
+		const slug = formData.get("slug")?.toString().trim();
+		const description = formData.get("description")?.toString().trim();
+		const parentSystemId = formData.get("parentSystemId")?.toString().trim();
+		const isOfficial = formData.get("isOfficial") === "on";
+
+		if (!id) {
+			return fail(400, { action: "update", error: "ID manquant." });
+		}
+		if (!nom || !version || !slug) {
+			return fail(400, {
+				action: "update",
+				error: "Le nom, la version et le slug sont requis.",
+			});
+		}
+
+		const res = await fetch(`${gameplayUrl()}/game-systems/${id}`, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json", Cookie: cookieHeader },
+			body: JSON.stringify({
+				nom,
+				version,
+				slug,
+				description: description || undefined,
+				parentSystemId: parentSystemId || undefined,
+				isOfficial,
+			}),
+		});
+
+		if (!res.ok) {
+			const body = await res.json().catch(() => ({}));
+			return fail(res.status, {
+				action: "update",
+				error: body?.error ?? "Erreur lors de la modification.",
+			});
+		}
+
+		return { success: true, action: "update" };
 	},
 
 	delete: async ({ request, fetch }) => {
