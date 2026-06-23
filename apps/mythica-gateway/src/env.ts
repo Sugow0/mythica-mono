@@ -1,6 +1,9 @@
 import { config } from "@dotenvx/dotenvx";
 
-config({ path: `./config/${process.env.NODE_ENV ?? "development"}.env` });
+config({
+	path: `./config/${process.env.NODE_ENV ?? "development"}.env`,
+	overload: true,
+});
 
 export const env = {
 	PORT: Number(process.env.PORT ?? 2100),
