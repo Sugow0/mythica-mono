@@ -75,8 +75,7 @@ export const AIDEDD_COLLECTIONS: Record<AideddCollection, CollectionConfig> = {
 // ─── HTTP ─────────────────────────────────────────────────────────────────────
 
 const FETCH_HEADERS: Record<string, string> = {
-	"User-Agent":
-		"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+	"User-Agent": "Mozilla/5.0 (compatible; Mythica-Content-Importer/1.0)",
 	Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 	"Accept-Language": "fr-FR,fr;q=0.9,en;q=0.5",
 	Connection: "keep-alive",

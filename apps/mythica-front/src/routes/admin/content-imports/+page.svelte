@@ -9,6 +9,7 @@
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
 	import * as Select from "$lib/components/ui/select";
+	import { gameSystemService } from "$lib/index.js";
 	import {
 		AIDEDD_COLLECTIONS,
 		COLLECTION_LABELS,
@@ -18,10 +19,15 @@
 		contentImportService,
 	} from "$lib/api/services/content-import-service";
 
+	type GameSystem = { id: string; nom: string; slug: string };
+
 	// ── State ──────────────────────────────────────────────────────────────────
 	let jobs = $state<ContentImportJob[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+
+	// Game systems disponibles (pour le sélecteur)
+	let gameSystems = $state<GameSystem[]>([]);
 
 	// Formulaire de scan
 	let selectedCollection = $state<AideddCollection>("dons");
@@ -48,6 +54,15 @@
 
 	onMount(() => {
 		load();
+		gameSystemService
+			.getGameSystems({ limit: 100 })
+			.then((res) => {
+				gameSystems = (res.items ?? []) as GameSystem[];
+				if (gameSystems.length > 0 && !gameSystemId) {
+					gameSystemId = gameSystems[0].id;
+				}
+			})
+			.catch(() => {});
 		return () => stopStream?.();
 	});
 
@@ -59,7 +74,7 @@
 		try {
 			const { jobId } = await contentImportService.startScan(
 				gameSystemId,
-				selectedCollection,
+				selectedCollection
 			);
 			await load();
 			// Ouvrir le SSE pour le job qui vient de démarrer
@@ -135,21 +150,36 @@
 			<Card.Title class="text-white">Nouveau scan</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-wrap items-end gap-4">
-			<!-- Game System ID -->
+			<!-- Système de jeu -->
 			<div class="flex flex-col gap-1.5">
-				<label class="text-sm text-slate-400" for="gs-id">Game System ID</label>
-				<input
-					id="gs-id"
-					type="text"
-					placeholder="UUID du système de jeu"
-					bind:value={gameSystemId}
-					class="h-9 w-72 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm text-white placeholder-slate-500 outline-none focus:border-red-500"
-				/>
+				<label class="text-sm text-slate-400" for="gs-select"
+					>Système de jeu</label
+				>
+				{#if gameSystems.length > 0}
+					<select
+						id="gs-select"
+						bind:value={gameSystemId}
+						class="h-9 w-64 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm text-white outline-none focus:border-red-500"
+					>
+						{#each gameSystems as gs (gs.id)}
+							<option value={gs.id}>{gs.nom}</option>
+						{/each}
+					</select>
+				{:else}
+					<input
+						id="gs-select"
+						type="text"
+						placeholder="UUID du système de jeu"
+						bind:value={gameSystemId}
+						class="h-9 w-64 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm text-white placeholder-slate-500 outline-none focus:border-red-500"
+					/>
+				{/if}
 			</div>
 
 			<!-- Collection -->
 			<div class="flex flex-col gap-1.5">
-				<label class="text-sm text-slate-400" for="collection">Collection</label>
+				<label class="text-sm text-slate-400" for="collection">Collection</label
+				>
 				<select
 					id="collection"
 					bind:value={selectedCollection}
@@ -185,9 +215,7 @@
 		<Card.Root class="mb-6 border-slate-700 bg-slate-900">
 			<Card.Content class="pt-4">
 				<div class="mb-3 flex items-center justify-between">
-					<span class="text-sm font-medium text-white">
-						Scan en cours…
-					</span>
+					<span class="text-sm font-medium text-white"> Scan en cours… </span>
 					<span class="text-xs text-slate-400">
 						{activeProgress.totalFetched} / {activeProgress.totalFound || "?"}
 					</span>
@@ -198,7 +226,8 @@
 						class="h-full bg-red-600 transition-all"
 						style="width: {activeProgress.totalFound
 							? Math.round(
-									(activeProgress.totalFetched / activeProgress.totalFound) * 100,
+									(activeProgress.totalFetched / activeProgress.totalFound) *
+										100
 								)
 							: 0}%"
 					></div>
@@ -209,8 +238,11 @@
 					</p>
 				{/if}
 				<div class="mt-3 flex gap-4 text-xs text-slate-400">
-					<span class="text-green-400">+{activeProgress.totalNew} nouveaux</span>
-					<span class="text-amber-400">~{activeProgress.totalUpdated} mis à jour</span>
+					<span class="text-green-400">+{activeProgress.totalNew} nouveaux</span
+					>
+					<span class="text-amber-400"
+						>~{activeProgress.totalUpdated} mis à jour</span
+					>
 				</div>
 			</Card.Content>
 		</Card.Root>
@@ -234,7 +266,9 @@
 						<th class="px-4 py-3 text-left font-medium text-slate-400"
 							>Collection</th
 						>
-						<th class="px-4 py-3 text-left font-medium text-slate-400">Statut</th>
+						<th class="px-4 py-3 text-left font-medium text-slate-400"
+							>Statut</th
+						>
 						<th class="px-4 py-3 text-right font-medium text-slate-400"
 							>Trouvés</th
 						>

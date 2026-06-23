@@ -109,6 +109,33 @@ export const contentImportController = new Elysia({
 			);
 		}
 
+		// Si le job est déjà terminé, envoyer l'état final immédiatement puis fermer.
+		const existingJob = await getJob(params.jobId);
+		const terminalStatuses = ["ready", "applied", "failed"] as const;
+		if (
+			existingJob &&
+			terminalStatuses.includes(
+				existingJob.status as (typeof terminalStatuses)[number],
+			)
+		) {
+			const snapshot = JSON.stringify({
+				jobId: params.jobId,
+				status: existingJob.status === "applied" ? "ready" : existingJob.status,
+				totalFound: existingJob.totalFound,
+				totalFetched: existingJob.totalFetched,
+				totalNew: existingJob.totalNew,
+				totalUpdated: existingJob.totalUpdated,
+			});
+			const body = `: connected\n\ndata: ${snapshot}\n\n`;
+			return new Response(body, {
+				headers: {
+					"content-type": "text/event-stream",
+					"cache-control": "no-cache",
+					connection: "keep-alive",
+				},
+			});
+		}
+
 		const encoder = new TextEncoder();
 		let unsubscribe: (() => void) | undefined;
 

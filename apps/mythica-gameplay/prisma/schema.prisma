@@ -674,7 +674,6 @@ model ContentImportItem {
   slug          String                  @db.VarChar(150)
   name          String?                 @db.VarChar(255)
   description   String?                 @db.Text
-  rawData       Json?                   @map("raw_data")
   isNew         Boolean                 @default(true) @map("is_new")
   existingId    String?                 @map("existing_id") @db.Uuid
   status        ContentImportItemStatus @default(pending)

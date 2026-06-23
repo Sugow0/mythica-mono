@@ -58,6 +58,17 @@ export async function createAndStartScan(
 	gameSystemId: string,
 	collection: AideddCollection,
 ): Promise<string> {
+	// Empêche les scans simultanés sur la même collection / game system
+	const running = await prisma.contentImportJob.findFirst({
+		where: { gameSystemId, collection, status: "scanning" },
+		select: { id: true },
+	});
+	if (running) {
+		throw new Error(
+			`Un scan est déjà en cours pour cette collection (job ${running.id})`,
+		);
+	}
+
 	const job = await prisma.contentImportJob.create({
 		data: {
 			gameSystemId,
@@ -231,43 +242,49 @@ export async function applyJob(jobId: string): Promise<{ applied: number }> {
 		data: { status: "applying" },
 	});
 
+	// Traitement par batch de 20 pour éviter une file séquentielle trop longue
+	// sur les grandes collections (428 monstres, 300+ sorts).
+	const BATCH = 20;
 	let applied = 0;
-	for (const item of job.items) {
-		if (item.existingId) {
-			// Mise à jour du contenu existant
-			await prisma.systemContent.update({
-				where: { id: item.existingId },
-				data: {
-					name: item.name ?? undefined,
-					description: item.description ?? undefined,
-				},
-			});
-		} else {
-			// Nouvel item
-			await prisma.systemContent.upsert({
-				where: {
-					gameSystemId_collectionKey_slug: {
-						gameSystemId: job.gameSystemId,
-						collectionKey,
-						slug: item.slug,
-					},
-				},
-				create: {
-					id: crypto.randomUUID(),
-					gameSystemId: job.gameSystemId,
-					collectionKey,
-					slug: item.slug,
-					name: item.name ?? item.slug,
-					description: item.description ?? null,
-					data: {},
-				},
-				update: {
-					name: item.name ?? undefined,
-					description: item.description ?? undefined,
-				},
-			});
-		}
-		applied++;
+	for (let i = 0; i < job.items.length; i += BATCH) {
+		const batch = job.items.slice(i, i + BATCH);
+		await Promise.all(
+			batch.map(async (item) => {
+				if (item.existingId) {
+					await prisma.systemContent.update({
+						where: { id: item.existingId },
+						data: {
+							name: item.name ?? undefined,
+							description: item.description ?? undefined,
+						},
+					});
+				} else {
+					await prisma.systemContent.upsert({
+						where: {
+							gameSystemId_collectionKey_slug: {
+								gameSystemId: job.gameSystemId,
+								collectionKey,
+								slug: item.slug,
+							},
+						},
+						create: {
+							id: crypto.randomUUID(),
+							gameSystemId: job.gameSystemId,
+							collectionKey,
+							slug: item.slug,
+							name: item.name ?? item.slug,
+							description: item.description ?? null,
+							data: {},
+						},
+						update: {
+							name: item.name ?? undefined,
+							description: item.description ?? undefined,
+						},
+					});
+				}
+				applied++;
+			}),
+		);
 	}
 
 	await prisma.contentImportJob.update({
