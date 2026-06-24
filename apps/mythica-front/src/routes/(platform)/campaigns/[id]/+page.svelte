@@ -406,6 +406,10 @@
 		actionError = null;
 		try {
 			await campaignService.updateSession(campaignId, sessionId, { status });
+			if (status === "active") {
+				goto(`/sessions/${sessionId}/table`);
+				return;
+			}
 			await reloadSessions();
 		} catch (err) {
 			actionError =
@@ -854,13 +858,13 @@
 								{/if}
 							</div>
 							<div class="flex shrink-0 items-center gap-1.5">
-								{#if kind !== "past"}
+								{#if kind === "active"}
 									<Button
 										size="sm"
-										variant="outline"
-										href={`/sessions/${session.id}/lobby`}
+										href={`/sessions/${session.id}/table`}
+										class="bg-red-600 text-white hover:bg-red-700"
 									>
-										<DoorOpenIcon class="h-3.5 w-3.5" />Salle d'attente
+										<DoorOpenIcon class="h-3.5 w-3.5" />Rejoindre la table
 									</Button>
 								{/if}
 								{#if isGm}
