@@ -116,7 +116,8 @@ describe("handleMapCommand — FOG_PAINT (MJ)", () => {
 			total: 7,
 			isPrivate: false,
 		};
-		const evt = await handleMapCommand(SID, PLAYER, cmd);
+		// OWNER est propriétaire de la campagne => accès valide
+		const evt = await handleMapCommand(SID, OWNER, cmd);
 		expect(evt?.type).toBe("DICE_ROLL");
 		expect(p.session.update).not.toHaveBeenCalled();
 	});

@@ -78,8 +78,13 @@ export async function handleMapCommand(
 	userId: string,
 	command: MapCommand,
 ): Promise<MapEvent | null> {
-	// DICE_ROLL : tout participant peut lancer, pas de persistance ni de vérification d'accès GM
+	// DICE_ROLL : tout participant peut lancer (vérification d'accès session requise)
 	if (command.type === "DICE_ROLL") {
+		const access = await resolveSessionAccess(sessionId, {
+			id: userId,
+			role: null,
+		});
+		if (!access.ok) return null;
 		return { type: "DICE_ROLL", ...command };
 	}
 
