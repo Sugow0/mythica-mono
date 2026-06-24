@@ -1,38 +1,48 @@
+// apps/mythica-front/src/lib/vtt/layers/GridLayer.ts
 import { Container, Graphics } from "pixi.js";
 import type { MapConfig } from "../types";
+import { drawSquareGrid, snapToSquare } from "../grid/SquareGrid";
+import { drawHexGrid, snapToHex } from "../grid/HexGrid";
+import { drawFreeGrid, snapToFree } from "../grid/FreeGrid";
 
 export class GridLayer {
 	private container: Container;
 	private graphics: Graphics;
+	private config: MapConfig | null = null;
 
 	constructor(stage: Container) {
 		this.container = new Container();
 		this.graphics = new Graphics();
 		this.container.addChild(this.graphics);
-		stage.addChild(this.container);
+		stage.addChildAt(this.container, 1);
 	}
 
 	setGrid(config: MapConfig) {
+		this.config = config;
 		this.graphics.clear();
-
-		if (config.gridType === "free") return;
-
-		const color = parseInt(config.gridColor.replace("#", ""), 16);
-		const alpha = config.gridOpacity;
-		const size = config.gridSize;
-
-		this.graphics.setStrokeStyle({ width: 1, color, alpha }).moveTo(0, 0);
-
-		if (config.gridType === "square") {
-			for (let x = config.gridOffsetX; x <= config.widthPx; x += size) {
-				this.graphics.moveTo(x, 0).lineTo(x, config.heightPx);
-			}
-			for (let y = config.gridOffsetY; y <= config.heightPx; y += size) {
-				this.graphics.moveTo(0, y).lineTo(config.widthPx, y);
-			}
+		switch (config.gridType) {
+			case "square":
+				drawSquareGrid(this.graphics, config);
+				break;
+			case "hex":
+				drawHexGrid(this.graphics, config);
+				break;
+			case "free":
+				drawFreeGrid();
+				break;
 		}
+	}
 
-		this.graphics.stroke();
+	snap(x: number, y: number): { x: number; y: number } {
+		if (!this.config) return { x, y };
+		switch (this.config.gridType) {
+			case "square":
+				return snapToSquare(x, y, this.config);
+			case "hex":
+				return snapToHex(x, y, this.config);
+			case "free":
+				return snapToFree(x, y, this.config);
+		}
 	}
 
 	destroy() {
