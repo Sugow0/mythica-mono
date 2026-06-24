@@ -126,6 +126,10 @@
 
 	onMount(async () => {
 		await loadSession();
+		if (session?.status === "active") {
+			goto(`/sessions/${sessionId}/table`);
+			return;
+		}
 		if (session) connectPresence();
 	});
 
