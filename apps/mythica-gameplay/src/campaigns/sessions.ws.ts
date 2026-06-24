@@ -3,6 +3,7 @@ import { authContext } from "../auth/context";
 import { logger } from "../logger";
 import { resolveSessionAccess } from "./session-access";
 import { handleCombatCommand, parseCombatCommand } from "./session-combat";
+import { handleMapCommand, parseMapCommand } from "./session-map";
 import { sessionPresence } from "./session-presence-ws";
 import { sessionRooms } from "./session-rooms";
 import { buildSessionSnapshot } from "./session-snapshot";
@@ -69,6 +70,14 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 		if (tokenCommand) {
 			const event = await handleTokenCommand(id, userId, tokenCommand);
 			if (event) await sessionRooms.broadcast(id, event);
+			return;
+		}
+
+		const mapCmd = parseMapCommand(raw);
+		if (mapCmd) {
+			const event = await handleMapCommand(id, userId, mapCmd);
+			if (event) await sessionRooms.broadcast(id, event);
+			return;
 		}
 	},
 
