@@ -68,6 +68,7 @@ export const mapsController = new Elysia({ prefix: "/campaigns/:id/maps" })
 			params: t.Object({ id: t.String() }),
 			response: {
 				200: t.Object({ success: t.Literal(true), maps: t.Array(MapDto) }),
+				400: ErrorResponse,
 				401: ErrorResponse,
 				403: ErrorResponse,
 				404: ErrorResponse,
@@ -94,6 +95,7 @@ export const mapsController = new Elysia({ prefix: "/campaigns/:id/maps" })
 			body: CreateMapBody,
 			response: {
 				201: t.Object({ success: t.Literal(true), map: MapDto }),
+				400: ErrorResponse,
 				401: ErrorResponse,
 				403: ErrorResponse,
 				404: ErrorResponse,
@@ -122,6 +124,7 @@ export const mapsController = new Elysia({ prefix: "/campaigns/:id/maps" })
 			params: t.Object({ id: t.String(), mapId: t.String() }),
 			response: {
 				200: t.Object({ success: t.Literal(true), map: MapDto }),
+				400: ErrorResponse,
 				401: ErrorResponse,
 				403: ErrorResponse,
 				404: ErrorResponse,
@@ -151,6 +154,7 @@ export const mapsController = new Elysia({ prefix: "/campaigns/:id/maps" })
 			body: UpdateMapBody,
 			response: {
 				200: t.Object({ success: t.Literal(true), map: MapDto }),
+				400: ErrorResponse,
 				401: ErrorResponse,
 				403: ErrorResponse,
 				404: ErrorResponse,
@@ -179,6 +183,7 @@ export const mapsController = new Elysia({ prefix: "/campaigns/:id/maps" })
 			params: t.Object({ id: t.String(), mapId: t.String() }),
 			response: {
 				200: t.Object({ success: t.Literal(true) }),
+				400: ErrorResponse,
 				401: ErrorResponse,
 				403: ErrorResponse,
 				404: ErrorResponse,
@@ -221,9 +226,14 @@ export const mapsController = new Elysia({ prefix: "/campaigns/:id/maps" })
 			response: {
 				200: t.Object({
 					success: t.Literal(true),
-					map: t.Any(),
-					file: t.Any(),
+					map: MapDto,
+					file: t.Object({
+						id: t.String(),
+						mimeType: t.String(),
+						displayName: t.String(),
+					}),
 				}),
+				400: ErrorResponse,
 				401: ErrorResponse,
 				403: ErrorResponse,
 				404: ErrorResponse,

@@ -1,34 +1,10 @@
-import * as Minio from "minio";
+import { BUCKET_CAMPAIGNS, minioClient } from "../lib/cover-storage";
 import { newId } from "../lib/id";
 import { prisma } from "../lib/prisma";
 
 // Stockage objet S3-compatible (RustFS) pour les images de maps.
-// Même convention que cover-storage.ts : priorité aux variables RUSTFS_*,
-// repli sur MINIO_* pour rétrocompatibilité.
-const endpoint =
-	process.env.RUSTFS_ENDPOINT ??
-	process.env.MINIO_ENDPOINT ??
-	"http://localhost:24000";
-const url = new URL(endpoint);
-const useSSL = url.protocol === "https:";
-const port = url.port ? Number.parseInt(url.port, 10) : useSSL ? 443 : 80;
-
-const minioClient = new Minio.Client({
-	endPoint: url.hostname,
-	port,
-	useSSL,
-	accessKey:
-		process.env.RUSTFS_USER_ROOT ?? process.env.MINIO_USER_ROOT ?? "admin",
-	secretKey:
-		process.env.RUSTFS_PASSWORD_ROOT ??
-		process.env.MINIO_PASSWORD_ROOT ??
-		"password123!",
-});
-
-const BUCKET_MAPS =
-	process.env.RUSTFS_BUCKET_CAMPAIGNS ??
-	process.env.MINIO_BUCKET_CAMPAIGNS ??
-	"campaigns";
+// Réutilise le client Minio et le bucket exportés depuis cover-storage.ts
+const BUCKET_MAPS = BUCKET_CAMPAIGNS;
 
 /** Clé objet déterministe pour l'image de fond d'une map. */
 export function mapObjectKey(campaignId: string, mapId: string): string {
