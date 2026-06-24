@@ -1,4 +1,5 @@
 <script lang="ts">
+	import SendIcon from "@lucide/svelte/icons/send";
 	import { onDestroy, onMount } from "svelte";
 	import { campaignService } from "$lib/index.js";
 
@@ -7,48 +8,36 @@
 		campaignId,
 	}: { sessionId: string; campaignId: string } = $props();
 
-	type ChatMessage = {
+	type Message = {
 		id: string;
-		content: string;
 		userId: string;
+		content: string;
 		createdAt: string;
+		user: { pseudo: string | null };
 	};
-
-	let messages = $state<ChatMessage[]>([]);
-	let inputValue = $state("");
+	let messages = $state<Message[]>([]);
+	let input = $state("");
+	let listEl = $state<HTMLElement | undefined>(undefined);
+	let isOpen = $state(true);
 	let eventSource: EventSource | null = null;
 
-	function connectChat() {
-		if (!campaignId) return;
-		eventSource?.close();
-		eventSource = new EventSource(
-			campaignService.messagesStreamUrl(campaignId),
-			{
-				withCredentials: true,
-			}
-		);
-		eventSource.onmessage = (event: MessageEvent<string>) => {
-			try {
-				const msg = JSON.parse(event.data) as ChatMessage;
-				messages = [...messages.slice(-99), msg];
-			} catch {
-				// ignore malformed events
-			}
-		};
+	function scrollBottom() {
+		setTimeout(() => {
+			listEl?.scrollTo({ top: listEl.scrollHeight, behavior: "smooth" });
+		}, 50);
 	}
 
 	async function send() {
-		const content = inputValue.trim();
-		if (!content || !campaignId) return;
-		inputValue = "";
+		if (!input.trim()) return;
 		try {
-			await campaignService.postMessage(campaignId, content);
+			await campaignService.postMessage(campaignId, input.trim());
+			input = "";
 		} catch {
-			// ignore send errors
+			/* ignorer */
 		}
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
+	function onKey(e: KeyboardEvent) {
 		if (e.key === "Enter" && !e.shiftKey) {
 			e.preventDefault();
 			send();
@@ -56,38 +45,66 @@
 	}
 
 	onMount(() => {
-		connectChat();
+		eventSource = new EventSource(
+			campaignService.messagesStreamUrl(campaignId),
+			{
+				withCredentials: true,
+			}
+		);
+		eventSource.onmessage = (e) => {
+			try {
+				const msg = JSON.parse(e.data);
+				if (msg.content) {
+					messages = [...messages.slice(-99), msg];
+					scrollBottom();
+				}
+			} catch {
+				/* ignorer */
+			}
+		};
 	});
 
-	onDestroy(() => {
-		eventSource?.close();
-	});
+	onDestroy(() => eventSource?.close());
 </script>
 
 <div
-	class="absolute bottom-2 right-2 w-64 rounded-lg bg-slate-900/90 border border-slate-700 flex flex-col z-10"
-	style="max-height: 300px"
+	class="fixed bottom-4 right-4 z-50 flex w-72 flex-col rounded-xl border border-slate-700 bg-slate-900/95 shadow-2xl backdrop-blur"
 >
-	<div
-		class="text-xs font-semibold uppercase tracking-wider text-slate-400 px-3 py-2 border-b border-slate-700"
+	<button
+		onclick={() => {
+			isOpen = !isOpen;
+		}}
+		class="flex items-center justify-between border-b border-slate-700 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-white"
 	>
-		Chat
-	</div>
-	<div class="flex-1 overflow-y-auto p-2 space-y-1 min-h-0">
-		{#each messages as msg (msg.id)}
-			<div class="text-xs text-slate-300">
-				<span class="text-slate-500">{msg.userId.slice(0, 6)}:</span>
-				{msg.content}
-			</div>
-		{/each}
-	</div>
-	<div class="border-t border-slate-700 p-2">
-		<input
-			type="text"
-			bind:value={inputValue}
-			onkeydown={handleKeydown}
-			placeholder="Message…"
-			class="w-full rounded bg-slate-800 text-xs text-slate-200 px-2 py-1 outline-none focus:ring-1 focus:ring-red-500"
-		/>
-	</div>
+		<span>Chat</span>
+		<span class="text-slate-600">{isOpen ? "▾" : "▸"}</span>
+	</button>
+	{#if isOpen}
+		<ul
+			bind:this={listEl}
+			class="flex max-h-48 flex-col gap-1 overflow-y-auto p-2"
+		>
+			{#each messages as msg (msg.id)}
+				<li class="text-xs">
+					<span class="font-medium text-red-400">{msg.user?.pseudo ?? "?"}</span
+					>
+					<span class="ml-1 text-slate-300">{msg.content}</span>
+				</li>
+			{/each}
+		</ul>
+		<div class="flex gap-1 border-t border-slate-700 p-2">
+			<input
+				bind:value={input}
+				onkeydown={onKey}
+				placeholder="Message…"
+				class="flex-1 rounded bg-slate-800 px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-600"
+			/>
+			<button
+				onclick={send}
+				class="rounded bg-red-600 p-1.5 text-white hover:bg-red-700"
+			>
+				<SendIcon class="h-3 w-3" />
+			</button>
+		</div>
+	{/if}
 </div>

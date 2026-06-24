@@ -2,13 +2,18 @@
 	let { participants }: { participants: string[] } = $props();
 </script>
 
-<div class="absolute top-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+<div class="fixed left-4 top-4 z-50 flex gap-2">
 	{#each participants as userId (userId)}
 		<div
-			class="h-7 w-7 rounded-full bg-slate-700 border border-slate-600 flex items-center justify-center text-xs text-slate-300"
+			class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-semibold text-white ring-2 ring-red-600"
 			title={userId}
 		>
 			{userId.slice(0, 2).toUpperCase()}
 		</div>
 	{/each}
+	{#if participants.length === 0}
+		<div class="rounded-lg bg-slate-800/80 px-3 py-1 text-xs text-slate-400">
+			Connexion…
+		</div>
+	{/if}
 </div>

@@ -1,32 +1,41 @@
 <script lang="ts">
+	import MousePointer2Icon from "@lucide/svelte/icons/mouse-pointer-2";
+	import MoveIcon from "@lucide/svelte/icons/move";
+	import EraserIcon from "@lucide/svelte/icons/eraser";
+	import PlusIcon from "@lucide/svelte/icons/plus";
 	import { vttState } from "$lib/vtt/vtt.svelte";
 	import type { VttWebSocket } from "$lib/vtt/ws/VttWebSocket";
 
 	let { isGm, ws: _ws }: { isGm: boolean; ws: VttWebSocket | null } = $props();
 
-	type ToolId = "select" | "move" | "fog-paint" | "fog-erase" | "add-token";
-
-	const tools: { id: ToolId; label: string; gmOnly?: boolean }[] = [
-		{ id: "select", label: "Sélection" },
-		{ id: "move", label: "Déplacement" },
-		{ id: "fog-paint", label: "Brouillard +", gmOnly: true },
-		{ id: "fog-erase", label: "Brouillard -", gmOnly: true },
-		{ id: "add-token", label: "Ajouter token", gmOnly: true },
+	const gmTools = [
+		{ id: "select" as const, icon: MousePointer2Icon, label: "Sélectionner" },
+		{ id: "move" as const, icon: MoveIcon, label: "Déplacer" },
+		{ id: "fog-paint" as const, icon: PlusIcon, label: "Révéler fog" },
+		{ id: "fog-erase" as const, icon: EraserIcon, label: "Masquer fog" },
 	];
 
-	const visibleTools = $derived(tools.filter((t) => !t.gmOnly || isGm));
+	const playerTools = [
+		{ id: "select" as const, icon: MousePointer2Icon, label: "Sélectionner" },
+	];
+
+	const tools = $derived(isGm ? gmTools : playerTools);
 </script>
 
-<div class="absolute left-2 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-10">
-	{#each visibleTools as tool (tool.id)}
+<div
+	class="fixed left-1/2 top-4 z-50 flex -translate-x-1/2 gap-1 rounded-xl border border-slate-700 bg-slate-900/95 p-1.5 shadow-2xl backdrop-blur"
+>
+	{#each tools as tool (tool.id)}
 		<button
-			class="px-2 py-1 rounded text-xs font-medium transition-colors {vttState.selectedToolId ===
+			onclick={() => vttState.setTool(tool.id)}
+			class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-2 text-xs transition-colors {vttState.selectedToolId ===
 			tool.id
 				? 'bg-red-600 text-white'
-				: 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'}"
-			onclick={() => vttState.setTool(tool.id)}
+				: 'text-slate-400 hover:bg-slate-800 hover:text-white'}"
+			title={tool.label}
 		>
-			{tool.label}
+			<tool.icon class="h-4 w-4" />
+			<span>{tool.label}</span>
 		</button>
 	{/each}
 </div>

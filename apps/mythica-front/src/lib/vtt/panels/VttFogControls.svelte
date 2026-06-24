@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { vttState } from "$lib/vtt/vtt.svelte";
 	import type { VttWebSocket } from "$lib/vtt/ws/VttWebSocket";
+	import { vttState } from "$lib/vtt/vtt.svelte";
 
 	let { ws }: { ws: VttWebSocket | null } = $props();
 
@@ -9,16 +9,21 @@
 	}
 </script>
 
-<div class="absolute left-2 bottom-2 flex flex-col gap-1 z-10">
-	<span
-		class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1"
-		>Brouillard</span
-	>
-	<span class="text-xs text-slate-500">Mode : {vttState.fog.mode}</span>
-	<button
-		class="px-2 py-1 rounded text-xs bg-slate-800/80 text-slate-300 hover:bg-slate-700"
-		onclick={clearFog}
-	>
-		Tout masquer
-	</button>
+<div
+	class="fixed bottom-4 left-4 z-50 rounded-xl border border-slate-700 bg-slate-900/95 px-3 py-2 shadow-2xl backdrop-blur"
+>
+	<p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+		Brouillard
+	</p>
+	<div class="flex gap-2">
+		<button
+			onclick={clearFog}
+			class="rounded-lg bg-slate-700 px-3 py-1.5 text-xs text-white transition-colors hover:bg-red-700"
+		>
+			Tout masquer
+		</button>
+		<span class="self-center text-xs text-slate-500">
+			Mode : <strong class="text-slate-300">{vttState.fog.mode}</strong>
+		</span>
+	</div>
 </div>
