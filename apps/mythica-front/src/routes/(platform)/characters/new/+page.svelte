@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import { goto } from "$app/navigation";
+	import { page } from "$app/state";
 	import GameSystemSelector from "$lib/components/game-system-selector.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
@@ -10,6 +11,9 @@
 	import * as m from "$lib/paraglide/messages.js";
 
 	const uid = $props.id();
+
+	const campaignId = $derived(page.url.searchParams.get("campaignId") ?? "");
+	const forPool = $derived(page.url.searchParams.get("pool") === "true");
 
 	let name = $state("");
 	let gameSystemId = $state("");
@@ -29,7 +33,12 @@
 				gameSystemId,
 			});
 			if (response?.id) {
-				await goto(`/characters/${response.id}/create`);
+				const parts: string[] = [];
+				if (campaignId)
+					parts.push(`campaignId=${encodeURIComponent(campaignId)}`);
+				if (forPool) parts.push("pool=true");
+				const query = parts.length > 0 ? `?${parts.join("&")}` : "";
+				await goto(`/characters/${response.id}/create${query}`);
 			}
 		} catch (err) {
 			error =

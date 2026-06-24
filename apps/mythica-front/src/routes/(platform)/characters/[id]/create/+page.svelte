@@ -22,8 +22,11 @@
 	import WizardStepper from "$lib/components/character-builder/wizard-stepper.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import { characterService } from "$lib/index.js";
+	import { campaignCharacterSheetsService } from "$lib/api/services/campaign-character-sheets-service";
 
 	const sheetId = $derived(page.params.id ?? "");
+	const campaignId = $derived(page.url.searchParams.get("campaignId") ?? "");
+	const forPool = $derived(page.url.searchParams.get("pool") === "true");
 
 	let builder = $state<CharacterBuilder | null>(null);
 	let bootError = $state<string | null>(null);
@@ -70,7 +73,26 @@
 	async function finish() {
 		if (!builder) return;
 		const id = await builder.finalize();
-		if (id) await goto(`/characters/${id}`);
+		if (!id) return;
+
+		if (campaignId) {
+			try {
+				if (forPool) {
+					await campaignCharacterSheetsService.importToPool(campaignId, id);
+				} else {
+					await campaignCharacterSheetsService.createSheetSnapshot(
+						campaignId,
+						id
+					);
+				}
+				await goto(`/campaigns/${campaignId}`);
+			} catch {
+				// Le snapshot a échoué mais la fiche master existe ; on redirige quand même.
+				await goto(`/characters/${id}`);
+			}
+		} else {
+			await goto(`/characters/${id}`);
+		}
 	}
 
 	async function uploadAvatar(blob: Blob) {

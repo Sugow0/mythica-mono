@@ -113,6 +113,7 @@ function activeCampaign(extra: Record<string, unknown> = {}) {
 		status: "active",
 		tags: [],
 		coverFileId: null,
+		characterCreationLocked: false,
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		deletedAt: null,
