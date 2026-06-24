@@ -11,7 +11,7 @@ const p = {
 };
 mock.module("../../lib/prisma", () => ({ prisma: p }));
 
-const { getMaps, getMap, createMap, updateMap, deleteMap } =
+const { getMaps, getMap, createMap, updateMap, deleteMap, setMapFile } =
 	require("../maps.service") as typeof import("../maps.service");
 
 const CID = "11111111-1111-1111-1111-111111111111";
@@ -97,5 +97,24 @@ describe("deleteMap", () => {
 		p.map.findFirst.mockResolvedValue(null);
 		const ok = await deleteMap(MID, CID);
 		expect(ok).toBe(false);
+	});
+});
+
+describe("setMapFile", () => {
+	it("met à jour le fileId de la map", async () => {
+		const newFileId = "33333333-3333-3333-3333-333333333333";
+		p.map.update.mockResolvedValue({ ...baseMap, fileId: newFileId });
+		const result = await setMapFile(MID, newFileId);
+		expect(result.fileId).toBe(newFileId);
+		expect(p.map.update).toHaveBeenCalledWith({
+			where: { id: MID },
+			data: { fileId: newFileId },
+		});
+	});
+
+	it("peut définir fileId à null", async () => {
+		p.map.update.mockResolvedValue({ ...baseMap, fileId: null });
+		const result = await setMapFile(MID, null);
+		expect(result.fileId).toBeNull();
 	});
 });
