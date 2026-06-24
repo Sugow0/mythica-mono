@@ -4,13 +4,17 @@
 
 	let {
 		combatState,
-		isGm: _isGm,
-		ws: _ws,
+		isGm,
+		ws,
 	}: {
 		combatState: CombatState;
 		isGm: boolean;
 		ws: VttWebSocket | null;
 	} = $props();
+
+	function nextTurn() {
+		ws?.send({ type: "TURN_NEXT" });
+	}
 </script>
 
 <div
@@ -32,4 +36,12 @@
 			</li>
 		{/each}
 	</ul>
+	{#if isGm}
+		<button
+			class="mt-2 w-full px-2 py-1 rounded text-xs bg-slate-700 text-slate-200 hover:bg-slate-600"
+			onclick={nextTurn}
+		>
+			Tour suivant
+		</button>
+	{/if}
 </div>

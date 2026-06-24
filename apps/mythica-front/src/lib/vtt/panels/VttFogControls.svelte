@@ -1,14 +1,11 @@
 <script lang="ts">
+	import { vttState } from "$lib/vtt/vtt.svelte";
 	import type { VttWebSocket } from "$lib/vtt/ws/VttWebSocket";
 
 	let { ws }: { ws: VttWebSocket | null } = $props();
 
 	function clearFog() {
-		ws?.send("fog_clear", {});
-	}
-
-	function revealAll() {
-		ws?.send("fog_reveal_all", {});
+		ws?.send({ type: "FOG_CLEAR" });
 	}
 </script>
 
@@ -17,16 +14,11 @@
 		class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1"
 		>Brouillard</span
 	>
+	<span class="text-xs text-slate-500">Mode : {vttState.fog.mode}</span>
 	<button
 		class="px-2 py-1 rounded text-xs bg-slate-800/80 text-slate-300 hover:bg-slate-700"
 		onclick={clearFog}
 	>
 		Tout masquer
-	</button>
-	<button
-		class="px-2 py-1 rounded text-xs bg-slate-800/80 text-slate-300 hover:bg-slate-700"
-		onclick={revealAll}
-	>
-		Tout révéler
 	</button>
 </div>

@@ -2,38 +2,48 @@ import { Container, Graphics } from "pixi.js";
 import type { FogState, MapConfig } from "../types";
 
 export class FogLayer {
-	private container: Container;
-	private graphics: Graphics;
+	private fogContainer: Container;
+	private fogGraphics: Graphics;
+	private maskGraphics: Graphics;
+	private isActive = true;
 
 	constructor(stage: Container) {
-		this.container = new Container();
-		this.graphics = new Graphics();
-		this.container.addChild(this.graphics);
-		stage.addChild(this.container);
+		this.fogContainer = new Container();
+		this.fogGraphics = new Graphics();
+		this.maskGraphics = new Graphics();
+		this.fogContainer.addChild(this.fogGraphics);
+		this.fogContainer.addChild(this.maskGraphics);
+		stage.addChild(this.fogContainer);
+		this.fogContainer.alpha = 0.9;
 	}
 
 	setFog(fog: FogState, config: MapConfig) {
-		this.graphics.clear();
+		if (!this.isActive) return;
 
-		// Draw full fog mask
-		this.graphics
+		// Draw solid fog overlay
+		this.fogGraphics.clear();
+		this.fogGraphics
 			.rect(0, 0, config.widthPx, config.heightPx)
-			.fill({ color: 0x000000, alpha: 0.6 });
+			.fill({ color: 0x0a0a14 });
 
-		// Reveal areas
-		if (fog.revealed.length > 0) {
-			for (const polygon of fog.revealed) {
-				if (polygon.length < 2) continue;
-				this.graphics.moveTo(polygon[0].x, polygon[0].y);
-				for (let i = 1; i < polygon.length; i++) {
-					this.graphics.lineTo(polygon[i].x, polygon[i].y);
-				}
-				this.graphics.fill({ color: 0x000000, alpha: 0 }).closePath();
-			}
+		// Draw revealed areas as white polygons for the mask
+		this.maskGraphics.clear();
+		for (const polygon of fog.revealed) {
+			if (polygon.length < 3) continue;
+			const points = polygon.flatMap((p) => [p.x, p.y]);
+			this.maskGraphics.poly(points).fill({ color: 0xffffff });
 		}
+
+		// Apply mask: fogGraphics is masked by maskGraphics (white = visible through)
+		this.fogGraphics.mask = this.maskGraphics;
+	}
+
+	toggle(active: boolean) {
+		this.isActive = active;
+		this.fogContainer.visible = active;
 	}
 
 	destroy() {
-		this.container.destroy({ children: true });
+		this.fogContainer.destroy({ children: true });
 	}
 }

@@ -9,16 +9,6 @@ import type {
 
 type VttStateRef = typeof VttStateType;
 
-type WsMessage =
-	| { type: "tokens"; payload: SessionTokenDto[] }
-	| { type: "token_update"; payload: Partial<SessionTokenDto> & { id: string } }
-	| { type: "token_add"; payload: SessionTokenDto }
-	| { type: "token_remove"; payload: { id: string } }
-	| { type: "fog"; payload: FogState }
-	| { type: "map"; payload: MapConfig }
-	| { type: "combat"; payload: CombatState }
-	| { type: "presence"; payload: string[] };
-
 export class VttWebSocket {
 	private sessionId: string;
 	private state: VttStateRef;
@@ -43,9 +33,9 @@ export class VttWebSocket {
 		};
 
 		this.ws.onmessage = (event: MessageEvent<string>) => {
-			let msg: WsMessage;
+			let msg: Record<string, unknown>;
 			try {
-				msg = JSON.parse(event.data) as WsMessage;
+				msg = JSON.parse(event.data) as Record<string, unknown>;
 			} catch {
 				return;
 			}
@@ -63,38 +53,64 @@ export class VttWebSocket {
 		};
 	}
 
-	private handleMessage(msg: WsMessage) {
-		switch (msg.type) {
-			case "tokens":
-				this.state.setTokens(msg.payload);
+	private handleMessage(event: Record<string, unknown>) {
+		const type = event.type as string;
+
+		switch (type) {
+			case "snapshot": {
+				const snap = event as {
+					type: string;
+					tokens?: SessionTokenDto[];
+					activeMap?: MapConfig;
+					mapState?: { fog?: FogState };
+					combatState?: CombatState;
+					participants?: string[];
+				};
+				if (snap.tokens) this.state.setTokens(snap.tokens);
+				if (snap.activeMap !== undefined)
+					this.state.setActiveMap(snap.activeMap ?? null);
+				if (snap.mapState?.fog) this.state.setFog(snap.mapState.fog);
+				if (snap.combatState) this.state.setCombatState(snap.combatState);
+				if (snap.participants) this.state.setParticipants(snap.participants);
 				break;
-			case "token_update":
-				this.state.updateToken(msg.payload);
+			}
+			case "TOKEN_MOVED":
+				this.state.updateToken({
+					id: event.tokenId as string,
+					posX: String(event.x),
+					posY: String(event.y),
+				});
 				break;
-			case "token_add":
-				this.state.addToken(msg.payload);
+			case "TOKEN_REMOVED":
+				this.state.removeToken(event.tokenId as string);
 				break;
-			case "token_remove":
-				this.state.removeToken(msg.payload.id);
+			case "TOKEN_UPDATED":
+				this.state.updateToken(
+					event as unknown as Partial<SessionTokenDto> & { id: string }
+				);
 				break;
-			case "fog":
-				this.state.setFog(msg.payload);
+			case "TOKEN_ADDED":
+				this.state.addToken(event.token as SessionTokenDto);
 				break;
-			case "map":
-				this.state.setActiveMap(msg.payload);
+			case "FOG_STATE":
+				this.state.setFog(event.fog as FogState);
 				break;
-			case "combat":
-				this.state.setCombatState(msg.payload);
+			case "MAP_CHANGE":
+				this.state.setActiveMap((event.map as MapConfig) ?? null);
 				break;
-			case "presence":
-				this.state.setParticipants(msg.payload);
+			case "COMBAT_STATE":
+				this.state.setCombatState(event as unknown as CombatState);
+				break;
+			case "PRESENCE_JOIN":
+			case "PRESENCE_LEAVE":
+				this.state.setParticipants((event.participants as string[]) ?? []);
 				break;
 		}
 	}
 
-	send(type: string, payload: unknown) {
+	send(event: Record<string, unknown>) {
 		if (this.ws?.readyState === WebSocket.OPEN) {
-			this.ws.send(JSON.stringify({ type, payload }));
+			this.ws.send(JSON.stringify(event));
 		}
 	}
 
