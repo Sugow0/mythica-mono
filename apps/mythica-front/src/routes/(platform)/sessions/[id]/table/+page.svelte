@@ -46,7 +46,11 @@
 >
 	<!-- Canvas PixiJS fullscreen -->
 	<div class="absolute inset-0">
-		<VttCanvas mapConfig={vttState.activeMap} />
+		<VttCanvas
+			mapConfig={vttState.activeMap}
+			onTokenMove={(id, x, y) =>
+				ws?.send({ type: "TOKEN_MOVE", tokenId: id, x, y })}
+		/>
 	</div>
 
 	<!-- Overlays DOM -->

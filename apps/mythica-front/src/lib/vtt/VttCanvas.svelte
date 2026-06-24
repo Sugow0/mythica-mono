@@ -3,7 +3,13 @@
 	import type { MapConfig } from "./types";
 	import { vttState } from "./vtt.svelte";
 
-	let { mapConfig }: { mapConfig: MapConfig | null } = $props();
+	let {
+		mapConfig,
+		onTokenMove,
+	}: {
+		mapConfig: MapConfig | null;
+		onTokenMove?: (tokenId: string, x: number, y: number) => void;
+	} = $props();
 
 	let canvasEl: HTMLCanvasElement | undefined = $state();
 
@@ -59,7 +65,9 @@
 
 		bgLayer = new BackgroundLayer(stage);
 		gridLayer = new GridLayer(stage);
-		tokensLayer = new TokensLayer(stage, app);
+		const tl = new TokensLayer(stage, app);
+		if (onTokenMove) tl.setOnMove(onTokenMove);
+		tokensLayer = tl;
 		fogLayer = new FogLayer(stage);
 
 		if (mapConfig) {
