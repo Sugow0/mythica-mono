@@ -1053,9 +1053,8 @@
 							<CampaignCharactersTab
 								campaignId={campaign.id}
 								{isGm}
-								characterCreationLocked={!!(
-									campaign as Record<string, unknown>
-								)["characterCreationLocked"]}
+								characterCreationLocked={campaign.characterCreationLocked ??
+									false}
 								currentUserId={data.user?.id ?? ""}
 							/>
 						</Card.Content>
