@@ -20,21 +20,26 @@ export class FogLayer {
 	setFog(fog: FogState, config: MapConfig) {
 		if (!this.isActive) return;
 
-		// Draw solid fog overlay
 		this.fogGraphics.clear();
+		this.maskGraphics.clear();
+
+		// Dark fog covers the whole map
 		this.fogGraphics
 			.rect(0, 0, config.widthPx, config.heightPx)
 			.fill({ color: 0x0a0a14 });
 
-		// Draw revealed areas as white polygons for the mask
-		this.maskGraphics.clear();
+		// Mask: fill whole map white (fog visible), then fill revealed areas black
+		// (fog hidden in revealed areas). White = fog shown, black = fog hidden.
+		this.maskGraphics
+			.rect(0, 0, config.widthPx, config.heightPx)
+			.fill({ color: 0xffffff });
+
 		for (const polygon of fog.revealed) {
 			if (polygon.length < 3) continue;
 			const points = polygon.flatMap((p) => [p.x, p.y]);
-			this.maskGraphics.poly(points).fill({ color: 0xffffff });
+			this.maskGraphics.poly(points).fill({ color: 0x000000 });
 		}
 
-		// Apply mask: fogGraphics is masked by maskGraphics (white = visible through)
 		this.fogGraphics.mask = this.maskGraphics;
 	}
 

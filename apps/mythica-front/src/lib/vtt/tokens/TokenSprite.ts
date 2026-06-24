@@ -16,17 +16,29 @@ export class TokenSprite {
 	private sprite: Sprite | Graphics;
 	private label: Text | null = null;
 	public tokenId: string;
+	private gridSize: number;
 
-	constructor(token: SessionTokenDto, onMove: TokenMoveCallback) {
+	constructor(
+		token: SessionTokenDto,
+		onMove: TokenMoveCallback,
+		gridSize = 100
+	) {
 		this.tokenId = token.id;
+		this.gridSize = gridSize;
 		this.container = new Container();
-		this.container.x = parseFloat(token.posX) * 100;
-		this.container.y = parseFloat(token.posY) * 100;
+		this.container.x = parseFloat(token.posX) * this.gridSize;
+		this.container.y = parseFloat(token.posY) * this.gridSize;
 		this.container.visible = token.isVisible;
 
 		// Placeholder graphique en attendant l'image réelle
 		const g = new Graphics();
-		g.roundRect(0, 0, token.width * 100, token.height * 100, 8)
+		g.roundRect(
+			0,
+			0,
+			token.width * this.gridSize,
+			token.height * this.gridSize,
+			8
+		)
 			.fill({ color: 0xdc2626, alpha: 0.85 })
 			.stroke({ color: 0xffffff, alpha: 0.5, width: 2 });
 		this.sprite = g;
@@ -38,8 +50,8 @@ export class TokenSprite {
 				style: { fontSize: 12, fill: 0xffffff, fontFamily: "Public Sans" },
 			});
 			this.label.anchor.set(0.5, 0);
-			this.label.x = (token.width * 100) / 2;
-			this.label.y = token.height * 100 + 4;
+			this.label.x = (token.width * this.gridSize) / 2;
+			this.label.y = token.height * this.gridSize + 4;
 			this.container.addChild(this.label);
 		}
 
@@ -56,8 +68,8 @@ export class TokenSprite {
 			const url = `/api/gameplay/files/${token.fileId}/content`;
 			const texture: Texture = await Assets.load(url);
 			const s = new Sprite(texture);
-			s.width = token.width * 100;
-			s.height = token.height * 100;
+			s.width = token.width * this.gridSize;
+			s.height = token.height * this.gridSize;
 			s.roundPixels = true;
 			this.container.removeChild(this.sprite);
 			(this.sprite as Graphics).destroy?.();
@@ -99,9 +111,9 @@ export class TokenSprite {
 			if (!isDragging) return;
 			isDragging = false;
 			this.container.zIndex = 0;
-			// Convertir position pixel → coordonnées grille (diviser par 100)
-			const gridX = this.container.x / 100;
-			const gridY = this.container.y / 100;
+			// Convertir position pixel → coordonnées grille
+			const gridX = this.container.x / this.gridSize;
+			const gridY = this.container.y / this.gridSize;
 			onMove(token.id, gridX, gridY);
 		});
 
@@ -112,8 +124,8 @@ export class TokenSprite {
 	}
 
 	update(token: SessionTokenDto) {
-		this.container.x = parseFloat(token.posX) * 100;
-		this.container.y = parseFloat(token.posY) * 100;
+		this.container.x = parseFloat(token.posX) * this.gridSize;
+		this.container.y = parseFloat(token.posY) * this.gridSize;
 		this.container.visible = token.isVisible;
 	}
 

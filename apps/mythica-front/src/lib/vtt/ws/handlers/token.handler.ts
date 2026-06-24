@@ -18,7 +18,10 @@ export function handleTokenEvent(
 			state.removeToken(event.tokenId as string);
 			break;
 		case "TOKEN_UPDATED":
-			state.updateToken(event as Parameters<typeof state.updateToken>[0]);
+			state.updateToken({
+				...(event as object),
+				id: event.tokenId as string,
+			} as Parameters<typeof state.updateToken>[0]);
 			break;
 		case "TOKEN_ADDED":
 			state.addToken(event.token as Parameters<typeof state.addToken>[0]);

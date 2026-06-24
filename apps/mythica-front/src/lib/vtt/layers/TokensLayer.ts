@@ -7,6 +7,7 @@ export class TokensLayer {
 	private container: Container;
 	private sprites: Map<string, TokenSprite> = new Map();
 	private onMove: TokenMoveCallback;
+	private gridSize = 100;
 
 	constructor(stage: Container, _app: Application, onMove?: TokenMoveCallback) {
 		this.container = new Container();
@@ -17,6 +18,10 @@ export class TokensLayer {
 
 	setOnMove(cb: TokenMoveCallback) {
 		this.onMove = cb;
+	}
+
+	setGridSize(size: number) {
+		this.gridSize = size;
 	}
 
 	setTokens(tokens: SessionTokenDto[]) {
@@ -33,7 +38,7 @@ export class TokensLayer {
 			if (existing) {
 				existing.update(token);
 			} else {
-				const sprite = new TokenSprite(token, this.onMove);
+				const sprite = new TokenSprite(token, this.onMove, this.gridSize);
 				this.container.addChild(sprite.container);
 				this.sprites.set(token.id, sprite);
 			}
@@ -45,7 +50,7 @@ export class TokensLayer {
 	}
 
 	addToken(token: SessionTokenDto) {
-		const sprite = new TokenSprite(token, this.onMove);
+		const sprite = new TokenSprite(token, this.onMove, this.gridSize);
 		this.container.addChild(sprite.container);
 		this.sprites.set(token.id, sprite);
 	}

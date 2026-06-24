@@ -60,7 +60,7 @@ describe("handleMapCommand — FOG_PAINT (MJ)", () => {
 		p.session.findUnique.mockResolvedValue({
 			id: SID,
 			campaignId: CID,
-			mapState: "{}",
+			mapState: {},
 		});
 		p.campaign.findFirst.mockResolvedValue({
 			id: CID,
@@ -101,17 +101,17 @@ describe("handleMapCommand — FOG_PAINT (MJ)", () => {
 		const evt = await handleMapCommand(SID, OWNER, { type: "FOG_CLEAR" });
 		expect(evt?.type).toBe("FOG_STATE");
 		const arg = p.session.update.mock.calls[0]?.[0] as {
-			data: { mapState: string };
+			data: { mapState: Record<string, unknown> };
 		};
-		const state = JSON.parse(arg.data.mapState);
-		expect(state.fog.revealed).toEqual([]);
+		const state = arg.data.mapState;
+		expect((state.fog as { revealed: unknown[] }).revealed).toEqual([]);
 	});
 
 	it("DICE_ROLL refuse un non-membre", async () => {
 		p.session.findUnique.mockResolvedValue({
 			id: SID,
 			campaignId: CID,
-			mapState: "{}",
+			mapState: {},
 		});
 		p.campaign.findFirst.mockResolvedValue({
 			id: CID,
@@ -136,7 +136,7 @@ describe("handleMapCommand — FOG_PAINT (MJ)", () => {
 		p.session.findUnique.mockResolvedValue({
 			id: SID,
 			campaignId: CID,
-			mapState: "{}",
+			mapState: {},
 		});
 		p.campaign.findFirst.mockResolvedValue({
 			id: CID,

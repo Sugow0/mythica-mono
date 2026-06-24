@@ -295,10 +295,7 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 			const token = await prisma.sessionToken.create({
 				data: { id: randomUUID(), sessionId: params.id, ...body },
 			});
-			await sessionRooms.broadcast(
-				params.id,
-				JSON.stringify({ type: "TOKEN_ADDED", token }),
-			);
+			await sessionRooms.broadcast(params.id, { type: "TOKEN_ADDED", token });
 			set.status = 201;
 			return { success: true as const, token };
 		},
@@ -352,14 +349,11 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 				where: { id: params.tokenId },
 				data: body,
 			});
-			await sessionRooms.broadcast(
-				params.id,
-				JSON.stringify({
-					type: "TOKEN_UPDATED",
-					tokenId: params.tokenId,
-					...body,
-				}),
-			);
+			await sessionRooms.broadcast(params.id, {
+				type: "TOKEN_UPDATED",
+				tokenId: params.tokenId,
+				...body,
+			});
 			return { success: true as const, token };
 		},
 		{
@@ -405,10 +399,10 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 				return { success: false as const, error: "Token introuvable" };
 			}
 			await prisma.sessionToken.delete({ where: { id: params.tokenId } });
-			await sessionRooms.broadcast(
-				params.id,
-				JSON.stringify({ type: "TOKEN_REMOVED", tokenId: params.tokenId }),
-			);
+			await sessionRooms.broadcast(params.id, {
+				type: "TOKEN_REMOVED",
+				tokenId: params.tokenId,
+			});
 			return { success: true as const };
 		},
 		{

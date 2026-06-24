@@ -115,7 +115,7 @@ export async function handleMapCommand(
 
 	await prisma.session.update({
 		where: { id: sessionId },
-		data: { mapState: JSON.stringify(mapState) },
+		data: { mapState: mapState as object },
 	});
 
 	return { type: "FOG_STATE", fog: nextFog };

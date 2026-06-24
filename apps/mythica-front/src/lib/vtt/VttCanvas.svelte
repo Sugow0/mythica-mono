@@ -21,6 +21,7 @@
 		setFog?: (f: typeof vttState.fog, c: MapConfig) => void;
 		syncTokens?: (t: typeof vttState.tokens) => void;
 		setTokens?: (t: typeof vttState.tokens) => void;
+		setGridSize?: (size: number) => void;
 		destroy: () => void;
 	};
 
@@ -74,6 +75,7 @@
 			await bgLayer.setMap!(mapConfig);
 			gridLayer.setGrid!(mapConfig);
 			fogLayer.setFog!(vttState.fog, mapConfig);
+			tl.setGridSize(mapConfig.gridSize);
 		}
 
 		tokensLayer.setTokens!(vttState.tokens);
@@ -89,6 +91,7 @@
 			bgLayer.setMap!(mapConfig);
 			gridLayer.setGrid!(mapConfig);
 			fogLayer.setFog!(vttState.fog, mapConfig);
+			tokensLayer?.setGridSize?.(mapConfig.gridSize);
 		}
 	});
 
