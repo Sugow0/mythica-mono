@@ -18,6 +18,7 @@ export interface CampaignPoolSheet {
 	name: string;
 	visibleToPlayers: boolean;
 	pendingRequestCount: number;
+	alreadyRequested: boolean;
 }
 
 export interface CampaignPoolRequest {

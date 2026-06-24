@@ -4,38 +4,18 @@ import { duplicateCharacterSheet } from "../character-sheets/character-sheets.se
 import { ErrorResponse, SuccessMessageResponse } from "../lib/http";
 import { newId } from "../lib/id";
 import { prisma } from "../lib/prisma";
-
-// ------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------
-
-function findActiveCampaign(id: string) {
-	return prisma.campaign.findFirst({ where: { id, deletedAt: null } });
-}
-
-async function memberRole(
-	campaignId: string,
-	userId: string,
-): Promise<string | null> {
-	const member = await prisma.campaignMember.findFirst({
-		where: { campaignId, userId, leftAt: null },
-	});
-	return member?.role ?? null;
-}
-
-function isGmOf(
-	campaign: { ownerId: string },
-	userId: string,
-	role: string | null,
-): boolean {
-	return campaign.ownerId === userId || role === "gm";
-}
+import {
+	findActiveCampaign,
+	isGmOf,
+	memberRole,
+	PRISMA_UNIQUE_VIOLATION,
+} from "./campaigns.helpers";
 
 // ------------------------------------------------------------
 // Schémas TypeBox
 // ------------------------------------------------------------
 
-const CampaignSheetStatus = t.Union([
+const _CampaignSheetStatus = t.Union([
 	t.Literal("active"),
 	t.Literal("inactive"),
 	t.Literal("disabled"),
@@ -59,6 +39,7 @@ const PoolSheetSchema = t.Object({
 	name: t.String(),
 	visibleToPlayers: t.Boolean(),
 	pendingRequestCount: t.Integer(),
+	alreadyRequested: t.Boolean(),
 });
 
 const PoolRequestSchema = t.Object({
@@ -154,18 +135,21 @@ export const campaignCharacterSheetsController = new Elysia({
 				}
 			}
 
-			const snapshotId = await duplicateCharacterSheet(
-				body.sourceSheetId,
-				currentUser.id,
-				prisma,
-			);
-			const link = await prisma.campaignCharacterSheet.create({
-				data: {
-					id: newId(),
-					campaignId: params.id,
-					characterSheetId: snapshotId,
-					status: "inactive",
-				},
+			const { link, snapshotId } = await prisma.$transaction(async (tx) => {
+				const snapshotId = await duplicateCharacterSheet(
+					body.sourceSheetId,
+					currentUser.id,
+					tx,
+				);
+				const link = await tx.campaignCharacterSheet.create({
+					data: {
+						id: newId(),
+						campaignId: params.id,
+						characterSheetId: snapshotId,
+						status: "inactive",
+					},
+				});
+				return { link, snapshotId };
 			});
 			set.status = 201;
 			return {
@@ -234,18 +218,21 @@ export const campaignCharacterSheetsController = new Elysia({
 				return { success: false as const, error: "Fiche introuvable" };
 			}
 
-			const snapshotId = await duplicateCharacterSheet(
-				body.characterSheetId,
-				currentUser.id,
-				prisma,
-			);
-			const link = await prisma.campaignCharacterSheet.create({
-				data: {
-					id: newId(),
-					campaignId: params.id,
-					characterSheetId: snapshotId,
-					status: "inactive",
-				},
+			const { link, snapshotId } = await prisma.$transaction(async (tx) => {
+				const snapshotId = await duplicateCharacterSheet(
+					body.characterSheetId,
+					currentUser.id,
+					tx,
+				);
+				const link = await tx.campaignCharacterSheet.create({
+					data: {
+						id: newId(),
+						campaignId: params.id,
+						characterSheetId: snapshotId,
+						status: "inactive",
+					},
+				});
+				return { link, snapshotId };
 			});
 			set.status = 201;
 			return {
@@ -399,6 +386,23 @@ export const campaignCharacterSheetsController = new Elysia({
 				return {
 					success: false as const,
 					error: "Fiche cible introuvable ou non éligible",
+				};
+			}
+
+			// Vérifie qu'aucune demande en attente n'existe déjà pour ce joueur.
+			const existingRequest =
+				await prisma.campaignCharacterChangeRequest.findFirst({
+					where: {
+						campaignId: params.id,
+						playerId: currentUser.id,
+						status: "pending",
+					},
+				});
+			if (existingRequest) {
+				set.status = 409;
+				return {
+					success: false as const,
+					error: "Une demande de changement est déjà en attente",
 				};
 			}
 
@@ -786,18 +790,20 @@ export const campaignCharacterSheetsController = new Elysia({
 				return { success: false as const, error: "Fiche source introuvable" };
 			}
 
-			const snapshotId = await duplicateCharacterSheet(
-				body.sourceSheetId,
-				currentUser.id,
-				prisma,
-			);
-			const poolSheet = await prisma.campaignPoolSheet.create({
-				data: {
-					id: newId(),
-					campaignId: params.id,
-					characterSheetId: snapshotId,
-					visibleToPlayers: false,
-				},
+			const poolSheet = await prisma.$transaction(async (tx) => {
+				const snapshotId = await duplicateCharacterSheet(
+					body.sourceSheetId,
+					currentUser.id,
+					tx,
+				);
+				return tx.campaignPoolSheet.create({
+					data: {
+						id: newId(),
+						campaignId: params.id,
+						characterSheetId: snapshotId,
+						visibleToPlayers: false,
+					},
+				});
 			});
 			set.status = 201;
 			return { success: true as const, id: poolSheet.id };
@@ -845,7 +851,14 @@ export const campaignCharacterSheetsController = new Elysia({
 				},
 				include: {
 					characterSheet: { select: { name: true } },
-					...(gm ? { requests: { where: { status: "pending" } } } : {}),
+					requests: {
+						where: gm
+							? { status: "pending" }
+							: {
+									requestedByUserId: currentUser.id,
+									status: "pending",
+								},
+					},
 				},
 				orderBy: { createdAt: "asc" },
 			});
@@ -857,7 +870,8 @@ export const campaignCharacterSheetsController = new Elysia({
 					characterSheetId: ps.characterSheetId,
 					name: ps.characterSheet.name,
 					visibleToPlayers: ps.visibleToPlayers,
-					pendingRequestCount: ps.requests?.length ?? 0,
+					pendingRequestCount: gm ? ps.requests.length : 0,
+					alreadyRequested: !gm && ps.requests.length > 0,
 				})),
 			};
 		},
@@ -1017,7 +1031,7 @@ export const campaignCharacterSheetsController = new Elysia({
 				set.status = 201;
 				return { success: true as const, id: request.id };
 			} catch (err) {
-				if ((err as { code?: string }).code === "P2002") {
+				if ((err as { code?: string }).code === PRISMA_UNIQUE_VIOLATION) {
 					set.status = 409;
 					return { success: false as const, error: "Demande déjà existante" };
 				}
@@ -1129,50 +1143,43 @@ export const campaignCharacterSheetsController = new Elysia({
 				return { success: false as const, error: "Demande introuvable" };
 			}
 
-			// Créer un snapshot de la fiche du pool pour le joueur.
-			const snapshotId = await duplicateCharacterSheet(
-				request.poolSheet.characterSheetId,
-				request.requestedByUserId,
-				prisma,
-			);
+			await prisma.$transaction(async (tx) => {
+				const snapshotId = await duplicateCharacterSheet(
+					request.poolSheet.characterSheetId,
+					request.requestedByUserId,
+					tx,
+				);
 
-			// Statut de la fiche selon le mode de la campagne.
-			const sheetStatus = campaign.characterCreationLocked
-				? "active"
-				: "inactive";
+				const sheetStatus = campaign.characterCreationLocked
+					? "active"
+					: "inactive";
 
-			const ops = [
-				prisma.campaignCharacterSheet.create({
-					data: {
-						id: newId(),
-						campaignId: params.id,
-						characterSheetId: snapshotId,
-						status: sheetStatus,
-					},
-				}),
-				prisma.campaignPoolRequest.update({
-					where: { id: request.id },
-					data: { status: "confirmed", assignedSheetId: snapshotId },
-				}),
-			] as const;
-
-			// Si la campagne est verrouillée et la fiche devient active,
-			// désactiver l'éventuelle fiche active du joueur.
-			if (campaign.characterCreationLocked) {
-				await prisma.$transaction([
-					prisma.campaignCharacterSheet.updateMany({
+				// Si la campagne est verrouillée, désactiver l'éventuelle fiche
+				// active du joueur avant d'en activer la nouvelle.
+				if (campaign.characterCreationLocked) {
+					await tx.campaignCharacterSheet.updateMany({
 						where: {
 							campaignId: params.id,
 							status: "active",
 							characterSheet: { userId: request.requestedByUserId },
 						},
 						data: { status: "disabled" },
-					}),
-					...ops,
-				]);
-			} else {
-				await prisma.$transaction([...ops]);
-			}
+					});
+				}
+
+				await tx.campaignCharacterSheet.create({
+					data: {
+						id: newId(),
+						campaignId: params.id,
+						characterSheetId: snapshotId,
+						status: sheetStatus,
+					},
+				});
+				await tx.campaignPoolRequest.update({
+					where: { id: request.id },
+					data: { status: "confirmed", assignedSheetId: snapshotId },
+				});
+			});
 
 			return { success: true as const, message: "Attribution confirmée" };
 		},

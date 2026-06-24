@@ -45,7 +45,6 @@
 	let importOpen = $state(false);
 	let importForPool = $state(false);
 	let activateDialogSheet = $state<CampaignCharacterSheet | null>(null);
-	let _changeRequestSheet = $state<CampaignCharacterSheet | null>(null);
 
 	// ── Computed ───────────────────────────────────────────────────────────────
 	const hasActiveSheet = $derived(mySheets.some((s) => s.status === "active"));
@@ -112,7 +111,6 @@
 				campaignId,
 				sheet.id
 			);
-			_changeRequestSheet = null;
 			await load();
 		} catch (e) {
 			actionError = (e as Error).message;
@@ -229,7 +227,7 @@
 	}
 
 	// Regrouper les fiches par userId pour la vue MJ
-	const sheetsByPlayer = $derived(() => {
+	const sheetsByPlayer = $derived.by(() => {
 		const map = new SvelteMap<string, CampaignCharacterSheet[]>();
 		for (const s of allSheets) {
 			if (!map.has(s.userId)) map.set(s.userId, []);
@@ -309,12 +307,9 @@
 			{:else}
 				<div class="grid gap-3 sm:grid-cols-2">
 					{#each poolSheets as ps (ps.id)}
-						{@const alreadyRequested = poolRequests.some(
-							(r) => r.poolSheetId === ps.id
-						)}
 						<Card.Root class="gap-3 p-4">
 							<p class="text-sm font-medium">{ps.name}</p>
-							{#if alreadyRequested}
+							{#if ps.alreadyRequested}
 								<Badge variant="secondary">Demandée (en attente)</Badge>
 							{:else}
 								<Button size="sm" onclick={() => handleRequestPool(ps.id)}>
@@ -338,7 +333,7 @@
 					Aucune fiche pour l'instant.
 				</p>
 			{:else}
-				{#each [...sheetsByPlayer()] as [userId, sheets] (userId)}
+				{#each [...sheetsByPlayer] as [userId, sheets] (userId)}
 					<div class="space-y-2">
 						<p class="text-muted-foreground text-xs">
 							Joueur {userId.slice(0, 8)}…

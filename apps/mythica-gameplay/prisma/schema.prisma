@@ -527,8 +527,9 @@ model CampaignCharacterChangeRequest {
   updatedAt     DateTime                    @updatedAt @map("updated_at") @db.Timestamptz
 
   campaign    Campaign               @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  targetSheet CampaignCharacterSheet @relation(fields: [targetSheetId], references: [id], onDelete: Cascade)
+  targetSheet CampaignCharacterSheet @relation(fields: [targetSheetId], references: [id], onDelete: Restrict)
 
+  @@unique([campaignId, playerId, targetSheetId])
   @@index([campaignId, status], name: "idx_change_requests_campaign_status")
   @@map("campaign_character_change_requests")
 }
