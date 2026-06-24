@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { resolveSessionAccess } from "./session-access";
+import { isGameMaster, resolveSessionAccess } from "./session-access";
 
 export type TokenCommand =
 	| { type: "TOKEN_MOVE"; tokenId: string; x: number; y: number }
@@ -93,6 +93,8 @@ export async function handleTokenCommand(
 			};
 		}
 		case "TOKEN_REMOVE": {
+			// Suppression réservée au MJ (cohérent avec DELETE /sessions/:id/tokens/:tokenId).
+			if (!isGameMaster(access)({ id: userId, role: null })) return null;
 			const token = await prisma.sessionToken.findUnique({
 				where: { id: command.tokenId },
 			});

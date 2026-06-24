@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Elysia, t } from "elysia";
 import { authContext, type CurrentUser } from "../auth/context";
 import { ErrorResponse } from "../lib/http";
@@ -291,7 +292,6 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 				set.status = 403;
 				return { success: false as const, error: "Réservé au MJ" };
 			}
-			const { randomUUID } = await import("node:crypto");
 			const token = await prisma.sessionToken.create({
 				data: { id: randomUUID(), sessionId: params.id, ...body },
 			});

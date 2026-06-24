@@ -14,7 +14,7 @@ const p = {
 };
 mock.module("../../lib/prisma", () => ({ prisma: p }));
 
-const { parseTokenCommand, handleTokenCommand } =
+const { parseTokenCommand, handleTokenCommand, getSessionTokens } =
 	require("../session-tokens") as typeof import("../session-tokens");
 
 const SID = "55555555-5555-5555-5555-555555555555";
@@ -135,6 +135,7 @@ describe("handleTokenCommand — TOKEN_REMOVE", () => {
 		p.campaignMember.findFirst.mockResolvedValue(null);
 		p.sessionToken.findUnique.mockResolvedValue({ id: TID, sessionId: SID });
 		p.sessionToken.delete.mockResolvedValue({ id: TID });
+		p.sessionToken.delete.mockClear();
 	});
 
 	it("supprime un token et retourne TOKEN_REMOVED", async () => {
@@ -153,6 +154,16 @@ describe("handleTokenCommand — TOKEN_REMOVE", () => {
 			tokenId: TID,
 		});
 		expect(evt).toBeNull();
+	});
+
+	it("TOKEN_REMOVE refusé pour un joueur non-MJ", async () => {
+		p.campaignMember.findFirst.mockResolvedValue({ role: "player" });
+		const evt = await handleTokenCommand(SID, PLAYER, {
+			type: "TOKEN_REMOVE",
+			tokenId: TID,
+		});
+		expect(evt).toBeNull();
+		expect(p.sessionToken.delete).not.toHaveBeenCalled();
 	});
 });
 
@@ -194,5 +205,20 @@ describe("handleTokenCommand — TOKEN_UPDATE", () => {
 			isVisible: true,
 		});
 		expect(evt).toBeNull();
+	});
+});
+
+describe("getSessionTokens", () => {
+	it("retourne les tokens d'une session dans l'ordre de création", async () => {
+		const fakeTokens = [{ id: TID, sessionId: SID, posX: 0, posY: 0 }];
+		p.sessionToken.findMany.mockResolvedValue(fakeTokens);
+		const result = await getSessionTokens(SID);
+		expect(result).toEqual(fakeTokens);
+		expect(p.sessionToken.findMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: { sessionId: SID },
+				orderBy: { createdAt: "asc" },
+			}),
+		);
 	});
 });

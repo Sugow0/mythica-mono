@@ -14,7 +14,6 @@ const { parseMapCommand, handleMapCommand } =
 	require("../session-map") as typeof import("../session-map");
 
 const SID = "55555555-5555-5555-5555-555555555555";
-const MID = "66666666-6666-6666-6666-666666666666";
 const CID = "44444444-4444-4444-4444-444444444444";
 const OWNER = "11111111-1111-1111-1111-111111111111";
 const PLAYER = "22222222-2222-2222-2222-222222222222";
@@ -108,7 +107,19 @@ describe("handleMapCommand — FOG_PAINT (MJ)", () => {
 		expect(state.fog.revealed).toEqual([]);
 	});
 
-	it("DICE_ROLL est broadcasté tel quel sans persistance", async () => {
+	it("DICE_ROLL refuse un non-membre", async () => {
+		p.session.findUnique.mockResolvedValue({
+			id: SID,
+			campaignId: CID,
+			mapState: "{}",
+		});
+		p.campaign.findFirst.mockResolvedValue({
+			id: CID,
+			ownerId: OWNER,
+			nom: "C",
+			deletedAt: null,
+		});
+		p.campaignMember.findFirst.mockResolvedValue(null); // PLAYER is not a member
 		const cmd = {
 			type: "DICE_ROLL" as const,
 			formula: "2d6",
@@ -116,8 +127,32 @@ describe("handleMapCommand — FOG_PAINT (MJ)", () => {
 			total: 7,
 			isPrivate: false,
 		};
-		// OWNER est propriétaire de la campagne => accès valide
-		const evt = await handleMapCommand(SID, OWNER, cmd);
+		const evt = await handleMapCommand(SID, PLAYER, cmd);
+		expect(evt).toBeNull();
+		expect(p.session.update).not.toHaveBeenCalled();
+	});
+
+	it("DICE_ROLL broadcasté pour un membre", async () => {
+		p.session.findUnique.mockResolvedValue({
+			id: SID,
+			campaignId: CID,
+			mapState: "{}",
+		});
+		p.campaign.findFirst.mockResolvedValue({
+			id: CID,
+			ownerId: OWNER,
+			nom: "C",
+			deletedAt: null,
+		});
+		p.campaignMember.findFirst.mockResolvedValue({ role: "player" }); // IS a member
+		const cmd = {
+			type: "DICE_ROLL" as const,
+			formula: "2d6",
+			results: [3, 4],
+			total: 7,
+			isPrivate: false,
+		};
+		const evt = await handleMapCommand(SID, PLAYER, cmd);
 		expect(evt?.type).toBe("DICE_ROLL");
 		expect(p.session.update).not.toHaveBeenCalled();
 	});
