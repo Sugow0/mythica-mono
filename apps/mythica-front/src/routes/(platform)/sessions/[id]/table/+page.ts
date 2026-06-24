@@ -1,6 +1,8 @@
 import { error, redirect } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
-import { campaignService } from "$lib/index.js";
+import { ApiError, campaignService } from "$lib/index.js";
+
+export const ssr = false;
 
 export const load: PageLoad = async ({ params, parent }) => {
 	const { user } = await parent();
@@ -17,6 +19,8 @@ export const load: PageLoad = async ({ params, parent }) => {
 		};
 	} catch (err: unknown) {
 		if (err && typeof err === "object" && "status" in err) throw err;
-		throw error(403, "Accès refusé à cette session");
+		if (err instanceof ApiError)
+			throw error(err.statusCode ?? 500, err.message);
+		throw error(500, "Erreur lors du chargement de la session");
 	}
 };
