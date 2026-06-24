@@ -1,0 +1,117 @@
+import { prisma } from "../lib/prisma";
+import { isGameMaster, resolveSessionAccess } from "./session-access";
+
+type Point = { x: number; y: number };
+type FogState = { mode: "manual" | "dynamic"; revealed: Point[][] };
+
+export type MapCommand =
+	| { type: "FOG_PAINT"; polygons: Point[][] }
+	| { type: "FOG_CLEAR" }
+	| {
+			type: "DICE_ROLL";
+			formula: string;
+			results: number[];
+			total: number;
+			isPrivate: boolean;
+	  };
+
+export type MapEvent =
+	| { type: "FOG_STATE"; fog: FogState }
+	| {
+			type: "DICE_ROLL";
+			formula: string;
+			results: number[];
+			total: number;
+			isPrivate: boolean;
+	  };
+
+export function parseMapCommand(raw: unknown): MapCommand | null {
+	let data: unknown = raw;
+	if (typeof raw === "string") {
+		try {
+			data = JSON.parse(raw);
+		} catch {
+			return null;
+		}
+	}
+	if (!data || typeof data !== "object") return null;
+	const cmd = data as Record<string, unknown>;
+	switch (cmd.type) {
+		case "FOG_PAINT":
+			if (!Array.isArray(cmd.polygons)) return null;
+			return { type: "FOG_PAINT", polygons: cmd.polygons as Point[][] };
+		case "FOG_CLEAR":
+			return { type: "FOG_CLEAR" };
+		case "DICE_ROLL":
+			if (
+				typeof cmd.formula === "string" &&
+				Array.isArray(cmd.results) &&
+				typeof cmd.total === "number" &&
+				typeof cmd.isPrivate === "boolean"
+			) {
+				return {
+					type: "DICE_ROLL",
+					formula: cmd.formula,
+					results: cmd.results as number[],
+					total: cmd.total,
+					isPrivate: cmd.isPrivate,
+				};
+			}
+			return null;
+		default:
+			return null;
+	}
+}
+
+function parseFogState(raw: unknown): FogState {
+	if (raw && typeof raw === "object") {
+		const obj = raw as Record<string, unknown>;
+		if (obj.fog && typeof obj.fog === "object") {
+			return obj.fog as FogState;
+		}
+	}
+	return { mode: "manual", revealed: [] };
+}
+
+export async function handleMapCommand(
+	sessionId: string,
+	userId: string,
+	command: MapCommand,
+): Promise<MapEvent | null> {
+	// DICE_ROLL : tout participant peut lancer, pas de persistance ni de vérification d'accès GM
+	if (command.type === "DICE_ROLL") {
+		return { type: "DICE_ROLL", ...command };
+	}
+
+	// FOG_* : réservé au MJ
+	const access = await resolveSessionAccess(sessionId, {
+		id: userId,
+		role: null,
+	});
+	if (!access.ok) return null;
+	if (!isGameMaster(access)({ id: userId, role: null })) return null;
+
+	const session = await prisma.session.findUnique({ where: { id: sessionId } });
+	if (!session) return null;
+
+	const currentFog = parseFogState(session.mapState);
+	let nextFog: FogState;
+
+	if (command.type === "FOG_CLEAR") {
+		nextFog = { mode: currentFog.mode, revealed: [] };
+	} else {
+		nextFog = { ...currentFog, revealed: command.polygons };
+	}
+
+	const mapState =
+		typeof session.mapState === "object" && session.mapState
+			? { ...(session.mapState as object), fog: nextFog }
+			: { fog: nextFog };
+
+	await prisma.session.update({
+		where: { id: sessionId },
+		data: { mapState: JSON.stringify(mapState) },
+	});
+
+	return { type: "FOG_STATE", fog: nextFog };
+}
