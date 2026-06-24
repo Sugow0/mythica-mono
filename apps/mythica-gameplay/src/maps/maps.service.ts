@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma";
 
 type CreateMapData = {
@@ -24,7 +25,9 @@ export async function getMap(mapId: string, campaignId: string) {
 }
 
 export async function createMap(campaignId: string, data: CreateMapData) {
-	return prisma.map.create({ data: { campaignId, ...data } });
+	return prisma.map.create({
+		data: { id: randomUUID(), campaignId, ...data },
+	});
 }
 
 export async function updateMap(

@@ -65,8 +65,11 @@ describe("createMap", () => {
 		p.map.create.mockResolvedValue({ ...baseMap, nom: "Donjon" });
 		const result = await createMap(CID, { nom: "Donjon" });
 		expect(result.nom).toBe("Donjon");
-		const arg = p.map.create.mock.calls[0]?.[0] as { data: { nom: string } };
+		const arg = p.map.create.mock.calls[0]?.[0] as {
+			data: { id: string; nom: string };
+		};
 		expect(arg.data.nom).toBe("Donjon");
+		expect(arg.data.id).toMatch(/^[0-9a-f-]{36}$/);
 	});
 });
 
