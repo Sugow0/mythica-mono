@@ -845,7 +845,7 @@ export const campaignCharacterSheetsController = new Elysia({
 				},
 				include: {
 					characterSheet: { select: { name: true } },
-					requests: gm ? { where: { status: "pending" } } : false,
+					...(gm ? { requests: { where: { status: "pending" } } } : {}),
 				},
 				orderBy: { createdAt: "asc" },
 			});
