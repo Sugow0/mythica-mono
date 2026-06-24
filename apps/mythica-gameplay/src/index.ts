@@ -15,6 +15,7 @@ import { characterSheetPropertiesController } from "./game-systems/character-she
 import { gameSystemsController } from "./game-systems/game-systems.controller";
 import { healthController } from "./health.controller";
 import { logger } from "./logger";
+import { mapsController } from "./maps/maps.controller";
 
 await startUserSync();
 
@@ -46,6 +47,7 @@ const app = new Elysia()
 					},
 					{ name: "Campaigns", description: "Campagnes, membres et sessions" },
 					{ name: "Sessions", description: "Sessions de jeu et présence" },
+					{ name: "Maps", description: "Maps des sessions de jeu" },
 				],
 			},
 		}),
@@ -59,6 +61,7 @@ const app = new Elysia()
 	.use(campaignsController)
 	.use(campaignCharacterSheetsController)
 	.use(sessionsController)
+	.use(mapsController)
 	.use(contentImportController)
 	.listen(env.PORT);
 

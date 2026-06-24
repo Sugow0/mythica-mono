@@ -10,6 +10,7 @@ import {
 	presenceChannel,
 } from "./commands/session-presence/session-presence.handler";
 import { isGameMaster, resolveSessionAccess } from "./session-access";
+import { sessionRooms } from "./session-rooms";
 
 // ------------------------------------------------------------
 // Schémas
@@ -200,4 +201,47 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 				connection: "keep-alive",
 			},
 		});
-	});
+	})
+
+	/** PUT /sessions/:id/map - Changer la map active d'une session (MJ). */
+	.put(
+		"/:id/map",
+		async ({ set, currentUser, params, body }) => {
+			const access = await resolveSessionAccess(params.id, currentUser);
+			if (!access.ok) {
+				set.status = access.status;
+				return { success: false as const, error: access.error };
+			}
+			if (!isGameMaster(access)(currentUser as CurrentUser)) {
+				set.status = 403;
+				return { success: false as const, error: "Réservé au MJ" };
+			}
+			const session = await prisma.session.update({
+				where: { id: params.id },
+				data: { activeMapId: body.mapId },
+				include: { activeMap: true },
+			});
+			await sessionRooms.broadcast(params.id, {
+				type: "MAP_CHANGE",
+				mapId: body.mapId,
+				map: session.activeMap,
+			});
+			return { success: true as const, session };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: t.Object({
+				mapId: t.Union([t.String({ format: "uuid" }), t.Null()]),
+			}),
+			response: {
+				200: t.Object({ success: t.Literal(true), session: t.Any() }),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["Sessions"],
+				summary: "Changer la map active d'une session",
+			},
+		},
+	);
