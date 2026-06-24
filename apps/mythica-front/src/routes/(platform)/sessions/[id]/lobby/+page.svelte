@@ -5,6 +5,7 @@
 	import RadioIcon from "@lucide/svelte/icons/radio";
 	import UsersIcon from "@lucide/svelte/icons/users";
 	import { onDestroy, onMount } from "svelte";
+	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
@@ -98,6 +99,9 @@
 					...session,
 					status: payload.status as SessionDetail["session"]["status"],
 				};
+				if (payload.status === "active") {
+					goto(`/sessions/${sessionId}/table`);
+				}
 			}
 		};
 	}
@@ -109,6 +113,7 @@
 		try {
 			await campaignService.launchSession(sessionId);
 			if (session) session = { ...session, status: "active" };
+			goto(`/sessions/${sessionId}/table`);
 		} catch (err) {
 			actionError =
 				err instanceof ApiError
