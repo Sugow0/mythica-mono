@@ -13,21 +13,29 @@ type CreateMapData = {
 	heightPx?: number;
 };
 
+// Prisma retourne gridOpacity en Decimal — on le normalise en number pour TypeBox.
+function normalizeMap<T extends { gridOpacity: unknown }>(map: T) {
+	return { ...map, gridOpacity: Number(map.gridOpacity) };
+}
+
 export async function getMaps(campaignId: string) {
-	return prisma.map.findMany({
+	const maps = await prisma.map.findMany({
 		where: { campaignId },
 		orderBy: { createdAt: "asc" },
 	});
+	return maps.map(normalizeMap);
 }
 
 export async function getMap(mapId: string, campaignId: string) {
-	return prisma.map.findFirst({ where: { id: mapId, campaignId } });
+	const map = await prisma.map.findFirst({ where: { id: mapId, campaignId } });
+	return map ? normalizeMap(map) : null;
 }
 
 export async function createMap(campaignId: string, data: CreateMapData) {
-	return prisma.map.create({
+	const map = await prisma.map.create({
 		data: { id: randomUUID(), campaignId, ...data },
 	});
+	return normalizeMap(map);
 }
 
 export async function updateMap(
@@ -39,7 +47,8 @@ export async function updateMap(
 		where: { id: mapId, campaignId },
 	});
 	if (!existing) return null;
-	return prisma.map.update({ where: { id: mapId }, data });
+	const map = await prisma.map.update({ where: { id: mapId }, data });
+	return normalizeMap(map);
 }
 
 export async function deleteMap(mapId: string, campaignId: string) {
@@ -52,5 +61,9 @@ export async function deleteMap(mapId: string, campaignId: string) {
 }
 
 export async function setMapFile(mapId: string, fileId: string | null) {
-	return prisma.map.update({ where: { id: mapId }, data: { fileId } });
+	const map = await prisma.map.update({
+		where: { id: mapId },
+		data: { fileId },
+	});
+	return normalizeMap(map);
 }
