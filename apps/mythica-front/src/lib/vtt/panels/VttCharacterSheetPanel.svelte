@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { vttState } from "$lib/vtt/vtt.svelte";
+	import type { VttWebSocket } from "$lib/vtt/ws/VttWebSocket";
 	import CharacterSheetViewer from "$lib/components/character-sheet/character-sheet-viewer.svelte";
 	import { campaignService } from "$lib/index.js";
 	import XIcon from "@lucide/svelte/icons/x";
 
-	let { campaignId }: { campaignId: string } = $props();
+	let { ws, campaignId }: { ws: VttWebSocket | null; campaignId: string } =
+		$props();
 
 	const selectedToken = $derived(
 		vttState.tokens.find((t) => t.id === vttState.selectedTokenId)
@@ -30,6 +32,17 @@
 			}
 			const sign = mod >= 0 ? "+" : "";
 			const msg = `🎲 Jet de ${label} : ${rolls.join(" + ")} ${sign}${mod} = **${total}**`;
+
+			if (ws) {
+				ws.send({
+					type: "DICE_ROLL",
+					formula,
+					results: rolls,
+					total,
+					isPrivate: false,
+				});
+			}
+
 			campaignService.postMessage(campaignId, msg).catch(() => {});
 		}
 	}
