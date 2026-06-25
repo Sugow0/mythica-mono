@@ -7,6 +7,7 @@ const p = {
 	},
 	campaign: { findFirst: mock(async () => null as unknown) },
 	campaignMember: { findFirst: mock(async () => null as unknown) },
+	sessionToken: { findUnique: mock(async () => null as unknown) },
 };
 mock.module("../../lib/prisma", () => ({ prisma: p }));
 
@@ -37,6 +38,11 @@ describe("parseMapCommand", () => {
 		expect(parseMapCommand({ type: "FOG_CLEAR" })).toEqual({
 			type: "FOG_CLEAR",
 		});
+	});
+
+	it("parse FOG_REVEAL_AROUND valide", () => {
+		const cmd = { type: "FOG_REVEAL_AROUND", tokenId: "token-1", radius: 5 };
+		expect(parseMapCommand(cmd)).toEqual(cmd);
 	});
 
 	it("parse DICE_ROLL valide", () => {
@@ -105,6 +111,41 @@ describe("handleMapCommand — FOG_PAINT (MJ)", () => {
 		};
 		const state = arg.data.mapState;
 		expect((state.fog as { revealed: unknown[] }).revealed).toEqual([]);
+	});
+
+	it("FOG_REVEAL_AROUND ajoute un cercle aux zones révélées", async () => {
+		p.sessionToken.findUnique.mockResolvedValue({
+			id: "token-1",
+			sessionId: SID,
+			posX: 100,
+			posY: 100,
+		});
+
+		const evt = await handleMapCommand(SID, OWNER, {
+			type: "FOG_REVEAL_AROUND",
+			tokenId: "token-1",
+			radius: 50,
+		});
+
+		expect(evt?.type).toBe("FOG_STATE");
+		const evtFog = evt as { fog: { mode: string; revealed: unknown[][] } };
+		expect(evtFog.fog.mode).toBe("dynamic");
+		expect(evtFog.fog.revealed.length).toBe(1); // Le cercle ajouté
+		expect(evtFog.fog.revealed[0].length).toBe(32); // 32 segments
+		expect(p.session.update).toHaveBeenCalled();
+	});
+
+	it("FOG_REVEAL_AROUND ignore si token inexistant ou mauvaise session", async () => {
+		p.sessionToken.findUnique.mockResolvedValue(null);
+
+		const evt = await handleMapCommand(SID, OWNER, {
+			type: "FOG_REVEAL_AROUND",
+			tokenId: "token-unknown",
+			radius: 50,
+		});
+
+		expect(evt).toBeNull();
+		expect(p.session.update).not.toHaveBeenCalled();
 	});
 
 	it("DICE_ROLL refuse un non-membre", async () => {
