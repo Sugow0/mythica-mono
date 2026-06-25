@@ -79,8 +79,18 @@ export async function handleTokenCommand(
 		case "TOKEN_MOVE": {
 			const token = await prisma.sessionToken.findUnique({
 				where: { id: command.tokenId },
+				include: { characterSheet: { select: { userId: true } } },
 			});
 			if (!token || token.sessionId !== sessionId) return null;
+
+			const isGm = isGameMaster(access)({ id: userId, role: null });
+			if (!isGm) {
+				// Les joueurs ne peuvent déplacer que les tokens liés à LEURS fiches.
+				if (!token.characterSheet || token.characterSheet.userId !== userId) {
+					return null;
+				}
+			}
+
 			await prisma.sessionToken.update({
 				where: { id: command.tokenId },
 				data: { posX: command.x, posY: command.y },

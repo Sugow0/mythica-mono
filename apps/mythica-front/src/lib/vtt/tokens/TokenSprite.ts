@@ -6,6 +6,7 @@ import {
 	Sprite,
 	Text,
 	type Texture,
+	type Ticker,
 } from "pixi.js";
 import type { SessionTokenDto } from "../types";
 import { vttState } from "../vtt.svelte";
@@ -19,18 +20,28 @@ export class TokenSprite {
 	private label: Text | null = null;
 	public tokenId: string;
 	private gridSize: number;
+	private ticker: Ticker;
+
+	private targetX: number;
+	private targetY: number;
 
 	constructor(
 		token: SessionTokenDto,
 		onMove: TokenMoveCallback,
 		onSelect: TokenSelectCallback,
-		gridSize = 100
+		gridSize = 100,
+		ticker: Ticker
 	) {
 		this.tokenId = token.id;
 		this.gridSize = gridSize;
+		this.ticker = ticker;
+
+		this.targetX = parseFloat(token.posX) * this.gridSize;
+		this.targetY = parseFloat(token.posY) * this.gridSize;
+
 		this.container = new Container();
-		this.container.x = parseFloat(token.posX) * this.gridSize;
-		this.container.y = parseFloat(token.posY) * this.gridSize;
+		this.container.x = this.targetX;
+		this.container.y = this.targetY;
 		this.container.visible = token.isVisible;
 
 		// Placeholder graphique en attendant l'image réelle
@@ -64,6 +75,23 @@ export class TokenSprite {
 		}
 
 		this.makeDraggable(onMove, onSelect, token);
+
+		this.ticker.add(this.onTick, this);
+	}
+
+	private onTick(ticker: Ticker) {
+		const dt = ticker.deltaTime;
+		// Vitesse d'interpolation
+		const speed = 0.15 * dt;
+
+		this.container.x += (this.targetX - this.container.x) * speed;
+		this.container.y += (this.targetY - this.container.y) * speed;
+
+		// Si on est très proche, on s'arrête (snap)
+		if (Math.abs(this.targetX - this.container.x) < 0.5)
+			this.container.x = this.targetX;
+		if (Math.abs(this.targetY - this.container.y) < 0.5)
+			this.container.y = this.targetY;
 	}
 
 	private async loadImage(token: SessionTokenDto) {
@@ -95,8 +123,8 @@ export class TokenSprite {
 		let startMouseX = 0; // For click detection only
 		let startMouseY = 0;
 		let dragStartLocal = { x: 0, y: 0 };
-		let startContainerX = this.container.x;
-		let startContainerY = this.container.y;
+		let startContainerX = this.targetX;
+		let startContainerY = this.targetY;
 
 		const rulerGraphics = new Graphics();
 		const rulerText = new Text({
@@ -117,8 +145,8 @@ export class TokenSprite {
 			startMouseX = e.globalX;
 			startMouseY = e.globalY;
 			dragStartLocal = e.getLocalPosition(this.container.parent!);
-			startContainerX = this.container.x;
-			startContainerY = this.container.y;
+			startContainerX = this.targetX;
+			startContainerY = this.targetY;
 			this.container.zIndex = 1000;
 
 			this.container.addChild(rulerGraphics);
@@ -194,12 +222,13 @@ export class TokenSprite {
 	}
 
 	update(token: SessionTokenDto) {
-		this.container.x = parseFloat(token.posX) * this.gridSize;
-		this.container.y = parseFloat(token.posY) * this.gridSize;
+		this.targetX = parseFloat(token.posX) * this.gridSize;
+		this.targetY = parseFloat(token.posY) * this.gridSize;
 		this.container.visible = token.isVisible;
 	}
 
 	destroy() {
+		this.ticker.remove(this.onTick, this);
 		this.container.destroy({ children: true });
 	}
 }
