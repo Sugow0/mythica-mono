@@ -21,6 +21,7 @@ export const vttState = (() => {
 	let selectedToolId = $state<
 		"select" | "move" | "fog-paint" | "fog-erase" | "add-token"
 	>("select");
+	let selectedTokenId = $state<string | null>(null);
 	let isGm = $state(false);
 
 	return {
@@ -41,6 +42,9 @@ export const vttState = (() => {
 		},
 		get selectedToolId() {
 			return selectedToolId;
+		},
+		get selectedTokenId() {
+			return selectedTokenId;
 		},
 		get isGm() {
 			return isGm;
@@ -76,6 +80,9 @@ export const vttState = (() => {
 		},
 		setIsGm(v: boolean) {
 			isGm = v;
+		},
+		setSelectedTokenId(v: string | null) {
+			selectedTokenId = v;
 		},
 	};
 })();
