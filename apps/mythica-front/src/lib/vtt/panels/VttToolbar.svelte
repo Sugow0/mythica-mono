@@ -20,8 +20,8 @@
 	const gmTools = [
 		{ id: "select" as const, icon: MousePointer2Icon, label: "Sélectionner" },
 		{ id: "move" as const, icon: MoveIcon, label: "Déplacer" },
-		{ id: "fog-paint" as const, icon: PlusIcon, label: "Révéler fog" },
-		{ id: "fog-erase" as const, icon: EraserIcon, label: "Masquer fog" },
+		{ id: "fog-paint" as const, icon: PlusIcon, label: "Reveal" },
+		{ id: "fog-erase" as const, icon: EraserIcon, label: "Hide" },
 	];
 
 	const playerTools = [

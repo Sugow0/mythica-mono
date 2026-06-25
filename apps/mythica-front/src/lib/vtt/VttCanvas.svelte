@@ -33,10 +33,10 @@
 	let panZoomCleanup: (() => void) | null = null;
 	let mounted = $state(false);
 
-	// Fog drawing state (DOM overlay)
+	// Fog drawing overlay state
 	let fogDrawing = $state(false);
 	let fogPreview = $state({ left: 0, top: 0, width: 0, height: 0 });
-	let fogStartClient = { x: 0, y: 0 };
+	let fogStartClient = { x: 0, y: 0 }; // mutable ref utilisé dans setupPanZoom
 
 	// Stage reference for coordinate conversion
 	let stageRef: {
@@ -141,59 +141,6 @@
 		};
 	}
 
-	function handleFogMouseDown(e: MouseEvent) {
-		const tool = vttState.selectedToolId;
-		if (
-			(tool !== "fog-paint" && tool !== "fog-erase") ||
-			e.button !== 0 ||
-			e.altKey
-		)
-			return;
-		e.preventDefault();
-		fogDrawing = true;
-		fogStartClient = { x: e.clientX, y: e.clientY };
-		fogPreview = { left: e.clientX, top: e.clientY, width: 0, height: 0 };
-
-		// Utiliser window pour capter move/up même hors du div
-		function onMove(ev: MouseEvent) {
-			const left = Math.min(ev.clientX, fogStartClient.x);
-			const top = Math.min(ev.clientY, fogStartClient.y);
-			const width = Math.abs(ev.clientX - fogStartClient.x);
-			const height = Math.abs(ev.clientY - fogStartClient.y);
-			fogPreview = { left, top, width, height };
-		}
-
-		function onUp(ev: MouseEvent) {
-			window.removeEventListener("mousemove", onMove);
-			window.removeEventListener("mouseup", onUp);
-			fogDrawing = false;
-
-			const currentTool = vttState.selectedToolId;
-			if (currentTool === "fog-erase") {
-				onFogPaint?.([]);
-				return;
-			}
-			const tl = screenToWorld(
-				Math.min(ev.clientX, fogStartClient.x),
-				Math.min(ev.clientY, fogStartClient.y)
-			);
-			const br = screenToWorld(
-				Math.max(ev.clientX, fogStartClient.x),
-				Math.max(ev.clientY, fogStartClient.y)
-			);
-			if (Math.abs(br.x - tl.x) < 5 || Math.abs(br.y - tl.y) < 5) return;
-			onFogPaint?.([
-				{ x: tl.x, y: tl.y },
-				{ x: br.x, y: tl.y },
-				{ x: br.x, y: br.y },
-				{ x: tl.x, y: br.y },
-			]);
-		}
-
-		window.addEventListener("mousemove", onMove);
-		window.addEventListener("mouseup", onUp);
-	}
-
 	function setupPanZoom(
 		app: { canvas: HTMLCanvasElement },
 		stage: {
@@ -215,11 +162,63 @@
 			);
 		}
 
+		// Gestionnaire unique mousedown sur le canvas — délègue selon l'outil actif
 		function onMouseDown(e: MouseEvent) {
-			if (e.button === 1 || (e.button === 0 && e.altKey)) {
+			const tool = vttState.selectedToolId;
+			const isFogTool = tool === "fog-paint" || tool === "fog-erase";
+
+			// Pan : clic molette ou alt+clic gauche, sauf en mode fog
+			if (!isFogTool && (e.button === 1 || (e.button === 0 && e.altKey))) {
 				dragging = true;
 				lastX = e.clientX;
 				lastY = e.clientY;
+				return;
+			}
+
+			// Fog drawing : clic gauche sans alt
+			if (isFogTool && e.button === 0 && !e.altKey) {
+				e.preventDefault();
+				fogDrawing = true;
+				fogStartClient = { x: e.clientX, y: e.clientY };
+				fogPreview = { left: e.clientX, top: e.clientY, width: 0, height: 0 };
+
+				function onFogMove(ev: MouseEvent) {
+					fogPreview = {
+						left: Math.min(ev.clientX, fogStartClient.x),
+						top: Math.min(ev.clientY, fogStartClient.y),
+						width: Math.abs(ev.clientX - fogStartClient.x),
+						height: Math.abs(ev.clientY - fogStartClient.y),
+					};
+				}
+
+				function onFogUp(ev: MouseEvent) {
+					window.removeEventListener("mousemove", onFogMove);
+					window.removeEventListener("mouseup", onFogUp);
+					fogDrawing = false;
+
+					if (tool === "fog-erase") {
+						onFogPaint?.([]);
+						return;
+					}
+					const tl = screenToWorld(
+						Math.min(ev.clientX, fogStartClient.x),
+						Math.min(ev.clientY, fogStartClient.y)
+					);
+					const br = screenToWorld(
+						Math.max(ev.clientX, fogStartClient.x),
+						Math.max(ev.clientY, fogStartClient.y)
+					);
+					if (Math.abs(br.x - tl.x) < 5 || Math.abs(br.y - tl.y) < 5) return;
+					onFogPaint?.([
+						{ x: tl.x, y: tl.y },
+						{ x: br.x, y: tl.y },
+						{ x: br.x, y: br.y },
+						{ x: tl.x, y: br.y },
+					]);
+				}
+
+				window.addEventListener("mousemove", onFogMove);
+				window.addEventListener("mouseup", onFogUp);
 			}
 		}
 
@@ -249,10 +248,8 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
 	class="relative block h-full w-full"
-	onmousedown={handleFogMouseDown}
 	style="cursor: {vttState.selectedToolId === 'fog-paint' ||
 	vttState.selectedToolId === 'fog-erase'
 		? 'crosshair'
