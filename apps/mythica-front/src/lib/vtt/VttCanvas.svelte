@@ -236,6 +236,35 @@
 		};
 	});
 
+	// Camera focus
+	$effect(() => {
+		if (vttState.focusedTokenId && stageRef && appRef && mapConfig) {
+			const token = vttState.tokens.find(
+				(t) => t.id === vttState.focusedTokenId
+			);
+			if (token && canvasEl) {
+				const targetX =
+					parseFloat(token.posX as unknown as string) * mapConfig.gridSize +
+					(token.width * mapConfig.gridSize) / 2;
+				const targetY =
+					parseFloat(token.posY as unknown as string) * mapConfig.gridSize +
+					(token.height * mapConfig.gridSize) / 2;
+
+				// Center the stage on these world coordinates
+				const screenW = canvasEl.clientWidth;
+				const screenH = canvasEl.clientHeight;
+
+				stageRef.x = screenW / 2 - targetX * stageRef.scale.x;
+				stageRef.y = screenH / 2 - targetY * stageRef.scale.y;
+
+				// Select it
+				vttState.setSelectedTokenId(token.id);
+			}
+			// Reset to prevent getting stuck
+			vttState.setFocusedTokenId(null);
+		}
+	});
+
 	function screenToWorld(
 		clientX: number,
 		clientY: number

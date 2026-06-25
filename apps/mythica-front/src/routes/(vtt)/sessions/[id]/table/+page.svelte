@@ -3,10 +3,10 @@
 	import { page } from "$app/state";
 	import VttCanvas from "$lib/vtt/VttCanvas.svelte";
 	import VttToolbar from "$lib/vtt/panels/VttToolbar.svelte";
-	import VttInitiativePanel from "$lib/vtt/panels/VttInitiativePanel.svelte";
 	import VttChatPanel from "$lib/vtt/panels/VttChatPanel.svelte";
 	import VttPresenceBar from "$lib/vtt/panels/VttPresenceBar.svelte";
 	import VttFogControls from "$lib/vtt/panels/VttFogControls.svelte";
+	import VttTimelinePanel from "$lib/vtt/panels/VttTimelinePanel.svelte";
 	import VttMapPanel from "$lib/vtt/panels/VttMapPanel.svelte";
 	import VttCharacterSheetPanel from "$lib/vtt/panels/VttCharacterSheetPanel.svelte";
 	import VttDiceRoller from "$lib/vtt/panels/VttDiceRoller.svelte";
@@ -207,7 +207,7 @@
 		/>
 	{/if}
 	{#if vttState.combatState.started}
-		<VttInitiativePanel combatState={vttState.combatState} {isGm} {ws} />
+		<VttTimelinePanel combatState={vttState.combatState} {isGm} {ws} />
 	{/if}
 	{#if isGm}
 		<VttFogControls {ws} />

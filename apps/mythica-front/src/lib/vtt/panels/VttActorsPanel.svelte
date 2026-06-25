@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { CampaignCharacterSheet } from "$lib/api/services/campaign-character-sheets-service";
 	import XIcon from "@lucide/svelte/icons/x";
 	import GripVerticalIcon from "@lucide/svelte/icons/grip-vertical";
 
@@ -7,10 +6,12 @@
 		campaignSheets,
 		onClose,
 	}: {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		campaignSheets: any[];
 		onClose: () => void;
 	} = $props();
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	function handleDragStart(e: DragEvent, sheet: any) {
 		if (e.dataTransfer && sheet.characterSheet) {
 			const payload = {
