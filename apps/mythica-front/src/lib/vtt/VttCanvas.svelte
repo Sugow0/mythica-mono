@@ -213,7 +213,12 @@
 			const tool = vttState.selectedToolId;
 			const isFogTool = tool === "fog-paint" || tool === "fog-erase";
 
-			if (!isFogTool && (e.button === 1 || (e.button === 0 && e.altKey))) {
+			// Pan : molette, alt+clic, ou clic gauche en mode non-fog
+			if (
+				e.button === 1 ||
+				(e.button === 0 && e.altKey) ||
+				(e.button === 0 && !isFogTool)
+			) {
 				dragging = true;
 				lastX = e.clientX;
 				lastY = e.clientY;
@@ -298,7 +303,7 @@
 	style="cursor: {vttState.selectedToolId === 'fog-paint' ||
 	vttState.selectedToolId === 'fog-erase'
 		? 'crosshair'
-		: 'default'}"
+		: 'grab'}"
 >
 	<!-- Canvas PixiJS plein écran -->
 	<canvas bind:this={canvasEl} class="block h-full w-full"></canvas>
