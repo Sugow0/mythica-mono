@@ -26,7 +26,7 @@
 </script>
 
 <div
-	class="fixed right-4 top-16 z-50 flex w-64 flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/95 shadow-2xl backdrop-blur"
+	class="fixed bottom-28 left-4 z-50 flex w-64 flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/95 shadow-2xl backdrop-blur"
 >
 	<div class="flex items-center justify-between border-b border-slate-700 p-3">
 		<h2 class="text-sm font-semibold text-slate-200">Acteurs (Tokens)</h2>
