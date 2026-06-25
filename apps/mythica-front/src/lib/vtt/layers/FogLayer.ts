@@ -2,44 +2,59 @@ import { Container, Graphics } from "pixi.js";
 import type { FogState, MapConfig } from "../types";
 
 /**
- * Fog of War via PixiJS v8 `.cut()` — la méthode native pour creuser des
- * trous dans une forme Graphics. On dessine un rectangle de brouillard, puis
- * chaque zone révélée est soustraite avec `.cut()`. Pas de mask, pas de
- * blendMode erase, pas de render group : simple et fiable.
+ * Fog of War via masque alpha PixiJS v8.
+ *
+ * fogGraphics : rectangle sombre couvrant toute la map.
+ * fogMask     : formes blanches = zones où le fog est visible,
+ *               formes noires  = zones révélées (fog transparent).
+ *
+ * fogMask n'est PAS dans le display tree → PixiJS v8 l'utilise
+ * uniquement pour le stencil, il n'apparaît pas à l'écran.
+ * Les chevauchements de zones révélées sont gérés correctement
+ * car des formes noires superposées restent noires (pas d'artefact).
  */
 export class FogLayer {
 	private container: Container;
-	private graphics: Graphics;
+	private fogGraphics: Graphics;
+	private fogMask: Graphics;
 	private isActive = true;
 
 	constructor(stage: Container) {
 		this.container = new Container();
-		this.graphics = new Graphics();
-		this.container.addChild(this.graphics);
 		this.container.alpha = 0.85;
+
+		this.fogGraphics = new Graphics();
+		this.fogMask = new Graphics();
+
+		// fogGraphics est dans le display tree, fogMask sert uniquement de masque
+		this.container.addChild(this.fogGraphics);
+		this.fogGraphics.mask = this.fogMask;
+
 		stage.addChild(this.container);
 	}
 
 	setFog(fog: FogState, config: MapConfig) {
 		if (!this.isActive) return;
 
-		this.graphics.clear();
+		this.fogGraphics.clear();
+		this.fogMask.clear();
 
-		// Dessin du rectangle de brouillard couvrant toute la map
-		this.graphics.rect(0, 0, config.widthPx, config.heightPx).fill({
-			color: 0x0a0a14,
-		});
+		// Brouillard sombre sur toute la map
+		this.fogGraphics
+			.rect(0, 0, config.widthPx, config.heightPx)
+			.fill({ color: 0x0a0a14 });
 
-		// Zones révélées : on trace le polygone PUIS on appelle .cut()
-		// pour percer un trou dans le rectangle précédent.
+		// Masque : blanc = fog visible, noir = fog caché (zone révélée)
+		// On remplit d'abord tout en blanc (fog partout)
+		this.fogMask
+			.rect(0, 0, config.widthPx, config.heightPx)
+			.fill({ color: 0xffffff });
+
+		// Zones révélées en noir : pas de fog là, même si elles se chevauchent
 		for (const polygon of fog.revealed) {
 			if (polygon.length < 3) continue;
-			const [first, ...rest] = polygon;
-			this.graphics.moveTo(first.x, first.y);
-			for (const p of rest) {
-				this.graphics.lineTo(p.x, p.y);
-			}
-			this.graphics.closePath().cut();
+			const points = polygon.flatMap((p) => [p.x, p.y]);
+			this.fogMask.poly(points).fill({ color: 0x000000 });
 		}
 	}
 
@@ -49,6 +64,7 @@ export class FogLayer {
 	}
 
 	destroy() {
+		this.fogMask.destroy();
 		this.container.destroy({ children: true });
 	}
 }

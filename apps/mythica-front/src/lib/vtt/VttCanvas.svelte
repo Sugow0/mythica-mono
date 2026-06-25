@@ -252,7 +252,7 @@
 </script>
 
 <div
-	class="relative block h-full w-full"
+	class="absolute inset-0"
 	style="cursor: {vttState.selectedToolId === 'fog-paint' ||
 	vttState.selectedToolId === 'fog-erase'
 		? 'crosshair'
