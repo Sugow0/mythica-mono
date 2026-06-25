@@ -154,6 +154,9 @@
 			onDropToken={handleDropToken}
 			onFogPaint={isGm ? handleFogPaint : undefined}
 			onFogHide={isGm ? handleFogHide : undefined}
+			onTokenDelete={isGm
+				? (id) => ws?.send({ type: "TOKEN_REMOVE", tokenId: id })
+				: undefined}
 		/>
 	</div>
 

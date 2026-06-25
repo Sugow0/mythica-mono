@@ -2,6 +2,7 @@
 	import { onDestroy, onMount } from "svelte";
 	import type { MapConfig } from "./types";
 	import { vttState } from "./vtt.svelte";
+	import VttTokenHud from "./panels/VttTokenHud.svelte";
 
 	let {
 		mapConfig,
@@ -9,6 +10,7 @@
 		onDropToken,
 		onFogPaint,
 		onFogHide,
+		onTokenDelete,
 	}: {
 		mapConfig: MapConfig | null;
 		onTokenMove?: (tokenId: string, x: number, y: number) => void;
@@ -21,10 +23,12 @@
 		) => void;
 		onFogPaint?: (polygon: { x: number; y: number }[]) => void;
 		onFogHide?: (polygon: { x: number; y: number }[]) => void;
+		onTokenDelete?: (tokenId: string) => void;
 	} = $props();
 
 	let canvasEl: HTMLCanvasElement | undefined = $state();
 	let fogCanvasEl: HTMLCanvasElement | undefined = $state();
+	let hudContainerEl: HTMLDivElement | undefined = $state();
 
 	type AnyLayer = {
 		setMap?: (c: MapConfig) => Promise<void> | void;
@@ -38,6 +42,7 @@
 	let bgLayer: AnyLayer | null = null;
 	let gridLayer: AnyLayer | null = null;
 	let tokensLayer: AnyLayer | null = null;
+	let appRef: import("pixi.js").Application | null = null;
 	let appDestroy: (() => void) | null = null;
 	let panZoomCleanup: (() => void) | null = null;
 	let mounted = $state(false);
@@ -76,6 +81,7 @@
 		]);
 
 		const app = new Application();
+		appRef = app;
 		await app.init({
 			canvas: canvasEl,
 			// resizeTo: window pour couvrir tout le viewport, indépendamment du CSS
@@ -190,6 +196,44 @@
 		gridLayer = null;
 		tokensLayer = null;
 		stageRef = null;
+	});
+
+	// Ticker hook to position HUD
+	$effect(() => {
+		if (!mounted || !hudContainerEl || !stageRef || !appRef) return;
+
+		const updateHud = () => {
+			if (!vttState.selectedTokenId) {
+				if (hudContainerEl) hudContainerEl.style.display = "none";
+				return;
+			}
+
+			const token = vttState.tokens.find(
+				(t) => t.id === vttState.selectedTokenId
+			);
+			if (!token || !mapConfig || !stageRef) return;
+
+			const worldX =
+				parseFloat(token.posX as unknown as string) * mapConfig.gridSize +
+				(token.width * mapConfig.gridSize) / 2;
+			const worldY =
+				parseFloat(token.posY as unknown as string) * mapConfig.gridSize; // top of token
+
+			const screenX = worldX * stageRef.scale.x + stageRef.x;
+			const screenY = worldY * stageRef.scale.y + stageRef.y - 12; // 12px padding above the token
+
+			if (hudContainerEl) {
+				hudContainerEl.style.display = "block";
+				hudContainerEl.style.transform = `translate(${screenX}px, ${screenY}px)`;
+			}
+		};
+
+		appRef.ticker.add(updateHud);
+		return () => {
+			if (appRef && appRef.ticker) {
+				appRef.ticker.remove(updateHud);
+			}
+		};
 	});
 
 	function screenToWorld(
@@ -426,8 +470,8 @@
 		const newY = parseFloat(token.posY as unknown as string) + dy;
 
 		// Optimistic update locally to allow rapid keystrokes (like diagonals)
-		token.posX = newX;
-		token.posY = newY;
+		token.posX = newX.toString();
+		token.posY = newY.toString();
 
 		if (onTokenMove) {
 			onTokenMove(token.id, newX, newY);
@@ -503,4 +547,24 @@
 			</text>
 		</svg>
 	{/if}
+
+	<!-- Token HUD Container (positionné par Pixi Ticker) -->
+	<div
+		bind:this={hudContainerEl}
+		class="pointer-events-none absolute left-0 top-0 z-[200] origin-bottom -translate-x-1/2 -translate-y-full"
+		style="display: none;"
+	>
+		<div class="pointer-events-auto">
+			{#if vttState.selectedTokenId}
+				{#if vttState.tokens.find((t) => t.id === vttState.selectedTokenId)}
+					<VttTokenHud
+						token={vttState.tokens.find(
+							(t) => t.id === vttState.selectedTokenId
+						)!}
+						onDelete={onTokenDelete}
+					/>
+				{/if}
+			{/if}
+		</div>
+	</div>
 </div>

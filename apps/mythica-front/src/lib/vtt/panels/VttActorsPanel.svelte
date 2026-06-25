@@ -7,11 +7,11 @@
 		campaignSheets,
 		onClose,
 	}: {
-		campaignSheets: CampaignCharacterSheet[];
+		campaignSheets: any[];
 		onClose: () => void;
 	} = $props();
 
-	function handleDragStart(e: DragEvent, sheet: CampaignCharacterSheet) {
+	function handleDragStart(e: DragEvent, sheet: any) {
 		if (e.dataTransfer && sheet.characterSheet) {
 			const payload = {
 				type: "character_sheet",

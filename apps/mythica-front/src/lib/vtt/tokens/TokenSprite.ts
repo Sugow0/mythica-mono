@@ -116,7 +116,7 @@ export class TokenSprite {
 			vttState.setIsTokenDragging(true);
 			startMouseX = e.globalX;
 			startMouseY = e.globalY;
-			dragStartLocal = e.getLocalPosition(this.container.parent);
+			dragStartLocal = e.getLocalPosition(this.container.parent!);
 			startContainerX = this.container.x;
 			startContainerY = this.container.y;
 			this.container.zIndex = 1000;
@@ -127,7 +127,7 @@ export class TokenSprite {
 
 		this.container.on("globalpointermove", (e) => {
 			if (!isDragging) return;
-			const localPos = e.getLocalPosition(this.container.parent);
+			const localPos = e.getLocalPosition(this.container.parent!);
 			const dx = localPos.x - dragStartLocal.x;
 			const dy = localPos.y - dragStartLocal.y;
 			this.container.x = startContainerX + dx;

@@ -36,11 +36,11 @@
 
 		if (isPrivate) {
 			vttState.addDiceRoll({
-				type: "DICE_ROLL",
 				formula,
 				results: rolls,
 				total,
 				isPrivate,
+				rollerId: vttState.participants[0] || "Unknown",
 			});
 		} else {
 			if (ws) {
