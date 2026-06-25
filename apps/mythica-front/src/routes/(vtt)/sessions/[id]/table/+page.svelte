@@ -7,6 +7,7 @@
 	import VttChatPanel from "$lib/vtt/panels/VttChatPanel.svelte";
 	import VttPresenceBar from "$lib/vtt/panels/VttPresenceBar.svelte";
 	import VttFogControls from "$lib/vtt/panels/VttFogControls.svelte";
+	import VttMapPanel from "$lib/vtt/panels/VttMapPanel.svelte";
 	import { vttState } from "$lib/vtt/vtt.svelte";
 	import { VttWebSocket } from "$lib/vtt/ws/VttWebSocket";
 	import { campaignService } from "$lib/index.js";
@@ -22,6 +23,7 @@
 	const isGm = $derived(isOwner || myRole === "gm");
 
 	let ws = $state<VttWebSocket | null>(null);
+	let showMaps = $state(false);
 
 	$effect(() => {
 		vttState.setIsGm(isGm);
@@ -76,7 +78,16 @@
 
 	<!-- Overlays DOM -->
 	<VttPresenceBar participants={vttState.participants} />
-	<VttToolbar {isGm} {ws} onAddToken={isGm ? handleAddToken : undefined} />
+	<VttToolbar
+		{isGm}
+		{ws}
+		onAddToken={isGm ? handleAddToken : undefined}
+		onToggleMaps={isGm ? () => (showMaps = !showMaps) : undefined}
+		{showMaps}
+	/>
+	{#if isGm && showMaps}
+		<VttMapPanel campaignId={data.campaign?.id ?? ""} {sessionId} />
+	{/if}
 	{#if vttState.combatState.started}
 		<VttInitiativePanel combatState={vttState.combatState} {isGm} {ws} />
 	{/if}

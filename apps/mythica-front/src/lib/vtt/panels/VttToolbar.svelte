@@ -1,5 +1,6 @@
 <script lang="ts">
 	import EraserIcon from "@lucide/svelte/icons/eraser";
+	import MapIcon from "@lucide/svelte/icons/map";
 	import MousePointer2Icon from "@lucide/svelte/icons/mouse-pointer-2";
 	import MoveIcon from "@lucide/svelte/icons/move";
 	import PlusCircleIcon from "@lucide/svelte/icons/plus-circle";
@@ -11,10 +12,14 @@
 		isGm,
 		ws: _ws,
 		onAddToken,
+		onToggleMaps,
+		showMaps = false,
 	}: {
 		isGm: boolean;
 		ws: VttWebSocket | null;
 		onAddToken?: (label: string) => void;
+		onToggleMaps?: () => void;
+		showMaps?: boolean;
 	} = $props();
 
 	const gmTools = [
@@ -80,6 +85,16 @@
 			>
 				<PlusCircleIcon class="h-4 w-4" />
 				<span>Token</span>
+			</button>
+			<button
+				onclick={onToggleMaps}
+				class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-2 text-xs transition-colors {showMaps
+					? 'bg-red-600 text-white'
+					: 'text-slate-400 hover:bg-slate-800 hover:text-white'}"
+				title="Gérer les maps"
+			>
+				<MapIcon class="h-4 w-4" />
+				<span>Maps</span>
 			</button>
 		{/if}
 	</div>

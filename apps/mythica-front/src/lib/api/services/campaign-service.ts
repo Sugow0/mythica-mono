@@ -305,6 +305,44 @@ export class CampaignService extends GameplayApiClient {
 		return data;
 	}
 
+	// ==================== Maps ====================
+
+	/** Lister les maps d'une campagne (MJ). */
+	async getMaps(campaignId: string) {
+		const { data, error } = await this.client.GET("/campaigns/{id}/maps/", {
+			params: { path: { id: campaignId } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Créer une map (MJ). */
+	async createMap(
+		campaignId: string,
+		body: {
+			nom: string;
+			gridType?: "square" | "hex" | "free";
+			gridSize?: number;
+		}
+	) {
+		const { data, error } = await this.client.POST("/campaigns/{id}/maps/", {
+			params: { path: { id: campaignId } },
+			body,
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Activer une map sur la session en cours (MJ). */
+	async activateMap(sessionId: string, mapId: string | null) {
+		const { data, error } = await this.client.PUT("/sessions/{id}/map", {
+			params: { path: { id: sessionId } },
+			body: { mapId },
+		});
+		if (error) throw error;
+		return data;
+	}
+
 	/** Créer un token dans une session (MJ). */
 	async createToken(
 		sessionId: string,
