@@ -333,7 +333,50 @@
 			// ignore parse error
 		}
 	}
+
+	function handleKeyDown(e: KeyboardEvent) {
+		if (
+			e.target instanceof HTMLInputElement ||
+			e.target instanceof HTMLTextAreaElement
+		)
+			return;
+		if (!vttState.selectedTokenId) return;
+
+		const token = vttState.tokens.find(
+			(t) => t.id === vttState.selectedTokenId
+		);
+		if (!token) return;
+
+		let dx = 0;
+		let dy = 0;
+		switch (e.key) {
+			case "ArrowUp":
+				dy = -1;
+				break;
+			case "ArrowDown":
+				dy = 1;
+				break;
+			case "ArrowLeft":
+				dx = -1;
+				break;
+			case "ArrowRight":
+				dx = 1;
+				break;
+			default:
+				return;
+		}
+
+		e.preventDefault();
+		const newX = parseFloat(token.posX as unknown as string) + dx;
+		const newY = parseFloat(token.posY as unknown as string) + dy;
+
+		if (onTokenMove) {
+			onTokenMove(token.id, newX, newY);
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeyDown} />
 
 <div
 	role="application"
