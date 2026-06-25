@@ -3,6 +3,7 @@
 	import MapIcon from "@lucide/svelte/icons/map";
 	import MousePointer2Icon from "@lucide/svelte/icons/mouse-pointer-2";
 	import MoveIcon from "@lucide/svelte/icons/move";
+	import RulerIcon from "@lucide/svelte/icons/ruler";
 	import PlusCircleIcon from "@lucide/svelte/icons/plus-circle";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import UserIcon from "@lucide/svelte/icons/user";
@@ -40,12 +41,14 @@
 	const gmTools = [
 		{ id: "select" as const, icon: MousePointer2Icon, label: "Sélectionner" },
 		{ id: "move" as const, icon: MoveIcon, label: "Déplacer" },
+		{ id: "ruler" as const, icon: RulerIcon, label: "Règle de mesure" },
 		{ id: "fog-paint" as const, icon: PlusIcon, label: "Reveal" },
 		{ id: "fog-erase" as const, icon: EraserIcon, label: "Hide" },
 	];
 
 	const playerTools = [
 		{ id: "select" as const, icon: MousePointer2Icon, label: "Sélectionner" },
+		{ id: "ruler" as const, icon: RulerIcon, label: "Règle de mesure" },
 	];
 
 	const tools = $derived(isGm ? gmTools : playerTools);

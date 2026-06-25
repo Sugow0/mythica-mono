@@ -47,6 +47,12 @@
 	let fogPreview = $state({ left: 0, top: 0, width: 0, height: 0 });
 	let fogStartClient = { x: 0, y: 0 };
 
+	// Ruler drawing state
+	let rulerDrawing = $state(false);
+	let rulerStartClient = $state({ x: 0, y: 0 });
+	let rulerCurrentClient = $state({ x: 0, y: 0 });
+	let rulerDistanceText = $state("");
+
 	// Stage reference for coordinate conversion
 	let stageRef: {
 		x: number;
@@ -238,17 +244,50 @@
 		function onMouseDown(e: MouseEvent) {
 			const tool = vttState.selectedToolId;
 			const isFogTool = tool === "fog-paint" || tool === "fog-erase";
+			const isRulerTool = tool === "ruler";
 
-			// Pan : molette, alt+clic, ou clic gauche en mode non-fog
+			// Pan : molette, alt+clic, ou clic gauche en mode non-fog/non-ruler
 			if (
 				!vttState.isTokenDragging &&
 				(e.button === 1 ||
 					(e.button === 0 && e.altKey) ||
-					(e.button === 0 && !isFogTool))
+					(e.button === 0 && !isFogTool && !isRulerTool))
 			) {
 				dragging = true;
 				lastX = e.clientX;
 				lastY = e.clientY;
+				return;
+			}
+
+			if (tool === "ruler" && e.button === 0 && !e.altKey) {
+				e.preventDefault();
+				rulerDrawing = true;
+				rulerStartClient = { x: e.clientX, y: e.clientY };
+				rulerCurrentClient = { x: e.clientX, y: e.clientY };
+				rulerDistanceText = "0.0 m";
+
+				function onRulerMove(ev: MouseEvent) {
+					rulerCurrentClient = { x: ev.clientX, y: ev.clientY };
+					const wStart = screenToWorld(rulerStartClient.x, rulerStartClient.y);
+					const wEnd = screenToWorld(
+						rulerCurrentClient.x,
+						rulerCurrentClient.y
+					);
+					const dx = wEnd.x - wStart.x;
+					const dy = wEnd.y - wStart.y;
+					const distPixels = Math.sqrt(dx * dx + dy * dy);
+					const distCells = distPixels / (mapConfig?.gridSize ?? 100);
+					rulerDistanceText = `${(distCells * 1.5).toFixed(1)} m`;
+				}
+
+				function onRulerUp() {
+					window.removeEventListener("mousemove", onRulerMove);
+					window.removeEventListener("mouseup", onRulerUp);
+					rulerDrawing = false;
+				}
+
+				window.addEventListener("mousemove", onRulerMove);
+				window.addEventListener("mouseup", onRulerUp);
 				return;
 			}
 
@@ -424,5 +463,44 @@
 				: 'border-red-400 bg-red-400/10'}"
 			style="left: {fogPreview.left}px; top: {fogPreview.top}px; width: {fogPreview.width}px; height: {fogPreview.height}px"
 		></div>
+	{/if}
+
+	<!-- Ruler Line -->
+	{#if rulerDrawing}
+		<svg class="pointer-events-none absolute inset-0 z-[100] h-full w-full">
+			<line
+				x1={rulerStartClient.x}
+				y1={rulerStartClient.y}
+				x2={rulerCurrentClient.x}
+				y2={rulerCurrentClient.y}
+				stroke="#ef4444"
+				stroke-width="3"
+			/>
+			<circle
+				cx={rulerStartClient.x}
+				cy={rulerStartClient.y}
+				r="4"
+				fill="white"
+			/>
+			<circle
+				cx={rulerCurrentClient.x}
+				cy={rulerCurrentClient.y}
+				r="4"
+				fill="#ef4444"
+			/>
+			<text
+				x={(rulerStartClient.x + rulerCurrentClient.x) / 2}
+				y={(rulerStartClient.y + rulerCurrentClient.y) / 2 - 12}
+				fill="white"
+				stroke="black"
+				stroke-width="1"
+				font-size="14"
+				text-anchor="middle"
+				font-family="Public Sans"
+				font-weight="bold"
+			>
+				{rulerDistanceText}
+			</text>
+		</svg>
 	{/if}
 </div>

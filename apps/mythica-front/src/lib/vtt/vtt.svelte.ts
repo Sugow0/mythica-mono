@@ -20,7 +20,7 @@ export const vttState = (() => {
 	});
 	let participants = $state<string[]>([]);
 	let selectedToolId = $state<
-		"select" | "move" | "fog-paint" | "fog-erase" | "add-token"
+		"select" | "move" | "fog-paint" | "fog-erase" | "add-token" | "ruler"
 	>("select");
 	let selectedTokenId = $state<string | null>(null);
 	let isGm = $state(false);
