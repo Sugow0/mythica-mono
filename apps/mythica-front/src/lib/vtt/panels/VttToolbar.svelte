@@ -5,6 +5,8 @@
 	import MoveIcon from "@lucide/svelte/icons/move";
 	import PlusCircleIcon from "@lucide/svelte/icons/plus-circle";
 	import PlusIcon from "@lucide/svelte/icons/plus";
+	import UserIcon from "@lucide/svelte/icons/user";
+	import DicesIcon from "@lucide/svelte/icons/dices";
 	import { vttState } from "$lib/vtt/vtt.svelte";
 	import type { VttWebSocket } from "$lib/vtt/ws/VttWebSocket";
 
@@ -14,12 +16,20 @@
 		onAddToken,
 		onToggleMaps,
 		showMaps = false,
+		onToggleMySheet,
+		showMySheet = false,
+		onToggleDice,
+		showDice = false,
 	}: {
 		isGm: boolean;
 		ws: VttWebSocket | null;
 		onAddToken?: (label: string) => void;
 		onToggleMaps?: () => void;
 		showMaps?: boolean;
+		onToggleMySheet?: () => void;
+		showMySheet?: boolean;
+		onToggleDice?: () => void;
+		showDice?: boolean;
 	} = $props();
 
 	const gmTools = [
@@ -97,6 +107,28 @@
 				<span>Maps</span>
 			</button>
 		{/if}
+
+		<div class="mx-0.5 w-px bg-slate-700"></div>
+		<button
+			onclick={onToggleMySheet}
+			class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-2 text-xs transition-colors {showMySheet
+				? 'bg-red-600 text-white'
+				: 'text-slate-400 hover:bg-slate-800 hover:text-white'}"
+			title="Ma Fiche de Personnage"
+		>
+			<UserIcon class="h-4 w-4" />
+			<span>Ma Fiche</span>
+		</button>
+		<button
+			onclick={onToggleDice}
+			class="flex flex-col items-center gap-0.5 rounded-lg px-3 py-2 text-xs transition-colors {showDice
+				? 'bg-red-600 text-white'
+				: 'text-slate-400 hover:bg-slate-800 hover:text-white'}"
+			title="Lancer les dés"
+		>
+			<DicesIcon class="h-4 w-4" />
+			<span>Dés</span>
+		</button>
 	</div>
 
 	{#if showAddToken}

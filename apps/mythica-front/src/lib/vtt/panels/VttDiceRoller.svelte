@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { vttState } from "$lib/vtt/vtt.svelte";
-	import { onMount } from "svelte";
 
 	type VisualRoll = {
 		id: string;

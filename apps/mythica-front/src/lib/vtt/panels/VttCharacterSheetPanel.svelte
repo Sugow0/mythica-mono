@@ -5,15 +5,29 @@
 	import { campaignService } from "$lib/index.js";
 	import XIcon from "@lucide/svelte/icons/x";
 
-	let { ws, campaignId }: { ws: VttWebSocket | null; campaignId: string } =
-		$props();
+	let {
+		ws,
+		campaignId,
+		sheetId: explicitSheetId,
+		onClose,
+	}: {
+		ws: VttWebSocket | null;
+		campaignId: string;
+		sheetId?: string | null;
+		onClose?: () => void;
+	} = $props();
 
 	const selectedToken = $derived(
 		vttState.tokens.find((t) => t.id === vttState.selectedTokenId)
 	);
-	const sheetId = $derived(selectedToken?.characterSheetId);
+	const sheetId = $derived(
+		explicitSheetId !== undefined
+			? explicitSheetId
+			: selectedToken?.characterSheetId
+	);
 
 	function close() {
+		if (onClose) onClose();
 		vttState.setSelectedTokenId(null);
 	}
 
@@ -67,6 +81,25 @@
 		</div>
 		<div class="flex-1 overflow-y-auto">
 			<CharacterSheetViewer {sheetId} onRoll={handleRoll} />
+		</div>
+	</div>
+{:else if explicitSheetId === null}
+	<div
+		class="fixed bottom-4 right-80 top-4 z-40 flex w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/95 shadow-2xl backdrop-blur"
+	>
+		<div
+			class="flex items-center justify-between border-b border-slate-700 p-3"
+		>
+			<h2 class="text-sm font-semibold text-slate-200">Fiche de personnage</h2>
+			<button
+				onclick={close}
+				class="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+			>
+				<XIcon class="h-4 w-4" />
+			</button>
+		</div>
+		<div class="flex-1 p-6 text-center text-sm text-slate-400">
+			Vous n'avez aucune fiche de personnage active dans cette campagne.
 		</div>
 	</div>
 {/if}

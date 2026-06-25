@@ -10,6 +10,8 @@
 	import VttMapPanel from "$lib/vtt/panels/VttMapPanel.svelte";
 	import VttCharacterSheetPanel from "$lib/vtt/panels/VttCharacterSheetPanel.svelte";
 	import VttDiceRoller from "$lib/vtt/panels/VttDiceRoller.svelte";
+	import VttQuickDicePanel from "$lib/vtt/panels/VttQuickDicePanel.svelte";
+	import type { CampaignCharacterSheet } from "$lib/api/services/campaign-character-sheets-service";
 	import { vttState } from "$lib/vtt/vtt.svelte";
 	import { VttWebSocket, type WsStatus } from "$lib/vtt/ws/VttWebSocket";
 	import { campaignService } from "$lib/index.js";
@@ -27,6 +29,15 @@
 	let ws = $state<VttWebSocket | null>(null);
 	let wsStatus = $state<WsStatus>("connecting");
 	let showMaps = $state(false);
+	let showMySheet = $state(false);
+	let showDice = $state(false);
+
+	const mySheetId = $derived(
+		data.campaignSheets?.find(
+			(s: CampaignCharacterSheet) =>
+				s.userId === data.user?.id && s.status === "active"
+		)?.characterSheetId
+	);
 
 	$effect(() => {
 		vttState.setIsGm(isGm);
@@ -149,6 +160,13 @@
 		onAddToken={isGm ? handleAddToken : undefined}
 		onToggleMaps={isGm ? () => (showMaps = !showMaps) : undefined}
 		{showMaps}
+		onToggleMySheet={() => {
+			showMySheet = !showMySheet;
+			if (showMySheet) vttState.setSelectedTokenId(null);
+		}}
+		{showMySheet}
+		onToggleDice={() => (showDice = !showDice)}
+		{showDice}
 	/>
 	{#if isGm && showMaps}
 		<VttMapPanel campaignId={data.campaign?.id ?? ""} {sessionId} />
@@ -160,6 +178,18 @@
 		<VttFogControls {ws} />
 	{/if}
 	<VttDiceRoller />
-	<VttCharacterSheetPanel {ws} campaignId={data.campaign?.id ?? ""} />
+	{#if showDice}
+		<VttQuickDicePanel
+			{ws}
+			campaignId={data.campaign?.id ?? ""}
+			onClose={() => (showDice = false)}
+		/>
+	{/if}
+	<VttCharacterSheetPanel
+		{ws}
+		campaignId={data.campaign?.id ?? ""}
+		sheetId={showMySheet ? (mySheetId ?? null) : undefined}
+		onClose={() => (showMySheet = false)}
+	/>
 	<VttChatPanel {sessionId} campaignId={data.campaign?.id ?? ""} />
 </div>

@@ -11,11 +11,19 @@ export const load: PageLoad = async ({ params, parent }) => {
 	try {
 		const data = await campaignService.getSession(params.id);
 		if (!data) throw error(404, "Session introuvable");
+
+		const { campaignCharacterSheetsService } =
+			await import("$lib/api/services/campaign-character-sheets-service");
+		const campaignSheets = await campaignCharacterSheetsService
+			.getCampaignSheets(data.campaign.id)
+			.catch(() => []);
+
 		return {
 			session: data.session,
 			campaign: data.campaign,
 			members: data.members,
 			user,
+			campaignSheets,
 		};
 	} catch (err: unknown) {
 		if (err && typeof err === "object" && "status" in err) throw err;
