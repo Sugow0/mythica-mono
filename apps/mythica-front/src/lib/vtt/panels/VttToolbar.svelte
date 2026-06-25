@@ -80,7 +80,7 @@
 				onclick={() => vttState.setTool(tool.id)}
 				class="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200 active:scale-95 {vttState.selectedToolId ===
 				tool.id
-					? 'bg-crimson-600/10 text-crimson-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-crimson-500/50'
+					? 'bg-crimson-600/90 text-white shadow-[0_0_10px_rgba(225,29,72,0.3)] ring-1 ring-crimson-500'
 					: 'text-slate-300 hover:bg-slate-800/80 hover:text-slate-100'}"
 				title={tool.label}
 			>
@@ -94,7 +94,7 @@
 			<button
 				onclick={() => (showAddToken = !showAddToken)}
 				class="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200 active:scale-95 {showAddToken
-					? 'bg-crimson-600/10 text-crimson-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-crimson-500/50'
+					? 'bg-crimson-600/90 text-white shadow-[0_0_10px_rgba(225,29,72,0.3)] ring-1 ring-crimson-500'
 					: 'text-slate-300 hover:bg-slate-800/80 hover:text-slate-100'}"
 				title="Ajouter un token"
 			>
@@ -104,7 +104,7 @@
 			<button
 				onclick={onToggleMaps}
 				class="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200 active:scale-95 {showMaps
-					? 'bg-crimson-600/10 text-crimson-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-crimson-500/50'
+					? 'bg-crimson-600/90 text-white shadow-[0_0_10px_rgba(225,29,72,0.3)] ring-1 ring-crimson-500'
 					: 'text-slate-300 hover:bg-slate-800/80 hover:text-slate-100'}"
 				title="Gérer les maps"
 			>
@@ -114,7 +114,7 @@
 			<button
 				onclick={onToggleActors}
 				class="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200 active:scale-95 {showActors
-					? 'bg-crimson-600/10 text-crimson-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-crimson-500/50'
+					? 'bg-crimson-600/90 text-white shadow-[0_0_10px_rgba(225,29,72,0.3)] ring-1 ring-crimson-500'
 					: 'text-slate-300 hover:bg-slate-800/80 hover:text-slate-100'}"
 				title="Ouvrir la bibliothèque d'acteurs"
 			>
@@ -127,7 +127,7 @@
 		<button
 			onclick={onToggleMySheet}
 			class="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200 active:scale-95 {showMySheet
-				? 'bg-crimson-600/10 text-crimson-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-crimson-500/50'
+				? 'bg-crimson-600/90 text-white shadow-[0_0_10px_rgba(225,29,72,0.3)] ring-1 ring-crimson-500'
 				: 'text-slate-300 hover:bg-slate-800/80 hover:text-slate-100'}"
 			title="Ma Fiche de Personnage"
 		>
@@ -137,7 +137,7 @@
 		<button
 			onclick={onToggleDice}
 			class="flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200 active:scale-95 {showDice
-				? 'bg-crimson-600/10 text-crimson-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] ring-1 ring-crimson-500/50'
+				? 'bg-crimson-600/90 text-white shadow-[0_0_10px_rgba(225,29,72,0.3)] ring-1 ring-crimson-500'
 				: 'text-slate-300 hover:bg-slate-800/80 hover:text-slate-100'}"
 			title="Lancer les dés"
 		>
