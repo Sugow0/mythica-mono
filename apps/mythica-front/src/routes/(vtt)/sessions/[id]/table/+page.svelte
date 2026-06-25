@@ -9,6 +9,7 @@
 	import VttFogControls from "$lib/vtt/panels/VttFogControls.svelte";
 	import { vttState } from "$lib/vtt/vtt.svelte";
 	import { VttWebSocket } from "$lib/vtt/ws/VttWebSocket";
+	import { campaignService } from "$lib/index.js";
 	import type { PageData } from "./$types";
 
 	let { data }: { data: PageData } = $props();
@@ -25,6 +26,25 @@
 	$effect(() => {
 		vttState.setIsGm(isGm);
 	});
+
+	async function handleAddToken(label: string) {
+		try {
+			await campaignService.createToken(sessionId, { label });
+		} catch {
+			// Le token s'affichera via l'événement WS TOKEN_ADDED
+		}
+	}
+
+	function handleFogPaint(polygon: { x: number; y: number }[]) {
+		if (polygon.length === 0) {
+			// fog-erase : tout masquer
+			ws?.send({ type: "FOG_CLEAR" });
+		} else {
+			// Ajouter le rectangle aux zones révélées existantes
+			const currentRevealed = vttState.fog.revealed;
+			ws?.send({ type: "FOG_PAINT", polygons: [...currentRevealed, polygon] });
+		}
+	}
 
 	onMount(() => {
 		ws = new VttWebSocket(sessionId, vttState);
@@ -50,12 +70,13 @@
 			mapConfig={vttState.activeMap}
 			onTokenMove={(id, x, y) =>
 				ws?.send({ type: "TOKEN_MOVE", tokenId: id, x, y })}
+			onFogPaint={isGm ? handleFogPaint : undefined}
 		/>
 	</div>
 
 	<!-- Overlays DOM -->
 	<VttPresenceBar participants={vttState.participants} />
-	<VttToolbar {isGm} {ws} />
+	<VttToolbar {isGm} {ws} onAddToken={isGm ? handleAddToken : undefined} />
 	{#if vttState.combatState.started}
 		<VttInitiativePanel combatState={vttState.combatState} {isGm} {ws} />
 	{/if}

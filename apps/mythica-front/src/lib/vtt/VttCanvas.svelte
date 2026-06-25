@@ -6,15 +6,15 @@
 	let {
 		mapConfig,
 		onTokenMove,
+		onFogPaint,
 	}: {
 		mapConfig: MapConfig | null;
 		onTokenMove?: (tokenId: string, x: number, y: number) => void;
+		onFogPaint?: (polygon: { x: number; y: number }[]) => void;
 	} = $props();
 
 	let canvasEl: HTMLCanvasElement | undefined = $state();
 
-	// Layer instances — typed as unknown to avoid importing pixi.js at module level
-	// (SSR-safe: all PixiJS is imported dynamically inside onMount)
 	type AnyLayer = {
 		setMap?: (c: MapConfig) => Promise<void> | void;
 		setGrid?: (c: MapConfig) => void;
@@ -33,10 +33,21 @@
 	let panZoomCleanup: (() => void) | null = null;
 	let mounted = $state(false);
 
+	// Fog drawing state (DOM overlay)
+	let fogDrawing = $state(false);
+	let fogPreview = $state({ left: 0, top: 0, width: 0, height: 0 });
+	let fogStartClient = { x: 0, y: 0 };
+
+	// Stage reference for coordinate conversion
+	let stageRef: {
+		x: number;
+		y: number;
+		scale: { x: number; y: number };
+	} | null = null;
+
 	onMount(async () => {
 		if (!canvasEl) return;
 
-		// Dynamic import: avoids SSR crash (PixiJS touches window/document)
 		const [
 			{ Application, Container },
 			{ BackgroundLayer },
@@ -63,6 +74,7 @@
 
 		const stage = new Container();
 		app.stage.addChild(stage);
+		stageRef = stage;
 
 		bgLayer = new BackgroundLayer(stage);
 		gridLayer = new GridLayer(stage);
@@ -112,7 +124,80 @@
 		gridLayer = null;
 		tokensLayer = null;
 		fogLayer = null;
+		stageRef = null;
 	});
+
+	function screenToWorld(
+		clientX: number,
+		clientY: number
+	): { x: number; y: number } {
+		if (!canvasEl || !stageRef) return { x: 0, y: 0 };
+		const rect = canvasEl.getBoundingClientRect();
+		const cx = clientX - rect.left;
+		const cy = clientY - rect.top;
+		return {
+			x: (cx - stageRef.x) / stageRef.scale.x,
+			y: (cy - stageRef.y) / stageRef.scale.y,
+		};
+	}
+
+	function handleFogMouseDown(e: MouseEvent) {
+		const tool = vttState.selectedToolId;
+		if (
+			(tool !== "fog-paint" && tool !== "fog-erase") ||
+			e.button !== 0 ||
+			e.altKey
+		)
+			return;
+		e.preventDefault();
+		fogDrawing = true;
+		fogStartClient = { x: e.clientX, y: e.clientY };
+		fogPreview = { left: e.clientX, top: e.clientY, width: 0, height: 0 };
+	}
+
+	function handleFogMouseMove(e: MouseEvent) {
+		if (!fogDrawing) return;
+		const left = Math.min(e.clientX, fogStartClient.x);
+		const top = Math.min(e.clientY, fogStartClient.y);
+		const width = Math.abs(e.clientX - fogStartClient.x);
+		const height = Math.abs(e.clientY - fogStartClient.y);
+		fogPreview = { left, top, width, height };
+	}
+
+	function handleFogMouseUp(e: MouseEvent) {
+		if (!fogDrawing) return;
+		fogDrawing = false;
+
+		const tool = vttState.selectedToolId;
+		const rect = canvasEl?.getBoundingClientRect();
+		if (!rect) return;
+
+		if (tool === "fog-erase") {
+			// Effacer = tout masquer (FOG_CLEAR côté backend)
+			onFogPaint?.([]);
+			return;
+		}
+
+		// Convertir le rectangle écran en polygone world
+		const tl = screenToWorld(
+			Math.min(e.clientX, fogStartClient.x),
+			Math.min(e.clientY, fogStartClient.y)
+		);
+		const br = screenToWorld(
+			Math.max(e.clientX, fogStartClient.x),
+			Math.max(e.clientY, fogStartClient.y)
+		);
+
+		if (Math.abs(br.x - tl.x) < 5 || Math.abs(br.y - tl.y) < 5) return;
+
+		const polygon = [
+			{ x: tl.x, y: tl.y },
+			{ x: br.x, y: tl.y },
+			{ x: br.x, y: br.y },
+			{ x: tl.x, y: br.y },
+		];
+		onFogPaint?.(polygon);
+	}
 
 	function setupPanZoom(
 		app: { canvas: HTMLCanvasElement },
@@ -169,4 +254,25 @@
 	}
 </script>
 
-<canvas bind:this={canvasEl} class="block h-full w-full"></canvas>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div
+	class="relative block h-full w-full"
+	onmousedown={handleFogMouseDown}
+	onmousemove={handleFogMouseMove}
+	onmouseup={handleFogMouseUp}
+>
+	<canvas bind:this={canvasEl} class="block h-full w-full"></canvas>
+
+	{#if fogDrawing}
+		<div
+			class="pointer-events-none absolute border-2 border-dashed {vttState.selectedToolId ===
+			'fog-paint'
+				? 'border-green-400 bg-green-400/10'
+				: 'border-red-400 bg-red-400/10'}"
+			style="left: {fogPreview.left -
+				(canvasEl?.getBoundingClientRect().left ?? 0)}px; top: {fogPreview.top -
+				(canvasEl?.getBoundingClientRect().top ??
+					0)}px; width: {fogPreview.width}px; height: {fogPreview.height}px"
+		></div>
+	{/if}
+</div>
