@@ -39,11 +39,15 @@
 	}
 
 	function handleFogPaint(polygon: { x: number; y: number }[]) {
+		console.log(
+			"[FOG] handleFogPaint appelé, polygon:",
+			polygon,
+			"ws status:",
+			ws?.status
+		);
 		if (polygon.length === 0) {
-			// fog-erase : tout masquer
 			ws?.send({ type: "FOG_CLEAR" });
 		} else {
-			// Ajouter le rectangle aux zones révélées existantes
 			const currentRevealed = vttState.fog.revealed;
 			ws?.send({ type: "FOG_PAINT", polygons: [...currentRevealed, polygon] });
 		}

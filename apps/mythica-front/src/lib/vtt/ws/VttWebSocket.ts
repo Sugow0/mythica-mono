@@ -118,8 +118,10 @@ export class VttWebSocket {
 	}
 
 	send(event: Record<string, unknown>) {
-		if (this.ws?.readyState === WebSocket.OPEN) {
-			this.ws.send(JSON.stringify(event));
+		const state = this.ws?.readyState;
+		console.log("[VTT WS] send", event.type, "readyState:", state, "(OPEN=1)");
+		if (state === WebSocket.OPEN) {
+			this.ws!.send(JSON.stringify(event));
 		}
 	}
 
