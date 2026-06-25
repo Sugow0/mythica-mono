@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { VttWebSocket } from "$lib/vtt/ws/VttWebSocket";
 	import { campaignService } from "$lib/index.js";
+	import { vttState } from "$lib/vtt/vtt.svelte";
 	import XIcon from "@lucide/svelte/icons/x";
 	import DicesIcon from "@lucide/svelte/icons/dices";
 
@@ -33,17 +34,26 @@
 		const modStr = modifier !== 0 ? ` ${sign} ${Math.abs(modifier)}` : "";
 		const msg = `🎲 Jet de dés (${formula}) : ${rolls.join(" + ")}${modStr} = **${total}** ${isPrivate ? "(Privé)" : ""}`;
 
-		if (ws) {
-			ws.send({
+		if (isPrivate) {
+			vttState.addDiceRoll({
 				type: "DICE_ROLL",
 				formula,
 				results: rolls,
 				total,
 				isPrivate,
 			});
+		} else {
+			if (ws) {
+				ws.send({
+					type: "DICE_ROLL",
+					formula,
+					results: rolls,
+					total,
+					isPrivate,
+				});
+			}
+			campaignService.postMessage(campaignId, msg).catch(() => {});
 		}
-
-		campaignService.postMessage(campaignId, msg).catch(() => {});
 	}
 </script>
 

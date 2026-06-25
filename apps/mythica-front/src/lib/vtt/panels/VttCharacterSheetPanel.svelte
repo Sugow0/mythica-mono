@@ -74,6 +74,7 @@
 	let dragStart = { x: 0, y: 0, px: 0, py: 0 };
 
 	function onPointerDown(e: PointerEvent) {
+		e.preventDefault();
 		isDragging = true;
 		dragStart = { x: e.clientX, y: e.clientY, px: panelX, py: panelY };
 		e.currentTarget?.setPointerCapture(e.pointerId);
@@ -94,6 +95,7 @@
 	let resizeStart = { x: 0, y: 0, w: 0, h: 0 };
 
 	function onResizeDown(e: PointerEvent) {
+		e.preventDefault();
 		e.stopPropagation();
 		isResizing = true;
 		resizeStart = { x: e.clientX, y: e.clientY, w: panelW, h: panelH };

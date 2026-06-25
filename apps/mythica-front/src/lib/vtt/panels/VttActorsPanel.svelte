@@ -12,7 +12,7 @@
 	} = $props();
 
 	function handleDragStart(e: DragEvent, sheet: CampaignCharacterSheet) {
-		if (e.dataTransfer) {
+		if (e.dataTransfer && sheet.characterSheet) {
 			const payload = {
 				type: "character_sheet",
 				sheetId: sheet.characterSheet.id,
@@ -44,35 +44,37 @@
 			</p>
 		{:else}
 			{#each campaignSheets as sheet (sheet.id)}
-				<div
-					draggable="true"
-					ondragstart={(e) => handleDragStart(e, sheet)}
-					class="flex cursor-grab items-center gap-3 rounded-lg border border-slate-800 bg-slate-800/50 p-2 transition-colors hover:border-slate-600 hover:bg-slate-800 active:cursor-grabbing"
-					title="Glissez sur la carte pour créer un token"
-				>
-					<GripVerticalIcon class="h-4 w-4 text-slate-500" />
-					{#if sheet.characterSheet.avatarFile}
-						<img
-							src={`/api/gameplay/files/${sheet.characterSheet.avatarFile.id}/content`}
-							alt={sheet.characterSheet.name}
-							class="h-8 w-8 rounded-full object-cover border border-slate-700 bg-slate-900"
-						/>
-					{:else}
-						<div
-							class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300"
-						>
-							{sheet.characterSheet.name.substring(0, 2).toUpperCase()}
+				{#if sheet.characterSheet}
+					<div
+						draggable="true"
+						ondragstart={(e) => handleDragStart(e, sheet)}
+						class="flex cursor-grab items-center gap-3 rounded-lg border border-slate-800 bg-slate-800/50 p-2 transition-colors hover:border-slate-600 hover:bg-slate-800 active:cursor-grabbing"
+						title="Glissez sur la carte pour créer un token"
+					>
+						<GripVerticalIcon class="h-4 w-4 text-slate-500" />
+						{#if sheet.characterSheet.avatarFile}
+							<img
+								src={`/api/gameplay/files/${sheet.characterSheet.avatarFile.id}/content`}
+								alt={sheet.characterSheet.name}
+								class="h-8 w-8 rounded-full object-cover border border-slate-700 bg-slate-900"
+							/>
+						{:else}
+							<div
+								class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-slate-300"
+							>
+								{sheet.characterSheet.name.substring(0, 2).toUpperCase()}
+							</div>
+						{/if}
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-slate-200"
+								>{sheet.characterSheet.name}</span
+							>
+							<span class="text-[10px] text-slate-400"
+								>{sheet.status === "active" ? "Actif" : "Inactif"}</span
+							>
 						</div>
-					{/if}
-					<div class="flex flex-col">
-						<span class="text-sm font-medium text-slate-200"
-							>{sheet.characterSheet.name}</span
-						>
-						<span class="text-[10px] text-slate-400"
-							>{sheet.status === "active" ? "Actif" : "Inactif"}</span
-						>
 					</div>
-				</div>
+				{/if}
 			{/each}
 		{/if}
 	</div>
