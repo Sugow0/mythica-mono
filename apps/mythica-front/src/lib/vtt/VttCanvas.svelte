@@ -14,11 +14,11 @@
 	} = $props();
 
 	let canvasEl: HTMLCanvasElement | undefined = $state();
+	let fogCanvasEl: HTMLCanvasElement | undefined = $state();
 
 	type AnyLayer = {
 		setMap?: (c: MapConfig) => Promise<void> | void;
 		setGrid?: (c: MapConfig) => void;
-		setFog?: (f: typeof vttState.fog, c: MapConfig) => void;
 		syncTokens?: (t: typeof vttState.tokens) => void;
 		setTokens?: (t: typeof vttState.tokens) => void;
 		setGridSize?: (size: number) => void;
@@ -28,7 +28,6 @@
 	let bgLayer: AnyLayer | null = null;
 	let gridLayer: AnyLayer | null = null;
 	let tokensLayer: AnyLayer | null = null;
-	let fogLayer: AnyLayer | null = null;
 	let appDestroy: (() => void) | null = null;
 	let panZoomCleanup: (() => void) | null = null;
 	let mounted = $state(false);
@@ -36,7 +35,7 @@
 	// Fog drawing overlay state
 	let fogDrawing = $state(false);
 	let fogPreview = $state({ left: 0, top: 0, width: 0, height: 0 });
-	let fogStartClient = { x: 0, y: 0 }; // mutable ref utilisé dans setupPanZoom
+	let fogStartClient = { x: 0, y: 0 };
 
 	// Stage reference for coordinate conversion
 	let stageRef: {
@@ -53,19 +52,18 @@
 			{ BackgroundLayer },
 			{ GridLayer },
 			{ TokensLayer },
-			{ FogLayer },
 		] = await Promise.all([
 			import("pixi.js"),
 			import("./layers/BackgroundLayer"),
 			import("./layers/GridLayer"),
 			import("./layers/TokensLayer"),
-			import("./layers/FogLayer"),
 		]);
 
 		const app = new Application();
 		await app.init({
 			canvas: canvasEl,
-			resizeTo: canvasEl,
+			// resizeTo: window pour couvrir tout le viewport, indépendamment du CSS
+			resizeTo: window,
 			backgroundColor: 0x1a1a2e,
 			antialias: true,
 			autoDensity: true,
@@ -81,23 +79,79 @@
 		const tl = new TokensLayer(stage, app);
 		if (onTokenMove) tl.setOnMove(onTokenMove);
 		tokensLayer = tl;
-		fogLayer = new FogLayer(stage);
 
 		if (mapConfig) {
 			await bgLayer.setMap!(mapConfig);
 			gridLayer.setGrid!(mapConfig);
-			fogLayer.setFog!(vttState.fog, mapConfig);
 			tl.setGridSize(mapConfig.gridSize);
 		}
 
 		tokensLayer.setTokens!(vttState.tokens);
+		drawFog();
 
 		panZoomCleanup = setupPanZoom(app, stage);
 		appDestroy = () => app.destroy(false, { children: true });
 		mounted = true;
 	});
 
-	// Effet carte : réagit au changement de mapConfig
+	// Dessine le fog sur le canvas 2D overlay — destination-out perce des trous fiables
+	function drawFog() {
+		if (!fogCanvasEl) return;
+		const ctx = fogCanvasEl.getContext("2d");
+		if (!ctx) return;
+
+		// Caler les dimensions du canvas 2D sur le viewport
+		fogCanvasEl.width = window.innerWidth;
+		fogCanvasEl.height = window.innerHeight;
+
+		ctx.clearRect(0, 0, fogCanvasEl.width, fogCanvasEl.height);
+
+		const stage = stageRef;
+		if (!stage) return;
+
+		// Convertir les dimensions de la map en coordonnées écran
+		const cfg = mapConfig ?? { widthPx: 20000, heightPx: 20000 };
+		const sx = cfg.widthPx * stage.scale.x;
+		const sy = cfg.heightPx * stage.scale.y;
+
+		// Fond sombre = brouillard sur toute la map
+		ctx.globalCompositeOperation = "source-over";
+		ctx.fillStyle = "rgba(10, 10, 20, 0.85)";
+		ctx.fillRect(stage.x, stage.y, sx, sy);
+
+		// Zones révélées : destination-out perce des trous dans le fog
+		ctx.globalCompositeOperation = "destination-out";
+		for (const polygon of vttState.fog.revealed) {
+			if (polygon.length < 3) continue;
+			ctx.beginPath();
+			const first = polygon[0];
+			// Convertir coordonnées monde → écran
+			ctx.moveTo(
+				first.x * stage.scale.x + stage.x,
+				first.y * stage.scale.y + stage.y
+			);
+			for (let i = 1; i < polygon.length; i++) {
+				ctx.lineTo(
+					polygon[i].x * stage.scale.x + stage.x,
+					polygon[i].y * stage.scale.y + stage.y
+				);
+			}
+			ctx.closePath();
+			ctx.fill();
+		}
+		ctx.globalCompositeOperation = "source-over";
+	}
+
+	// Recalcule le fog quand l'état change
+	$effect(() => {
+		if (!mounted) return;
+		// Lire les dépendances réactives
+		void vttState.fog;
+		void mapConfig;
+		drawFog();
+	});
+
+	// Effet carte
 	$effect(() => {
 		if (!mounted || !bgLayer || !gridLayer) return;
 		if (mapConfig) {
@@ -113,20 +167,12 @@
 		tokensLayer.syncTokens!(vttState.tokens);
 	});
 
-	// Effet fog : se met à jour même sans map (utilise de grandes dimensions par défaut)
-	$effect(() => {
-		if (!mounted || !fogLayer?.setFog) return;
-		const fogConfig = mapConfig ?? { widthPx: 20000, heightPx: 20000 };
-		fogLayer.setFog(vttState.fog, fogConfig as never);
-	});
-
 	onDestroy(() => {
 		panZoomCleanup?.();
 		appDestroy?.();
 		bgLayer = null;
 		gridLayer = null;
 		tokensLayer = null;
-		fogLayer = null;
 		stageRef = null;
 	});
 
@@ -134,13 +180,10 @@
 		clientX: number,
 		clientY: number
 	): { x: number; y: number } {
-		if (!canvasEl || !stageRef) return { x: 0, y: 0 };
-		const rect = canvasEl.getBoundingClientRect();
-		const cx = clientX - rect.left;
-		const cy = clientY - rect.top;
+		if (!stageRef) return { x: 0, y: 0 };
 		return {
-			x: (cx - stageRef.x) / stageRef.scale.x,
-			y: (cy - stageRef.y) / stageRef.scale.y,
+			x: (clientX - stageRef.x) / stageRef.scale.x,
+			y: (clientY - stageRef.y) / stageRef.scale.y,
 		};
 	}
 
@@ -163,14 +206,13 @@
 				Math.max(0.1, Math.min(5, stage.scale.x * factor)),
 				Math.max(0.1, Math.min(5, stage.scale.x * factor))
 			);
+			drawFog();
 		}
 
-		// Gestionnaire unique mousedown sur le canvas — délègue selon l'outil actif
 		function onMouseDown(e: MouseEvent) {
 			const tool = vttState.selectedToolId;
 			const isFogTool = tool === "fog-paint" || tool === "fog-erase";
 
-			// Pan : clic molette ou alt+clic gauche, sauf en mode fog
 			if (!isFogTool && (e.button === 1 || (e.button === 0 && e.altKey))) {
 				dragging = true;
 				lastX = e.clientX;
@@ -178,7 +220,6 @@
 				return;
 			}
 
-			// Fog drawing : clic gauche sans alt
 			if (isFogTool && e.button === 0 && !e.altKey) {
 				e.preventDefault();
 				fogDrawing = true;
@@ -231,6 +272,7 @@
 			stage.y += e.clientY - lastY;
 			lastX = e.clientX;
 			lastY = e.clientY;
+			drawFog();
 		}
 
 		function onMouseUp() {
@@ -252,24 +294,27 @@
 </script>
 
 <div
-	class="absolute inset-0"
+	class="fixed inset-0"
 	style="cursor: {vttState.selectedToolId === 'fog-paint' ||
 	vttState.selectedToolId === 'fog-erase'
 		? 'crosshair'
 		: 'default'}"
 >
+	<!-- Canvas PixiJS plein écran -->
 	<canvas bind:this={canvasEl} class="block h-full w-full"></canvas>
 
+	<!-- Canvas 2D overlay pour le fog (destination-out, sans PixiJS) -->
+	<canvas bind:this={fogCanvasEl} class="pointer-events-none absolute inset-0"
+	></canvas>
+
+	<!-- Prévisualisation du rectangle en cours de dessin -->
 	{#if fogDrawing}
 		<div
 			class="pointer-events-none absolute border-2 border-dashed {vttState.selectedToolId ===
 			'fog-paint'
 				? 'border-green-400 bg-green-400/10'
 				: 'border-red-400 bg-red-400/10'}"
-			style="left: {fogPreview.left -
-				(canvasEl?.getBoundingClientRect().left ?? 0)}px; top: {fogPreview.top -
-				(canvasEl?.getBoundingClientRect().top ??
-					0)}px; width: {fogPreview.width}px; height: {fogPreview.height}px"
+			style="left: {fogPreview.left}px; top: {fogPreview.top}px; width: {fogPreview.width}px; height: {fogPreview.height}px"
 		></div>
 	{/if}
 </div>
