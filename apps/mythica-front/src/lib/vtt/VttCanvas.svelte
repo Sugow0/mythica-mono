@@ -6,11 +6,19 @@
 	let {
 		mapConfig,
 		onTokenMove,
+		onDropToken,
 		onFogPaint,
 		onFogHide,
 	}: {
 		mapConfig: MapConfig | null;
 		onTokenMove?: (tokenId: string, x: number, y: number) => void;
+		onDropToken?: (
+			sheetId: string,
+			label: string,
+			fileId: string | null,
+			gridX: number,
+			gridY: number
+		) => void;
 		onFogPaint?: (polygon: { x: number; y: number }[]) => void;
 		onFogHide?: (polygon: { x: number; y: number }[]) => void;
 	} = $props();
@@ -217,9 +225,10 @@
 
 			// Pan : molette, alt+clic, ou clic gauche en mode non-fog
 			if (
-				e.button === 1 ||
-				(e.button === 0 && e.altKey) ||
-				(e.button === 0 && !isFogTool)
+				!vttState.isTokenDragging &&
+				(e.button === 1 ||
+					(e.button === 0 && e.altKey) ||
+					(e.button === 0 && !isFogTool))
 			) {
 				dragging = true;
 				lastX = e.clientX;
@@ -301,10 +310,36 @@
 			window.removeEventListener("mouseup", onMouseUp);
 		};
 	}
+
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault();
+	}
+
+	function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		const dataStr = e.dataTransfer?.getData("application/json");
+		if (!dataStr || !onDropToken) return;
+		try {
+			const data = JSON.parse(dataStr);
+			if (data.type === "character_sheet") {
+				const { x, y } = screenToWorld(e.clientX, e.clientY);
+				const gridSize = mapConfig?.gridSize ?? 100;
+				// Convert to grid coordinates
+				const gridX = Math.floor(x / gridSize);
+				const gridY = Math.floor(y / gridSize);
+				onDropToken(data.sheetId, data.label, data.fileId, gridX, gridY);
+			}
+		} catch (_err) {
+			// ignore parse error
+		}
+	}
 </script>
 
 <div
+	role="application"
 	class="fixed inset-0"
+	ondragover={handleDragOver}
+	ondrop={handleDrop}
 	style="cursor: {vttState.selectedToolId === 'fog-paint' ||
 	vttState.selectedToolId === 'fog-erase'
 		? 'crosshair'

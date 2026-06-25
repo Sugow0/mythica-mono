@@ -8,6 +8,7 @@ import {
 	type Texture,
 } from "pixi.js";
 import type { SessionTokenDto } from "../types";
+import { vttState } from "../vtt.svelte";
 
 export type TokenMoveCallback = (tokenId: string, x: number, y: number) => void;
 export type TokenSelectCallback = (tokenId: string) => void;
@@ -97,7 +98,9 @@ export class TokenSprite {
 		let startContainerY = this.container.y;
 
 		this.container.on("pointerdown", (e) => {
+			e.stopPropagation();
 			isDragging = true;
+			vttState.setIsTokenDragging(true);
 			startMouseX = e.globalX;
 			startMouseY = e.globalY;
 			startContainerX = this.container.x;
@@ -116,6 +119,7 @@ export class TokenSprite {
 		this.container.on("pointerup", (e) => {
 			if (!isDragging) return;
 			isDragging = false;
+			vttState.setIsTokenDragging(false);
 			this.container.zIndex = 0;
 
 			// Si on a à peine bougé, on considère que c'est un clic
@@ -133,6 +137,7 @@ export class TokenSprite {
 
 		this.container.on("pointerupoutside", () => {
 			isDragging = false;
+			vttState.setIsTokenDragging(false);
 			this.container.zIndex = 0;
 		});
 	}

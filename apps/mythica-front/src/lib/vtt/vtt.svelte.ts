@@ -25,6 +25,7 @@ export const vttState = (() => {
 	let selectedTokenId = $state<string | null>(null);
 	let isGm = $state(false);
 	let diceRolls = $state<DiceRollEvent[]>([]);
+	let isTokenDragging = $state(false);
 
 	return {
 		get tokens() {
@@ -53,6 +54,9 @@ export const vttState = (() => {
 		},
 		get diceRolls() {
 			return diceRolls;
+		},
+		get isTokenDragging() {
+			return isTokenDragging;
 		},
 
 		setTokens(v: SessionTokenDto[]) {
@@ -91,6 +95,9 @@ export const vttState = (() => {
 		},
 		addDiceRoll(v: DiceRollEvent) {
 			diceRolls = [...diceRolls, v];
+		},
+		setIsTokenDragging(v: boolean) {
+			isTokenDragging = v;
 		},
 	};
 })();
