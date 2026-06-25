@@ -97,24 +97,27 @@
 		mounted = true;
 	});
 
+	// Effet carte : réagit au changement de mapConfig
 	$effect(() => {
-		if (!mounted || !bgLayer || !gridLayer || !fogLayer) return;
+		if (!mounted || !bgLayer || !gridLayer) return;
 		if (mapConfig) {
 			bgLayer.setMap!(mapConfig);
 			gridLayer.setGrid!(mapConfig);
-			fogLayer.setFog!(vttState.fog, mapConfig);
 			tokensLayer?.setGridSize?.(mapConfig.gridSize);
 		}
 	});
 
+	// Effet tokens
 	$effect(() => {
 		if (!mounted || !tokensLayer) return;
 		tokensLayer.syncTokens!(vttState.tokens);
 	});
 
+	// Effet fog : se met à jour même sans map (utilise de grandes dimensions par défaut)
 	$effect(() => {
-		if (!mounted || !fogLayer || !mapConfig) return;
-		fogLayer.setFog!(vttState.fog, mapConfig);
+		if (!mounted || !fogLayer?.setFog) return;
+		const fogConfig = mapConfig ?? { widthPx: 20000, heightPx: 20000 };
+		fogLayer.setFog(vttState.fog, fogConfig as never);
 	});
 
 	onDestroy(() => {
