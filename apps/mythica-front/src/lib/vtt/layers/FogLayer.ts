@@ -2,60 +2,53 @@ import { Container, Graphics } from "pixi.js";
 import type { FogState, MapConfig } from "../types";
 
 /**
- * Fog of War via PixiJS v8 blend mode "erase".
- *
- * Le fogContainer est un renderGroup isolé : toute la couche fog est rendue
- * dans une texture propre. Les zones révélées sont dessinées avec blendMode
- * "erase" qui perce des trous dans cette texture, laissant voir la carte
- * en dessous sans renderer de masque séparé.
+ * Fog of War via PixiJS v8 `.cut()` — la méthode native pour creuser des
+ * trous dans une forme Graphics. On dessine un rectangle de brouillard, puis
+ * chaque zone révélée est soustraite avec `.cut()`. Pas de mask, pas de
+ * blendMode erase, pas de render group : simple et fiable.
  */
 export class FogLayer {
-	private fogContainer: Container;
-	private fogBase: Graphics;
-	private revealGraphics: Graphics;
+	private container: Container;
+	private graphics: Graphics;
 	private isActive = true;
 
 	constructor(stage: Container) {
-		this.fogContainer = new Container();
-		// renderGroup isole la couche dans sa propre texture — requis pour "erase"
-		this.fogContainer.isRenderGroup = true;
-		this.fogContainer.alpha = 0.85;
-
-		this.fogBase = new Graphics();
-		this.revealGraphics = new Graphics();
-
-		this.fogContainer.addChild(this.fogBase);
-		this.fogContainer.addChild(this.revealGraphics);
-
-		stage.addChild(this.fogContainer);
+		this.container = new Container();
+		this.graphics = new Graphics();
+		this.container.addChild(this.graphics);
+		this.container.alpha = 0.85;
+		stage.addChild(this.container);
 	}
 
 	setFog(fog: FogState, config: MapConfig) {
 		if (!this.isActive) return;
 
-		// Couverture totale en brouillard sombre
-		this.fogBase.clear();
-		this.fogBase
-			.rect(0, 0, config.widthPx, config.heightPx)
-			.fill({ color: 0x0a0a14 });
+		this.graphics.clear();
 
-		// Zones révélées : mode "erase" perce des trous dans la texture du container
-		this.revealGraphics.clear();
-		this.revealGraphics.blendMode = "erase";
+		// Dessin du rectangle de brouillard couvrant toute la map
+		this.graphics.rect(0, 0, config.widthPx, config.heightPx).fill({
+			color: 0x0a0a14,
+		});
 
+		// Zones révélées : on trace le polygone PUIS on appelle .cut()
+		// pour percer un trou dans le rectangle précédent.
 		for (const polygon of fog.revealed) {
 			if (polygon.length < 3) continue;
-			const points = polygon.flatMap((p) => [p.x, p.y]);
-			this.revealGraphics.poly(points).fill({ color: 0xffffff, alpha: 1 });
+			const [first, ...rest] = polygon;
+			this.graphics.moveTo(first.x, first.y);
+			for (const p of rest) {
+				this.graphics.lineTo(p.x, p.y);
+			}
+			this.graphics.closePath().cut();
 		}
 	}
 
 	toggle(active: boolean) {
 		this.isActive = active;
-		this.fogContainer.visible = active;
+		this.container.visible = active;
 	}
 
 	destroy() {
-		this.fogContainer.destroy({ children: true });
+		this.container.destroy({ children: true });
 	}
 }
