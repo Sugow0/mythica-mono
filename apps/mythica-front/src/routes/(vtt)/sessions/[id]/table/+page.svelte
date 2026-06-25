@@ -38,19 +38,55 @@
 		}
 	}
 
-	function handleFogPaint(polygon: { x: number; y: number }[]) {
-		console.log(
-			"[FOG] handleFogPaint appelé, polygon:",
-			polygon,
-			"ws status:",
-			ws?.status
-		);
-		if (polygon.length === 0) {
-			ws?.send({ type: "FOG_CLEAR" });
-		} else {
-			const currentRevealed = vttState.fog.revealed;
-			ws?.send({ type: "FOG_PAINT", polygons: [...currentRevealed, polygon] });
+	type Point = { x: number; y: number };
+
+	function handleFogPaint(polygon: Point[]) {
+		const currentRevealed = vttState.fog.revealed;
+		ws?.send({ type: "FOG_PAINT", polygons: [...currentRevealed, polygon] });
+	}
+
+	// Soustrait le rectangle `hide` de chaque polygone révélé existant.
+	// Chaque rectangle révélé peut produire jusqu'à 4 sous-rectangles après soustraction.
+	function handleFogHide(hide: Point[]) {
+		if (hide.length < 4) return;
+		const hx1 = Math.min(...hide.map((p) => p.x));
+		const hx2 = Math.max(...hide.map((p) => p.x));
+		const hy1 = Math.min(...hide.map((p) => p.y));
+		const hy2 = Math.max(...hide.map((p) => p.y));
+
+		const rect = (x1: number, y1: number, x2: number, y2: number): Point[] => [
+			{ x: x1, y: y1 },
+			{ x: x2, y: y1 },
+			{ x: x2, y: y2 },
+			{ x: x1, y: y2 },
+		];
+
+		const remaining: Point[][] = [];
+		for (const poly of vttState.fog.revealed) {
+			if (poly.length < 4) continue;
+			const rx1 = Math.min(...poly.map((p) => p.x));
+			const rx2 = Math.max(...poly.map((p) => p.x));
+			const ry1 = Math.min(...poly.map((p) => p.y));
+			const ry2 = Math.max(...poly.map((p) => p.y));
+
+			// Pas de chevauchement : conserver intact
+			if (rx2 <= hx1 || rx1 >= hx2 || ry2 <= hy1 || ry1 >= hy2) {
+				remaining.push(poly);
+				continue;
+			}
+			// Zone de chevauchement réelle
+			const ox1 = Math.max(rx1, hx1);
+			const ox2 = Math.min(rx2, hx2);
+			const oy1 = Math.max(ry1, hy1);
+			const oy2 = Math.min(ry2, hy2);
+			// Bandes restantes autour du trou
+			if (ry1 < oy1) remaining.push(rect(rx1, ry1, rx2, oy1)); // haut
+			if (ry2 > oy2) remaining.push(rect(rx1, oy2, rx2, ry2)); // bas
+			if (rx1 < ox1) remaining.push(rect(rx1, oy1, ox1, oy2)); // gauche
+			if (rx2 > ox2) remaining.push(rect(ox2, oy1, rx2, oy2)); // droite
 		}
+
+		ws?.send({ type: "FOG_PAINT", polygons: remaining });
 	}
 
 	onMount(() => {
@@ -80,6 +116,7 @@
 			onTokenMove={(id, x, y) =>
 				ws?.send({ type: "TOKEN_MOVE", tokenId: id, x, y })}
 			onFogPaint={isGm ? handleFogPaint : undefined}
+			onFogHide={isGm ? handleFogHide : undefined}
 		/>
 	</div>
 

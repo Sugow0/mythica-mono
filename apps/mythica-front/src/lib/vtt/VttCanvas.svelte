@@ -7,10 +7,12 @@
 		mapConfig,
 		onTokenMove,
 		onFogPaint,
+		onFogHide,
 	}: {
 		mapConfig: MapConfig | null;
 		onTokenMove?: (tokenId: string, x: number, y: number) => void;
 		onFogPaint?: (polygon: { x: number; y: number }[]) => void;
+		onFogHide?: (polygon: { x: number; y: number }[]) => void;
 	} = $props();
 
 	let canvasEl: HTMLCanvasElement | undefined = $state();
@@ -245,10 +247,6 @@
 					window.removeEventListener("mouseup", onFogUp);
 					fogDrawing = false;
 
-					if (tool === "fog-erase") {
-						onFogPaint?.([]);
-						return;
-					}
 					const tl = screenToWorld(
 						Math.min(ev.clientX, fogStartClient.x),
 						Math.min(ev.clientY, fogStartClient.y)
@@ -258,12 +256,19 @@
 						Math.max(ev.clientY, fogStartClient.y)
 					);
 					if (Math.abs(br.x - tl.x) < 5 || Math.abs(br.y - tl.y) < 5) return;
-					onFogPaint?.([
+
+					const polygon = [
 						{ x: tl.x, y: tl.y },
 						{ x: br.x, y: tl.y },
 						{ x: br.x, y: br.y },
 						{ x: tl.x, y: br.y },
-					]);
+					];
+
+					if (tool === "fog-erase") {
+						onFogHide?.(polygon);
+					} else {
+						onFogPaint?.(polygon);
+					}
 				}
 
 				window.addEventListener("mousemove", onFogMove);
