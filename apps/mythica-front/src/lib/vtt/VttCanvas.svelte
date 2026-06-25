@@ -153,50 +153,45 @@
 		fogDrawing = true;
 		fogStartClient = { x: e.clientX, y: e.clientY };
 		fogPreview = { left: e.clientX, top: e.clientY, width: 0, height: 0 };
-	}
 
-	function handleFogMouseMove(e: MouseEvent) {
-		if (!fogDrawing) return;
-		const left = Math.min(e.clientX, fogStartClient.x);
-		const top = Math.min(e.clientY, fogStartClient.y);
-		const width = Math.abs(e.clientX - fogStartClient.x);
-		const height = Math.abs(e.clientY - fogStartClient.y);
-		fogPreview = { left, top, width, height };
-	}
-
-	function handleFogMouseUp(e: MouseEvent) {
-		if (!fogDrawing) return;
-		fogDrawing = false;
-
-		const tool = vttState.selectedToolId;
-		const rect = canvasEl?.getBoundingClientRect();
-		if (!rect) return;
-
-		if (tool === "fog-erase") {
-			// Effacer = tout masquer (FOG_CLEAR côté backend)
-			onFogPaint?.([]);
-			return;
+		// Utiliser window pour capter move/up même hors du div
+		function onMove(ev: MouseEvent) {
+			const left = Math.min(ev.clientX, fogStartClient.x);
+			const top = Math.min(ev.clientY, fogStartClient.y);
+			const width = Math.abs(ev.clientX - fogStartClient.x);
+			const height = Math.abs(ev.clientY - fogStartClient.y);
+			fogPreview = { left, top, width, height };
 		}
 
-		// Convertir le rectangle écran en polygone world
-		const tl = screenToWorld(
-			Math.min(e.clientX, fogStartClient.x),
-			Math.min(e.clientY, fogStartClient.y)
-		);
-		const br = screenToWorld(
-			Math.max(e.clientX, fogStartClient.x),
-			Math.max(e.clientY, fogStartClient.y)
-		);
+		function onUp(ev: MouseEvent) {
+			window.removeEventListener("mousemove", onMove);
+			window.removeEventListener("mouseup", onUp);
+			fogDrawing = false;
 
-		if (Math.abs(br.x - tl.x) < 5 || Math.abs(br.y - tl.y) < 5) return;
+			const currentTool = vttState.selectedToolId;
+			if (currentTool === "fog-erase") {
+				onFogPaint?.([]);
+				return;
+			}
+			const tl = screenToWorld(
+				Math.min(ev.clientX, fogStartClient.x),
+				Math.min(ev.clientY, fogStartClient.y)
+			);
+			const br = screenToWorld(
+				Math.max(ev.clientX, fogStartClient.x),
+				Math.max(ev.clientY, fogStartClient.y)
+			);
+			if (Math.abs(br.x - tl.x) < 5 || Math.abs(br.y - tl.y) < 5) return;
+			onFogPaint?.([
+				{ x: tl.x, y: tl.y },
+				{ x: br.x, y: tl.y },
+				{ x: br.x, y: br.y },
+				{ x: tl.x, y: br.y },
+			]);
+		}
 
-		const polygon = [
-			{ x: tl.x, y: tl.y },
-			{ x: br.x, y: tl.y },
-			{ x: br.x, y: br.y },
-			{ x: tl.x, y: br.y },
-		];
-		onFogPaint?.(polygon);
+		window.addEventListener("mousemove", onMove);
+		window.addEventListener("mouseup", onUp);
 	}
 
 	function setupPanZoom(
@@ -258,8 +253,10 @@
 <div
 	class="relative block h-full w-full"
 	onmousedown={handleFogMouseDown}
-	onmousemove={handleFogMouseMove}
-	onmouseup={handleFogMouseUp}
+	style="cursor: {vttState.selectedToolId === 'fog-paint' ||
+	vttState.selectedToolId === 'fog-erase'
+		? 'crosshair'
+		: 'default'}"
 >
 	<canvas bind:this={canvasEl} class="block h-full w-full"></canvas>
 
