@@ -142,7 +142,7 @@
 </svelte:head>
 
 <div
-	class="fixed inset-0 overflow-hidden bg-slate-950"
+	class="fixed inset-0 overflow-hidden bg-slate-950 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px]"
 	style="font-family: 'Public Sans', sans-serif"
 >
 	<!-- Canvas PixiJS fullscreen -->

@@ -212,10 +212,26 @@
 		function onWheel(e: WheelEvent) {
 			e.preventDefault();
 			const factor = e.deltaY < 0 ? 1.1 : 0.9;
-			stage.scale.set(
-				Math.max(0.1, Math.min(5, stage.scale.x * factor)),
-				Math.max(0.1, Math.min(5, stage.scale.x * factor))
-			);
+			const currentScale = stage.scale.x;
+			const newScale = Math.max(0.1, Math.min(5, currentScale * factor));
+
+			// Si le scale ne change pas (limite atteinte), on ne fait rien
+			if (currentScale === newScale) return;
+
+			// Coordonnées de la souris relatives à la fenêtre
+			const mouseX = e.clientX;
+			const mouseY = e.clientY;
+
+			// Coordonnées de la souris dans le monde avant le zoom
+			const worldX = (mouseX - stage.x) / currentScale;
+			const worldY = (mouseY - stage.y) / currentScale;
+
+			stage.scale.set(newScale, newScale);
+
+			// Ajuster la position du stage pour que le point sous la souris reste au même endroit
+			stage.x = mouseX - worldX * newScale;
+			stage.y = mouseY - worldY * newScale;
+
 			drawFog();
 		}
 
@@ -369,6 +385,10 @@
 		e.preventDefault();
 		const newX = parseFloat(token.posX as unknown as string) + dx;
 		const newY = parseFloat(token.posY as unknown as string) + dy;
+
+		// Optimistic update locally to allow rapid keystrokes (like diagonals)
+		token.posX = newX;
+		token.posY = newY;
 
 		if (onTokenMove) {
 			onTokenMove(token.id, newX, newY);
