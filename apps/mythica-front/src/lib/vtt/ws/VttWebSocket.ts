@@ -14,6 +14,8 @@ import { handlePresenceEvent } from "./handlers/presence.handler";
 
 type VttStateRef = typeof VttStateType;
 
+export type WsStatus = "connecting" | "open" | "closed" | "error";
+
 export class VttWebSocket {
 	private sessionId: string;
 	private state: VttStateRef;
@@ -21,20 +23,31 @@ export class VttWebSocket {
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 	private reconnectDelay = 2000;
 	private destroyed = false;
+	public status: WsStatus = "connecting";
+	public onStatusChange: ((s: WsStatus) => void) | null = null;
 
 	constructor(sessionId: string, state: VttStateRef) {
 		this.sessionId = sessionId;
 		this.state = state;
 	}
 
+	private setStatus(s: WsStatus) {
+		this.status = s;
+		this.onStatusChange?.(s);
+	}
+
 	connect() {
 		if (this.destroyed) return;
 
 		const url = campaignService.sessionSocketUrl(this.sessionId);
+		console.log("[VTT WS] connexion vers", url);
 		this.ws = new WebSocket(url);
+		this.setStatus("connecting");
 
 		this.ws.onopen = () => {
 			this.reconnectDelay = 2000;
+			this.setStatus("open");
+			console.log("[VTT WS] connecté");
 		};
 
 		this.ws.onmessage = (event: MessageEvent<string>) => {
@@ -47,13 +60,17 @@ export class VttWebSocket {
 			this.handleMessage(msg);
 		};
 
-		this.ws.onclose = () => {
+		this.ws.onclose = (e) => {
+			console.log("[VTT WS] fermé", e.code, e.reason);
+			this.setStatus("closed");
 			if (!this.destroyed) {
 				this.scheduleReconnect();
 			}
 		};
 
-		this.ws.onerror = () => {
+		this.ws.onerror = (e) => {
+			console.error("[VTT WS] erreur", e);
+			this.setStatus("error");
 			this.ws?.close();
 		};
 	}
