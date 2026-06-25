@@ -4,6 +4,7 @@ import type {
 	FogState,
 	MapConfig,
 	SessionTokenDto,
+	DiceRollEvent,
 } from "./types";
 
 export const vttState = (() => {
@@ -21,7 +22,10 @@ export const vttState = (() => {
 	let selectedToolId = $state<
 		"select" | "move" | "fog-paint" | "fog-erase" | "add-token"
 	>("select");
+	let selectedTokenId = $state<string | null>(null);
 	let isGm = $state(false);
+	let diceRolls = $state<DiceRollEvent[]>([]);
+	let isTokenDragging = $state(false);
 
 	return {
 		get tokens() {
@@ -42,8 +46,17 @@ export const vttState = (() => {
 		get selectedToolId() {
 			return selectedToolId;
 		},
+		get selectedTokenId() {
+			return selectedTokenId;
+		},
 		get isGm() {
 			return isGm;
+		},
+		get diceRolls() {
+			return diceRolls;
+		},
+		get isTokenDragging() {
+			return isTokenDragging;
 		},
 
 		setTokens(v: SessionTokenDto[]) {
@@ -76,6 +89,15 @@ export const vttState = (() => {
 		},
 		setIsGm(v: boolean) {
 			isGm = v;
+		},
+		setSelectedTokenId(v: string | null) {
+			selectedTokenId = v;
+		},
+		addDiceRoll(v: DiceRollEvent) {
+			diceRolls = [...diceRolls, v];
+		},
+		setIsTokenDragging(v: boolean) {
+			isTokenDragging = v;
 		},
 	};
 })();

@@ -8,6 +8,11 @@
 	import VttPresenceBar from "$lib/vtt/panels/VttPresenceBar.svelte";
 	import VttFogControls from "$lib/vtt/panels/VttFogControls.svelte";
 	import VttMapPanel from "$lib/vtt/panels/VttMapPanel.svelte";
+	import VttCharacterSheetPanel from "$lib/vtt/panels/VttCharacterSheetPanel.svelte";
+	import VttDiceRoller from "$lib/vtt/panels/VttDiceRoller.svelte";
+	import VttQuickDicePanel from "$lib/vtt/panels/VttQuickDicePanel.svelte";
+	import VttActorsPanel from "$lib/vtt/panels/VttActorsPanel.svelte";
+	import type { CampaignCharacterSheet } from "$lib/api/services/campaign-character-sheets-service";
 	import { vttState } from "$lib/vtt/vtt.svelte";
 	import { VttWebSocket, type WsStatus } from "$lib/vtt/ws/VttWebSocket";
 	import { campaignService } from "$lib/index.js";
@@ -25,6 +30,16 @@
 	let ws = $state<VttWebSocket | null>(null);
 	let wsStatus = $state<WsStatus>("connecting");
 	let showMaps = $state(false);
+	let showActors = $state(false);
+	let showMySheet = $state(false);
+	let showDice = $state(false);
+
+	const mySheetId = $derived(
+		data.campaignSheets?.find(
+			(s: CampaignCharacterSheet) =>
+				s.userId === data.user?.id && s.status === "active"
+		)?.characterSheetId
+	);
 
 	$effect(() => {
 		vttState.setIsGm(isGm);
@@ -35,6 +50,27 @@
 			await campaignService.createToken(sessionId, { label });
 		} catch {
 			// Le token s'affichera via l'événement WS TOKEN_ADDED
+		}
+	}
+
+	async function handleDropToken(
+		sheetId: string,
+		label: string,
+		fileId: string | null,
+		gridX: number,
+		gridY: number
+	) {
+		if (!isGm) return;
+		try {
+			await campaignService.createToken(sessionId, {
+				label,
+				characterSheetId: sheetId,
+				fileId: fileId ?? undefined,
+				posX: gridX,
+				posY: gridY,
+			});
+		} catch (_err) {
+			// Ignore
 		}
 	}
 
@@ -106,7 +142,7 @@
 </svelte:head>
 
 <div
-	class="fixed inset-0 overflow-hidden bg-slate-950"
+	class="fixed inset-0 overflow-hidden bg-slate-950 bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px]"
 	style="font-family: 'Public Sans', sans-serif"
 >
 	<!-- Canvas PixiJS fullscreen -->
@@ -115,6 +151,7 @@
 			mapConfig={vttState.activeMap}
 			onTokenMove={(id, x, y) =>
 				ws?.send({ type: "TOKEN_MOVE", tokenId: id, x, y })}
+			onDropToken={handleDropToken}
 			onFogPaint={isGm ? handleFogPaint : undefined}
 			onFogHide={isGm ? handleFogHide : undefined}
 		/>
@@ -147,9 +184,24 @@
 		onAddToken={isGm ? handleAddToken : undefined}
 		onToggleMaps={isGm ? () => (showMaps = !showMaps) : undefined}
 		{showMaps}
+		onToggleActors={isGm ? () => (showActors = !showActors) : undefined}
+		{showActors}
+		onToggleMySheet={() => {
+			showMySheet = !showMySheet;
+			if (showMySheet) vttState.setSelectedTokenId(null);
+		}}
+		{showMySheet}
+		onToggleDice={() => (showDice = !showDice)}
+		{showDice}
 	/>
 	{#if isGm && showMaps}
 		<VttMapPanel campaignId={data.campaign?.id ?? ""} {sessionId} />
+	{/if}
+	{#if isGm && showActors}
+		<VttActorsPanel
+			campaignSheets={data.campaignSheets ?? []}
+			onClose={() => (showActors = false)}
+		/>
 	{/if}
 	{#if vttState.combatState.started}
 		<VttInitiativePanel combatState={vttState.combatState} {isGm} {ws} />
@@ -157,5 +209,19 @@
 	{#if isGm}
 		<VttFogControls {ws} />
 	{/if}
+	<VttDiceRoller />
+	{#if showDice}
+		<VttQuickDicePanel
+			{ws}
+			campaignId={data.campaign?.id ?? ""}
+			onClose={() => (showDice = false)}
+		/>
+	{/if}
+	<VttCharacterSheetPanel
+		{ws}
+		campaignId={data.campaign?.id ?? ""}
+		sheetId={showMySheet ? (mySheetId ?? null) : undefined}
+		onClose={() => (showMySheet = false)}
+	/>
 	<VttChatPanel {sessionId} campaignId={data.campaign?.id ?? ""} />
 </div>

@@ -7,6 +7,7 @@ type FogState = { mode: "manual" | "dynamic"; revealed: Point[][] };
 export type MapCommand =
 	| { type: "FOG_PAINT"; polygons: Point[][] }
 	| { type: "FOG_CLEAR" }
+	| { type: "FOG_REVEAL_AROUND"; tokenId: string; radius: number }
 	| {
 			type: "DICE_ROLL";
 			formula: string;
@@ -42,6 +43,15 @@ export function parseMapCommand(raw: unknown): MapCommand | null {
 			return { type: "FOG_PAINT", polygons: cmd.polygons as Point[][] };
 		case "FOG_CLEAR":
 			return { type: "FOG_CLEAR" };
+		case "FOG_REVEAL_AROUND":
+			if (typeof cmd.tokenId === "string" && typeof cmd.radius === "number") {
+				return {
+					type: "FOG_REVEAL_AROUND",
+					tokenId: cmd.tokenId,
+					radius: cmd.radius,
+				};
+			}
+			return null;
 		case "DICE_ROLL":
 			if (
 				typeof cmd.formula === "string" &&
@@ -104,6 +114,29 @@ export async function handleMapCommand(
 
 	if (command.type === "FOG_CLEAR") {
 		nextFog = { mode: currentFog.mode, revealed: [] };
+	} else if (command.type === "FOG_REVEAL_AROUND") {
+		const token = await prisma.sessionToken.findUnique({
+			where: { id: command.tokenId },
+		});
+		if (!token || token.sessionId !== sessionId) return null;
+
+		// Calculer un polygone circulaire (32 segments) autour de la position du token
+		const circlePoints: Point[] = [];
+		const segments = 32;
+		for (let i = 0; i < segments; i++) {
+			const angle = (i / segments) * 2 * Math.PI;
+			circlePoints.push({
+				x: Math.round(token.posX + Math.cos(angle) * command.radius),
+				y: Math.round(token.posY + Math.sin(angle) * command.radius),
+			});
+		}
+
+		// Ajouter ce cercle aux zones révélées (permanent fog exploration)
+		// On limite le mode à "dynamic" s'il ne l'était pas
+		nextFog = {
+			mode: "dynamic",
+			revealed: [...currentFog.revealed, circlePoints],
+		};
 	} else {
 		nextFog = { ...currentFog, revealed: command.polygons };
 	}

@@ -5,6 +5,7 @@ import type {
 	FogState,
 	MapConfig,
 	SessionTokenDto,
+	DiceRollEvent,
 } from "../types";
 import { handleTokenEvent } from "./handlers/token.handler";
 import { handleFogEvent } from "./handlers/fog.handler";
@@ -112,6 +113,12 @@ export class VttWebSocket {
 			handleCombatEvent(this.state, event);
 			return;
 		}
+
+		if (type === "DICE_ROLL") {
+			this.state.addDiceRoll(event as unknown as DiceRollEvent);
+			return;
+		}
+
 		if (type.startsWith("PRESENCE_")) {
 			handlePresenceEvent(this.state, event);
 		}

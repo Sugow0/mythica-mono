@@ -6,11 +6,19 @@
 	let {
 		mapConfig,
 		onTokenMove,
+		onDropToken,
 		onFogPaint,
 		onFogHide,
 	}: {
 		mapConfig: MapConfig | null;
 		onTokenMove?: (tokenId: string, x: number, y: number) => void;
+		onDropToken?: (
+			sheetId: string,
+			label: string,
+			fileId: string | null,
+			gridX: number,
+			gridY: number
+		) => void;
 		onFogPaint?: (polygon: { x: number; y: number }[]) => void;
 		onFogHide?: (polygon: { x: number; y: number }[]) => void;
 	} = $props();
@@ -204,10 +212,26 @@
 		function onWheel(e: WheelEvent) {
 			e.preventDefault();
 			const factor = e.deltaY < 0 ? 1.1 : 0.9;
-			stage.scale.set(
-				Math.max(0.1, Math.min(5, stage.scale.x * factor)),
-				Math.max(0.1, Math.min(5, stage.scale.x * factor))
-			);
+			const currentScale = stage.scale.x;
+			const newScale = Math.max(0.1, Math.min(5, currentScale * factor));
+
+			// Si le scale ne change pas (limite atteinte), on ne fait rien
+			if (currentScale === newScale) return;
+
+			// Coordonnées de la souris relatives à la fenêtre
+			const mouseX = e.clientX;
+			const mouseY = e.clientY;
+
+			// Coordonnées de la souris dans le monde avant le zoom
+			const worldX = (mouseX - stage.x) / currentScale;
+			const worldY = (mouseY - stage.y) / currentScale;
+
+			stage.scale.set(newScale, newScale);
+
+			// Ajuster la position du stage pour que le point sous la souris reste au même endroit
+			stage.x = mouseX - worldX * newScale;
+			stage.y = mouseY - worldY * newScale;
+
 			drawFog();
 		}
 
@@ -217,9 +241,10 @@
 
 			// Pan : molette, alt+clic, ou clic gauche en mode non-fog
 			if (
-				e.button === 1 ||
-				(e.button === 0 && e.altKey) ||
-				(e.button === 0 && !isFogTool)
+				!vttState.isTokenDragging &&
+				(e.button === 1 ||
+					(e.button === 0 && e.altKey) ||
+					(e.button === 0 && !isFogTool))
 			) {
 				dragging = true;
 				lastX = e.clientX;
@@ -301,10 +326,83 @@
 			window.removeEventListener("mouseup", onMouseUp);
 		};
 	}
+
+	function handleDragOver(e: DragEvent) {
+		e.preventDefault();
+	}
+
+	function handleDrop(e: DragEvent) {
+		e.preventDefault();
+		const dataStr = e.dataTransfer?.getData("application/json");
+		if (!dataStr || !onDropToken) return;
+		try {
+			const data = JSON.parse(dataStr);
+			if (data.type === "character_sheet") {
+				const { x, y } = screenToWorld(e.clientX, e.clientY);
+				const gridSize = mapConfig?.gridSize ?? 100;
+				// Convert to grid coordinates
+				const gridX = Math.floor(x / gridSize);
+				const gridY = Math.floor(y / gridSize);
+				onDropToken(data.sheetId, data.label, data.fileId, gridX, gridY);
+			}
+		} catch (_err) {
+			// ignore parse error
+		}
+	}
+
+	function handleKeyDown(e: KeyboardEvent) {
+		if (
+			e.target instanceof HTMLInputElement ||
+			e.target instanceof HTMLTextAreaElement
+		)
+			return;
+		if (!vttState.selectedTokenId) return;
+
+		const token = vttState.tokens.find(
+			(t) => t.id === vttState.selectedTokenId
+		);
+		if (!token) return;
+
+		let dx = 0;
+		let dy = 0;
+		switch (e.key) {
+			case "ArrowUp":
+				dy = -1;
+				break;
+			case "ArrowDown":
+				dy = 1;
+				break;
+			case "ArrowLeft":
+				dx = -1;
+				break;
+			case "ArrowRight":
+				dx = 1;
+				break;
+			default:
+				return;
+		}
+
+		e.preventDefault();
+		const newX = parseFloat(token.posX as unknown as string) + dx;
+		const newY = parseFloat(token.posY as unknown as string) + dy;
+
+		// Optimistic update locally to allow rapid keystrokes (like diagonals)
+		token.posX = newX;
+		token.posY = newY;
+
+		if (onTokenMove) {
+			onTokenMove(token.id, newX, newY);
+		}
+	}
 </script>
 
+<svelte:window onkeydown={handleKeyDown} />
+
 <div
+	role="application"
 	class="fixed inset-0"
+	ondragover={handleDragOver}
+	ondrop={handleDrop}
 	style="cursor: {vttState.selectedToolId === 'fog-paint' ||
 	vttState.selectedToolId === 'fog-erase'
 		? 'crosshair'

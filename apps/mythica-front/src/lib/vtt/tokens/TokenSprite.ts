@@ -8,8 +8,10 @@ import {
 	type Texture,
 } from "pixi.js";
 import type { SessionTokenDto } from "../types";
+import { vttState } from "../vtt.svelte";
 
 export type TokenMoveCallback = (tokenId: string, x: number, y: number) => void;
+export type TokenSelectCallback = (tokenId: string) => void;
 
 export class TokenSprite {
 	public container: Container;
@@ -21,6 +23,7 @@ export class TokenSprite {
 	constructor(
 		token: SessionTokenDto,
 		onMove: TokenMoveCallback,
+		onSelect: TokenSelectCallback,
 		gridSize = 100
 	) {
 		this.tokenId = token.id;
@@ -60,7 +63,7 @@ export class TokenSprite {
 			this.loadImage(token);
 		}
 
-		this.makeDraggable(onMove, token);
+		this.makeDraggable(onMove, onSelect, token);
 	}
 
 	private async loadImage(token: SessionTokenDto) {
@@ -80,7 +83,11 @@ export class TokenSprite {
 		}
 	}
 
-	private makeDraggable(onMove: TokenMoveCallback, token: SessionTokenDto) {
+	private makeDraggable(
+		onMove: TokenMoveCallback,
+		onSelect: TokenSelectCallback,
+		token: SessionTokenDto
+	) {
 		this.container.eventMode = "static";
 		this.container.cursor = "pointer";
 
@@ -91,7 +98,9 @@ export class TokenSprite {
 		let startContainerY = this.container.y;
 
 		this.container.on("pointerdown", (e) => {
+			e.stopPropagation();
 			isDragging = true;
+			vttState.setIsTokenDragging(true);
 			startMouseX = e.globalX;
 			startMouseY = e.globalY;
 			startContainerX = this.container.x;
@@ -99,7 +108,7 @@ export class TokenSprite {
 			this.container.zIndex = 1000;
 		});
 
-		this.container.on("pointermove", (e) => {
+		this.container.on("globalpointermove", (e) => {
 			if (!isDragging) return;
 			const dx = e.globalX - startMouseX;
 			const dy = e.globalY - startMouseY;
@@ -107,19 +116,35 @@ export class TokenSprite {
 			this.container.y = startContainerY + dy;
 		});
 
-		this.container.on("pointerup", () => {
+		this.container.on("pointerup", (e) => {
 			if (!isDragging) return;
 			isDragging = false;
+			vttState.setIsTokenDragging(false);
 			this.container.zIndex = 0;
+
+			// Si on a à peine bougé, on considère que c'est un clic
+			const dist =
+				Math.abs(e.globalX - startMouseX) + Math.abs(e.globalY - startMouseY);
+			if (dist < 5) {
+				onSelect(token.id);
+			} else {
+				// Convertir position pixel → coordonnées grille
+				const gridX = this.container.x / this.gridSize;
+				const gridY = this.container.y / this.gridSize;
+				onMove(token.id, gridX, gridY);
+			}
+		});
+
+		this.container.on("pointerupoutside", () => {
+			if (!isDragging) return;
+			isDragging = false;
+			vttState.setIsTokenDragging(false);
+			this.container.zIndex = 0;
+
 			// Convertir position pixel → coordonnées grille
 			const gridX = this.container.x / this.gridSize;
 			const gridY = this.container.y / this.gridSize;
 			onMove(token.id, gridX, gridY);
-		});
-
-		this.container.on("pointerupoutside", () => {
-			isDragging = false;
-			this.container.zIndex = 0;
 		});
 	}
 

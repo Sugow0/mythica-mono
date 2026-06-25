@@ -7,6 +7,15 @@
 	function clearFog() {
 		ws?.send({ type: "FOG_CLEAR" });
 	}
+
+	function revealAroundToken() {
+		if (!vttState.selectedTokenId) return;
+		ws?.send({
+			type: "FOG_REVEAL_AROUND",
+			tokenId: vttState.selectedTokenId,
+			radius: 6, // Rayon en cases (par exemple 6 cases = 9 mètres dans D&D)
+		});
+	}
 </script>
 
 <div
@@ -22,6 +31,14 @@
 		>
 			Tout masquer
 		</button>
+		{#if vttState.selectedTokenId}
+			<button
+				onclick={revealAroundToken}
+				class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-indigo-700"
+			>
+				Révéler (Token)
+			</button>
+		{/if}
 		<span class="self-center text-xs text-slate-500">
 			Mode : <strong class="text-slate-300">{vttState.fog.mode}</strong>
 		</span>
