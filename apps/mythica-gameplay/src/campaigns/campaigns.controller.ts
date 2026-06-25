@@ -185,6 +185,7 @@ const CampaignCharacterSheetSchema = t.Object({
 	characterSheetId: t.String({ format: "uuid" }),
 	userId: t.String({ format: "uuid" }),
 	name: t.String(),
+	avatarFileId: t.Nullable(t.String({ format: "uuid" })),
 	status: CampaignSheetStatus,
 });
 
@@ -1309,7 +1310,9 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 					...(isGm ? {} : { characterSheet: { userId: currentUser.id } }),
 				},
 				include: {
-					characterSheet: { select: { userId: true, name: true } },
+					characterSheet: {
+						select: { userId: true, name: true, avatarFileId: true },
+					},
 				},
 			});
 
@@ -1318,6 +1321,7 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				characterSheetId: row.characterSheetId,
 				userId: row.characterSheet.userId,
 				name: row.characterSheet.name,
+				avatarFileId: row.characterSheet.avatarFileId,
 				status: row.status,
 			}));
 			return { success: true as const, sheets };
