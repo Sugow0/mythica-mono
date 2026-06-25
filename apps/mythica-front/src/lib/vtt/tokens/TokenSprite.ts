@@ -92,8 +92,9 @@ export class TokenSprite {
 		this.container.cursor = "pointer";
 
 		let isDragging = false;
-		let startMouseX = 0;
+		let startMouseX = 0; // For click detection only
 		let startMouseY = 0;
+		let dragStartLocal = { x: 0, y: 0 };
 		let startContainerX = this.container.x;
 		let startContainerY = this.container.y;
 
@@ -115,6 +116,7 @@ export class TokenSprite {
 			vttState.setIsTokenDragging(true);
 			startMouseX = e.globalX;
 			startMouseY = e.globalY;
+			dragStartLocal = e.getLocalPosition(this.container.parent);
 			startContainerX = this.container.x;
 			startContainerY = this.container.y;
 			this.container.zIndex = 1000;
@@ -125,8 +127,9 @@ export class TokenSprite {
 
 		this.container.on("globalpointermove", (e) => {
 			if (!isDragging) return;
-			const dx = e.globalX - startMouseX;
-			const dy = e.globalY - startMouseY;
+			const localPos = e.getLocalPosition(this.container.parent);
+			const dx = localPos.x - dragStartLocal.x;
+			const dy = localPos.y - dragStartLocal.y;
 			this.container.x = startContainerX + dx;
 			this.container.y = startContainerY + dy;
 
