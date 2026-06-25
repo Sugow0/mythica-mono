@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Elysia, t } from "elysia";
 import { authContext, type CurrentUser } from "../auth/context";
 import { ErrorResponse } from "../lib/http";
@@ -10,6 +11,8 @@ import {
 	presenceChannel,
 } from "./commands/session-presence/session-presence.handler";
 import { isGameMaster, resolveSessionAccess } from "./session-access";
+import { sessionRooms } from "./session-rooms";
+import { getSessionTokens } from "./session-tokens";
 
 // ------------------------------------------------------------
 // Schémas
@@ -200,4 +203,216 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 				connection: "keep-alive",
 			},
 		});
-	});
+	})
+
+	/** PUT /sessions/:id/map - Changer la map active d'une session (MJ). */
+	.put(
+		"/:id/map",
+		async ({ set, currentUser, params, body }) => {
+			const access = await resolveSessionAccess(params.id, currentUser);
+			if (!access.ok) {
+				set.status = access.status;
+				return { success: false as const, error: access.error };
+			}
+			if (!isGameMaster(access)(currentUser as CurrentUser)) {
+				set.status = 403;
+				return { success: false as const, error: "Réservé au MJ" };
+			}
+			const session = await prisma.session.update({
+				where: { id: params.id },
+				data: { activeMapId: body.mapId },
+				include: { activeMap: true },
+			});
+			await sessionRooms.broadcast(params.id, {
+				type: "MAP_CHANGE",
+				mapId: body.mapId,
+				map: session.activeMap,
+			});
+			return { success: true as const, session };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: t.Object({
+				mapId: t.Union([t.String({ format: "uuid" }), t.Null()]),
+			}),
+			response: {
+				200: t.Object({
+					success: t.Literal(true),
+					session: t.Object({
+						id: t.String(),
+						activeMapId: t.Union([t.String({ format: "uuid" }), t.Null()]),
+					}),
+				}),
+				400: ErrorResponse,
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: {
+				tags: ["Sessions"],
+				summary: "Changer la map active d'une session",
+			},
+		},
+	)
+
+	/** GET /sessions/:id/tokens — Liste des tokens d'une session. */
+	.get(
+		"/:id/tokens",
+		async ({ set, currentUser, params }) => {
+			const access = await resolveSessionAccess(params.id, currentUser);
+			if (!access.ok) {
+				set.status = access.status;
+				return { success: false as const, error: access.error };
+			}
+			const tokens = await getSessionTokens(params.id);
+			return { success: true as const, tokens };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			response: {
+				200: t.Object({ success: t.Literal(true), tokens: t.Array(t.Any()) }),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Sessions"], summary: "Tokens d'une session" },
+		},
+	)
+
+	/** POST /sessions/:id/tokens — Créer un token (MJ). */
+	.post(
+		"/:id/tokens",
+		async ({ set, currentUser, params, body }) => {
+			const access = await resolveSessionAccess(params.id, currentUser);
+			if (!access.ok) {
+				set.status = access.status;
+				return { success: false as const, error: access.error };
+			}
+			if (!isGameMaster(access)(currentUser as CurrentUser)) {
+				set.status = 403;
+				return { success: false as const, error: "Réservé au MJ" };
+			}
+			const token = await prisma.sessionToken.create({
+				data: { id: randomUUID(), sessionId: params.id, ...body },
+			});
+			await sessionRooms.broadcast(params.id, { type: "TOKEN_ADDED", token });
+			set.status = 201;
+			return { success: true as const, token };
+		},
+		{
+			params: t.Object({ id: t.String() }),
+			body: t.Object({
+				characterSheetId: t.Optional(t.String({ format: "uuid" })),
+				label: t.Optional(t.String({ maxLength: 255 })),
+				fileId: t.Optional(t.String({ format: "uuid" })),
+				posX: t.Number({ default: 0 }),
+				posY: t.Number({ default: 0 }),
+				width: t.Optional(t.Integer({ minimum: 1, default: 1 })),
+				height: t.Optional(t.Integer({ minimum: 1, default: 1 })),
+				isVisible: t.Optional(t.Boolean({ default: true })),
+				layer: t.Optional(
+					t.Union([
+						t.Literal("background"),
+						t.Literal("object"),
+						t.Literal("token"),
+						t.Literal("gm"),
+					]),
+				),
+			}),
+			response: {
+				201: t.Object({ success: t.Literal(true), token: t.Any() }),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Sessions"], summary: "Créer un token (MJ)" },
+		},
+	)
+
+	/** PATCH /sessions/:id/tokens/:tokenId — Modifier un token. */
+	.patch(
+		"/:id/tokens/:tokenId",
+		async ({ set, currentUser, params, body }) => {
+			const access = await resolveSessionAccess(params.id, currentUser);
+			if (!access.ok) {
+				set.status = access.status;
+				return { success: false as const, error: access.error };
+			}
+			const existing = await prisma.sessionToken.findFirst({
+				where: { id: params.tokenId, sessionId: params.id },
+			});
+			if (!existing) {
+				set.status = 404;
+				return { success: false as const, error: "Token introuvable" };
+			}
+			const token = await prisma.sessionToken.update({
+				where: { id: params.tokenId },
+				data: body,
+			});
+			await sessionRooms.broadcast(params.id, {
+				type: "TOKEN_UPDATED",
+				tokenId: params.tokenId,
+				...body,
+			});
+			return { success: true as const, token };
+		},
+		{
+			params: t.Object({ id: t.String(), tokenId: t.String() }),
+			body: t.Partial(
+				t.Object({
+					posX: t.Number(),
+					posY: t.Number(),
+					width: t.Integer(),
+					height: t.Integer(),
+					isVisible: t.Boolean(),
+					label: t.String({ maxLength: 255 }),
+				}),
+			),
+			response: {
+				200: t.Object({ success: t.Literal(true), token: t.Any() }),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Sessions"], summary: "Modifier un token" },
+		},
+	)
+
+	/** DELETE /sessions/:id/tokens/:tokenId — Supprimer un token (MJ). */
+	.delete(
+		"/:id/tokens/:tokenId",
+		async ({ set, currentUser, params }) => {
+			const access = await resolveSessionAccess(params.id, currentUser);
+			if (!access.ok) {
+				set.status = access.status;
+				return { success: false as const, error: access.error };
+			}
+			if (!isGameMaster(access)(currentUser as CurrentUser)) {
+				set.status = 403;
+				return { success: false as const, error: "Réservé au MJ" };
+			}
+			const existing = await prisma.sessionToken.findFirst({
+				where: { id: params.tokenId, sessionId: params.id },
+			});
+			if (!existing) {
+				set.status = 404;
+				return { success: false as const, error: "Token introuvable" };
+			}
+			await prisma.sessionToken.delete({ where: { id: params.tokenId } });
+			await sessionRooms.broadcast(params.id, {
+				type: "TOKEN_REMOVED",
+				tokenId: params.tokenId,
+			});
+			return { success: true as const };
+		},
+		{
+			params: t.Object({ id: t.String(), tokenId: t.String() }),
+			response: {
+				200: t.Object({ success: t.Literal(true) }),
+				401: ErrorResponse,
+				403: ErrorResponse,
+				404: ErrorResponse,
+			},
+			detail: { tags: ["Sessions"], summary: "Supprimer un token (MJ)" },
+		},
+	);

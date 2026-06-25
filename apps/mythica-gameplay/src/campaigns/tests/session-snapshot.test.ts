@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 const p = {
 	session: { findUnique: mock(async () => null as unknown) },
 	message: { findMany: mock(async () => [] as unknown[]) },
+	sessionToken: { findMany: mock(async () => [] as unknown[]) },
 };
 mock.module("../../lib/prisma", () => ({ prisma: p }));
 
@@ -18,6 +19,7 @@ function aSession(extra: Record<string, unknown> = {}) {
 		campaignId: CID,
 		mapState: { grid: "hex" },
 		combatState: {},
+		activeMap: null,
 		...extra,
 	};
 }
@@ -31,10 +33,28 @@ function aMessage(id: string, content: string) {
 		user: { pseudo: "joueur" },
 	};
 }
+function aToken(id: string) {
+	return {
+		id,
+		sessionId: SID,
+		characterSheetId: null,
+		label: null,
+		fileId: null,
+		posX: "0",
+		posY: "0",
+		width: 1,
+		height: 1,
+		isVisible: true,
+		layer: "token",
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	};
+}
 
 beforeEach(() => {
 	p.session.findUnique.mockResolvedValue(null);
 	p.message.findMany.mockResolvedValue([]);
+	p.sessionToken.findMany.mockResolvedValue([]);
 });
 
 describe("buildSessionSnapshot", () => {
@@ -79,5 +99,33 @@ describe("buildSessionSnapshot", () => {
 		const arg = p.message.findMany.mock.calls.at(-1)?.[0] as { take: number };
 		expect(arg.take).toBe(SNAPSHOT_CHAT_LIMIT);
 		expect(SNAPSHOT_CHAT_LIMIT).toBe(50);
+	});
+
+	it("inclut activeMap null quand aucune carte active", async () => {
+		p.session.findUnique.mockResolvedValue(aSession());
+		const snap = await buildSessionSnapshot(SID, []);
+		expect(snap?.activeMap).toBeNull();
+	});
+
+	it("inclut activeMap quand une carte est définie", async () => {
+		const map = { id: "map-1", name: "Donjon" };
+		p.session.findUnique.mockResolvedValue(aSession({ activeMap: map }));
+		const snap = await buildSessionSnapshot(SID, []);
+		expect(snap?.activeMap).toEqual(map);
+	});
+
+	it("inclut les tokens de la session", async () => {
+		p.session.findUnique.mockResolvedValue(aSession());
+		p.sessionToken.findMany.mockResolvedValue([aToken("t1"), aToken("t2")]);
+		const snap = await buildSessionSnapshot(SID, []);
+		expect(snap?.tokens).toHaveLength(2);
+		expect(snap?.tokens[0].id).toBe("t1");
+	});
+
+	it("inclut combatState dans le snapshot", async () => {
+		const combatState = { activeTurn: "u1", round: 3 };
+		p.session.findUnique.mockResolvedValue(aSession({ combatState }));
+		const snap = await buildSessionSnapshot(SID, []);
+		expect(snap?.combatState).toEqual(combatState);
 	});
 });

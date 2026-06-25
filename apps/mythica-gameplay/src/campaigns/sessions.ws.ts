@@ -3,9 +3,11 @@ import { authContext } from "../auth/context";
 import { logger } from "../logger";
 import { resolveSessionAccess } from "./session-access";
 import { handleCombatCommand, parseCombatCommand } from "./session-combat";
+import { handleMapCommand, parseMapCommand } from "./session-map";
 import { sessionPresence } from "./session-presence-ws";
 import { sessionRooms } from "./session-rooms";
 import { buildSessionSnapshot } from "./session-snapshot";
+import { handleTokenCommand, parseTokenCommand } from "./session-tokens";
 
 /**
  * Serveur WebSocket des sessions de jeu.
@@ -50,15 +52,33 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 	},
 
 	async message(ws, raw) {
-		// Les trames entrantes sont des commandes de contrôle. Pour l'instant :
-		// le suivi de combat (initiative), réservé au MJ, diffusé à la room.
-		const command = parseCombatCommand(raw);
-		if (!command) return;
+		// Les trames entrantes sont des commandes de contrôle :
+		// - Suivi de combat (initiative), réservé au MJ
+		// - Déplacement/modification/suppression de tokens
 		const userId = ws.data.currentUser?.id;
 		if (!userId) return;
 		const { id } = ws.data.params;
-		const event = await handleCombatCommand(id, userId, command);
-		if (event) await sessionRooms.broadcast(id, event);
+
+		const combatCommand = parseCombatCommand(raw);
+		if (combatCommand) {
+			const event = await handleCombatCommand(id, userId, combatCommand);
+			if (event) await sessionRooms.broadcast(id, event);
+			return;
+		}
+
+		const tokenCommand = parseTokenCommand(raw);
+		if (tokenCommand) {
+			const event = await handleTokenCommand(id, userId, tokenCommand);
+			if (event) await sessionRooms.broadcast(id, event);
+			return;
+		}
+
+		const mapCmd = parseMapCommand(raw);
+		if (mapCmd) {
+			const event = await handleMapCommand(id, userId, mapCmd);
+			if (event) await sessionRooms.broadcast(id, event);
+			return;
+		}
 	},
 
 	async close(ws) {

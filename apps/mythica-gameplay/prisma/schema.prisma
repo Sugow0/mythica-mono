@@ -86,6 +86,14 @@ enum FileDomain {
   @@map("file_domain")
 }
 
+enum GridType {
+  square
+  hex
+  free
+
+  @@map("grid_type")
+}
+
 enum JoinRequestStatus {
   pending
   accepted
@@ -290,6 +298,7 @@ model Campaign {
   changeRequests  CampaignCharacterChangeRequest[]
   sessions        Session[]
   files           File[]                            @relation("CampaignFiles")
+  maps            Map[]
   invites         CampaignInvite[]
   messages        Message[]
   joinRequests    CampaignJoinRequest[]
@@ -308,13 +317,17 @@ model Message {
   campaignId String   @map("campaign_id") @db.Uuid
   userId     String   @map("user_id") @db.Uuid
   content    String   @db.Text
+  sessionId  String?  @map("session_id") @db.Uuid
+  kind       String?  @db.VarChar(50)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relations
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session  Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([campaignId, createdAt], name: "idx_messages_campaign_created")
+  @@index([sessionId], name: "idx_messages_session")
   @@map("campaign_messages")
 }
 
@@ -549,12 +562,15 @@ model Session {
   endedAt     DateTime?     @map("ended_at") @db.Timestamptz
   mapState    Json          @default("{}") @map("map_state")
   combatState Json          @default("{}") @map("combat_state")
+  activeMapId String?       @map("active_map_id") @db.Uuid
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
-  campaign Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  tokens   SessionToken[]
+  campaign        Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  activeMap       Map?           @relation("SessionActiveMap", fields: [activeMapId], references: [id], onDelete: SetNull)
+  tokens          SessionToken[]
+  sessionMessages Message[]
 
   @@index([campaignId], name: "idx_sessions_campaign")
   @@index([status], name: "idx_sessions_status")
@@ -644,11 +660,42 @@ model File {
   characterAvatars CharacterSheet[] @relation("CharacterSheetAvatar")
   sessionTokens    SessionToken[]   @relation("TokenFile")
   contentPortraits SystemContent[]  @relation("SystemContentPortrait")
+  maps             Map[]            @relation("MapFile")
 
   @@index([ownerId], name: "idx_files_owner")
   @@index([campaignId, domain], name: "idx_files_campaign_domain")
   @@index([deletedAt], name: "idx_files_deleted")
   @@map("files")
+}
+
+// ------------------------------------------------------------
+// MAP
+// Carte utilisée dans une session. L'image de fond est un File
+// (domain: map). La grille est configurable par type et taille.
+// ------------------------------------------------------------
+
+model Map {
+  id          String   @id @db.Uuid
+  campaignId  String   @map("campaign_id") @db.Uuid
+  nom         String   @db.VarChar(255)
+  fileId      String?  @map("file_id") @db.Uuid
+  gridType    GridType @default(square) @map("grid_type")
+  gridSize    Int      @default(100) @map("grid_size")
+  gridOffsetX Int      @default(0) @map("grid_offset_x")
+  gridOffsetY Int      @default(0) @map("grid_offset_y")
+  gridColor   String   @default("#ffffff33") @map("grid_color") @db.VarChar(9)
+  gridOpacity Decimal  @default(0.3) @map("grid_opacity") @db.Decimal
+  widthPx     Int      @default(2000) @map("width_px")
+  heightPx    Int      @default(2000) @map("height_px")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  file     File?     @relation("MapFile", fields: [fileId], references: [id], onDelete: SetNull)
+  sessions Session[] @relation("SessionActiveMap")
+
+  @@index([campaignId], name: "idx_maps_campaign")
+  @@map("maps")
 }
 
 // ------------------------------------------------------------

@@ -9,6 +9,21 @@ export type SnapshotMessage = {
 	user: { pseudo: string | null };
 };
 
+/** Token de session tel qu'inclus dans le snapshot initial. */
+export type SnapshotToken = {
+	id: string;
+	sessionId: string;
+	characterSheetId: string | null;
+	label: string | null;
+	fileId: string | null;
+	posX: string;
+	posY: string;
+	width: number;
+	height: number;
+	isVisible: boolean;
+	layer: string;
+};
+
 /**
  * État initial complet d'une session, envoyé à un client dès sa connexion
  * WebSocket pour qu'il se synchronise sans requête supplémentaire.
@@ -16,8 +31,11 @@ export type SnapshotMessage = {
 export type SessionSnapshot = {
 	type: "snapshot";
 	participants: string[];
+	activeMap: unknown | null;
 	mapState: unknown;
+	tokens: SnapshotToken[];
 	activeTurn: string | null;
+	combatState: unknown;
 	messages: SnapshotMessage[];
 };
 
@@ -26,8 +44,9 @@ export const SNAPSHOT_CHAT_LIMIT = 50;
 
 /**
  * Construit le snapshot d'une session : participants présents (fournis par
- * l'appelant), état de la carte, tour actif et historique de chat (50 derniers
- * messages, ordre chronologique). Retourne null si la session n'existe pas.
+ * l'appelant), carte active, tokens, état de la carte, tour actif, état du
+ * combat et historique de chat (50 derniers messages, ordre chronologique).
+ * Retourne null si la session n'existe pas.
  */
 export async function buildSessionSnapshot(
 	sessionId: string,
@@ -35,24 +54,34 @@ export async function buildSessionSnapshot(
 ): Promise<SessionSnapshot | null> {
 	const session = await prisma.session.findUnique({
 		where: { id: sessionId },
+		include: { activeMap: true },
 	});
 	if (!session) return null;
 
-	const messages = await prisma.message.findMany({
-		where: { campaignId: session.campaignId },
-		orderBy: { createdAt: "desc" },
-		take: SNAPSHOT_CHAT_LIMIT,
-		include: { user: { select: { pseudo: true } } },
-	});
-
-	const combat = (session.combatState ?? {}) as { activeTurn?: string | null };
+	const [messages, tokens] = await Promise.all([
+		prisma.message.findMany({
+			where: { campaignId: session.campaignId },
+			orderBy: { createdAt: "desc" },
+			take: SNAPSHOT_CHAT_LIMIT,
+			include: { user: { select: { pseudo: true } } },
+		}),
+		prisma.sessionToken.findMany({
+			where: { sessionId },
+			orderBy: { createdAt: "asc" },
+		}),
+	]);
 
 	return {
 		type: "snapshot",
 		participants,
+		activeMap: session.activeMap ?? null,
 		mapState: session.mapState,
-		activeTurn: combat.activeTurn ?? null,
+		tokens: tokens as unknown as SnapshotToken[],
+		activeTurn:
+			(session.combatState as { activeTurn?: string | null })?.activeTurn ??
+			null,
+		combatState: session.combatState,
 		// findMany trie du plus récent au plus ancien : on rétablit l'ordre chrono.
-		messages: (messages as SnapshotMessage[]).reverse(),
+		messages: (messages as unknown as SnapshotMessage[]).reverse(),
 	};
 }

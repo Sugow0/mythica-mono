@@ -285,7 +285,7 @@ export class CampaignService extends GameplayApiClient {
 		return data;
 	}
 
-	// ==================== Salle d'attente (lobby) ====================
+	// ==================== Sessions ====================
 
 	/** Détail d'une session par son id (membre de la campagne). */
 	async getSession(sessionId: string) {
@@ -303,6 +303,65 @@ export class CampaignService extends GameplayApiClient {
 		});
 		if (error) throw error;
 		return data;
+	}
+
+	// ==================== Maps ====================
+
+	/** Lister les maps d'une campagne (MJ). */
+	async getMaps(campaignId: string) {
+		const { data, error } = await this.client.GET("/campaigns/{id}/maps/", {
+			params: { path: { id: campaignId } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Créer une map (MJ). */
+	async createMap(
+		campaignId: string,
+		body: {
+			nom: string;
+			gridType?: "square" | "hex" | "free";
+			gridSize?: number;
+		}
+	) {
+		const { data, error } = await this.client.POST("/campaigns/{id}/maps/", {
+			params: { path: { id: campaignId } },
+			body,
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Activer une map sur la session en cours (MJ). */
+	async activateMap(sessionId: string, mapId: string | null) {
+		const { data, error } = await this.client.PUT("/sessions/{id}/map", {
+			params: { path: { id: sessionId } },
+			body: { mapId },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Créer un token dans une session (MJ). */
+	async createToken(
+		sessionId: string,
+		data: {
+			label?: string;
+			posX?: number;
+			posY?: number;
+			layer?: "background" | "object" | "token" | "gm";
+		}
+	) {
+		const { data: result, error } = await this.client.POST(
+			"/sessions/{id}/tokens",
+			{
+				params: { path: { id: sessionId } },
+				body: { posX: data.posX ?? 0, posY: data.posY ?? 0, ...data },
+			}
+		);
+		if (error) throw error;
+		return result;
 	}
 
 	/** URL du flux SSE de présence d'une session (à consommer via EventSource). */
