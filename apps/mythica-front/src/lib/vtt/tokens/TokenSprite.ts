@@ -130,30 +130,32 @@ export class TokenSprite {
 			const localPos = e.getLocalPosition(this.container.parent!);
 			const dx = localPos.x - dragStartLocal.x;
 			const dy = localPos.y - dragStartLocal.y;
-			this.container.x = startContainerX + dx;
-			this.container.y = startContainerY + dy;
 
-			// Dessin de la règle de mesure
+			// Le token reste à sa place (startContainerX, Y)
+			// La règle part du centre du token vers le curseur
 			const cx = (token.width * this.gridSize) / 2;
 			const cy = (token.height * this.gridSize) / 2;
+
 			rulerGraphics.clear();
-			rulerGraphics.moveTo(-dx + cx, -dy + cy);
-			rulerGraphics.lineTo(cx, cy);
+			rulerGraphics.moveTo(cx, cy);
+			rulerGraphics.lineTo(cx + dx, cy + dy);
 			rulerGraphics.stroke({ color: 0xff0000, width: 3, alpha: 0.8 });
+
 			// Dessin des cercles aux extrémités
-			rulerGraphics.circle(-dx + cx, -dy + cy, 4).fill(0xffffff);
 			rulerGraphics.circle(cx, cy, 4).fill(0xff0000);
+			rulerGraphics.circle(cx + dx, cy + dy, 4).fill(0xffffff);
 
 			const distPixels = Math.sqrt(dx * dx + dy * dy);
 			const distCells = distPixels / this.gridSize;
 			const distMeters = distCells * 1.5; // 1 case = 1.5m
 
 			rulerText.text = `${distMeters.toFixed(1)} m`;
-			rulerText.x = -dx / 2 + cx;
-			rulerText.y = -dy / 2 + cy - 12;
+			rulerText.x = cx + dx / 2;
+			rulerText.y = cy + dy / 2 - 12;
 		});
 
-		this.container.on("pointerup", (e) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const handlePointerUp = (e: any) => {
 			if (!isDragging) return;
 			isDragging = false;
 			vttState.setIsTokenDragging(false);
@@ -164,38 +166,31 @@ export class TokenSprite {
 
 			const dist =
 				Math.abs(e.globalX - startMouseX) + Math.abs(e.globalY - startMouseY);
+
 			if (dist < 5) {
 				onSelect(token.id);
 			} else {
+				const localPos = e.getLocalPosition(this.container.parent!);
+				const dx = localPos.x - dragStartLocal.x;
+				const dy = localPos.y - dragStartLocal.y;
+
 				const snap = !e.shiftKey;
+				const finalX = startContainerX + dx;
+				const finalY = startContainerY + dy;
+
 				const gridX = snap
-					? Math.round(this.container.x / this.gridSize)
-					: this.container.x / this.gridSize;
+					? Math.round(finalX / this.gridSize)
+					: finalX / this.gridSize;
 				const gridY = snap
-					? Math.round(this.container.y / this.gridSize)
-					: this.container.y / this.gridSize;
+					? Math.round(finalY / this.gridSize)
+					: finalY / this.gridSize;
+
 				onMove(token.id, gridX, gridY);
 			}
-		});
+		};
 
-		this.container.on("pointerupoutside", (e) => {
-			if (!isDragging) return;
-			isDragging = false;
-			vttState.setIsTokenDragging(false);
-			this.container.zIndex = 0;
-
-			this.container.removeChild(rulerGraphics);
-			this.container.removeChild(rulerText);
-
-			const snap = !e.shiftKey;
-			const gridX = snap
-				? Math.round(this.container.x / this.gridSize)
-				: this.container.x / this.gridSize;
-			const gridY = snap
-				? Math.round(this.container.y / this.gridSize)
-				: this.container.y / this.gridSize;
-			onMove(token.id, gridX, gridY);
-		});
+		this.container.on("pointerup", handlePointerUp);
+		this.container.on("pointerupoutside", handlePointerUp);
 	}
 
 	update(token: SessionTokenDto) {

@@ -198,6 +198,59 @@
 		stageRef = null;
 	});
 
+	// Keyboard listener for token movement
+	$effect(() => {
+		if (!mounted) return;
+
+		function onKeyDown(e: KeyboardEvent) {
+			if (!vttState.selectedTokenId) return;
+			// Ignorer si on tape dans un input
+			if (
+				e.target instanceof HTMLInputElement ||
+				e.target instanceof HTMLTextAreaElement
+			)
+				return;
+
+			const token = vttState.tokens.find(
+				(t) => t.id === vttState.selectedTokenId
+			);
+			if (!token || !mapConfig) return;
+
+			let dx = 0;
+			let dy = 0;
+
+			switch (e.key) {
+				case "ArrowUp":
+					dy = -1;
+					break;
+				case "ArrowDown":
+					dy = 1;
+					break;
+				case "ArrowLeft":
+					dx = -1;
+					break;
+				case "ArrowRight":
+					dx = 1;
+					break;
+				default:
+					return; // Not an arrow key
+			}
+
+			// Prevent scrolling the page
+			e.preventDefault();
+
+			const newX = parseFloat(token.posX as unknown as string) + dx;
+			const newY = parseFloat(token.posY as unknown as string) + dy;
+
+			onTokenMove?.(token.id, newX, newY);
+		}
+
+		window.addEventListener("keydown", onKeyDown);
+		return () => {
+			window.removeEventListener("keydown", onKeyDown);
+		};
+	});
+
 	// Ticker hook to position HUD
 	$effect(() => {
 		if (!mounted || !hudContainerEl || !stageRef || !appRef) return;
