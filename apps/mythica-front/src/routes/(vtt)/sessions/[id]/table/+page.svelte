@@ -8,6 +8,7 @@
 	import VttPresenceBar from "$lib/vtt/panels/VttPresenceBar.svelte";
 	import VttFogControls from "$lib/vtt/panels/VttFogControls.svelte";
 	import VttMapPanel from "$lib/vtt/panels/VttMapPanel.svelte";
+	import VttCharacterSheetPanel from "$lib/vtt/panels/VttCharacterSheetPanel.svelte";
 	import { vttState } from "$lib/vtt/vtt.svelte";
 	import { VttWebSocket, type WsStatus } from "$lib/vtt/ws/VttWebSocket";
 	import { campaignService } from "$lib/index.js";
@@ -157,5 +158,6 @@
 	{#if isGm}
 		<VttFogControls {ws} />
 	{/if}
+	<VttCharacterSheetPanel campaignId={data.campaign?.id ?? ""} />
 	<VttChatPanel {sessionId} campaignId={data.campaign?.id ?? ""} />
 </div>

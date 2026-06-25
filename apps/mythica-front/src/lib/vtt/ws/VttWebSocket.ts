@@ -112,6 +112,7 @@ export class VttWebSocket {
 			handleCombatEvent(this.state, event);
 			return;
 		}
+
 		if (type.startsWith("PRESENCE_")) {
 			handlePresenceEvent(this.state, event);
 		}

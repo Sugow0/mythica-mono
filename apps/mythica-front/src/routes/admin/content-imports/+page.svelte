@@ -8,7 +8,7 @@
 	import { Badge } from "$lib/components/ui/badge";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
-	import * as Select from "$lib/components/ui/select";
+
 	import { gameSystemService } from "$lib/index.js";
 	import {
 		AIDEDD_COLLECTIONS,
