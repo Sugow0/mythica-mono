@@ -108,7 +108,7 @@ export class TokenSprite {
 			this.container.zIndex = 1000;
 		});
 
-		this.container.on("pointermove", (e) => {
+		this.container.on("globalpointermove", (e) => {
 			if (!isDragging) return;
 			const dx = e.globalX - startMouseX;
 			const dy = e.globalY - startMouseY;
@@ -136,9 +136,15 @@ export class TokenSprite {
 		});
 
 		this.container.on("pointerupoutside", () => {
+			if (!isDragging) return;
 			isDragging = false;
 			vttState.setIsTokenDragging(false);
 			this.container.zIndex = 0;
+
+			// Convertir position pixel → coordonnées grille
+			const gridX = this.container.x / this.gridSize;
+			const gridY = this.container.y / this.gridSize;
+			onMove(token.id, gridX, gridY);
 		});
 	}
 
