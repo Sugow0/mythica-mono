@@ -351,6 +351,8 @@ export class CampaignService extends GameplayApiClient {
 			posX?: number;
 			posY?: number;
 			layer?: "background" | "object" | "token" | "gm";
+			characterSheetId?: string;
+			fileId?: string;
 		}
 	) {
 		const { data: result, error } = await this.client.POST(
