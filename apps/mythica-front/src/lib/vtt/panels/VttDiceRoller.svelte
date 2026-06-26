@@ -53,7 +53,8 @@
 		};
 	});
 
-	function stringToColor(str: string) {
+	function stringToColor(str?: string) {
+		if (!str) return "#991b1b";
 		let hash = 0;
 		for (let i = 0; i < str.length; i++) {
 			hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -84,11 +85,22 @@
 						if (typeof diceBoxInstance.resizeWorld === "function") {
 							diceBoxInstance.resizeWorld();
 						}
-						// Use updateConfig or pass it directly. dice-box 1.1.4 accepts it in roll() or updateConfig()
-						diceBoxInstance.updateConfig({ themeColor: rollerColor });
-						diceBoxInstance.roll(cleanFormula).catch((err: any) => {
-							console.error("Error rolling 3D dice:", err);
-						});
+
+						diceBoxInstance
+							.roll(matches, { themeColor: rollerColor })
+							.then(() => {
+								setTimeout(() => {
+									if (
+										diceBoxInstance &&
+										typeof diceBoxInstance.clear === "function"
+									) {
+										diceBoxInstance.clear();
+									}
+								}, 3000);
+							})
+							.catch((err: any) => {
+								console.error("Error rolling 3D dice:", err);
+							});
 					}
 				} else if (!vttState.use3DDice) {
 					// Fallback to 2D
