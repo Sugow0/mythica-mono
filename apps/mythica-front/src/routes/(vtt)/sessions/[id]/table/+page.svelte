@@ -5,7 +5,6 @@
 	import VttToolbar from "$lib/vtt/panels/VttToolbar.svelte";
 	import VttChatPanel from "$lib/vtt/panels/VttChatPanel.svelte";
 	import VttPresenceBar from "$lib/vtt/panels/VttPresenceBar.svelte";
-	import VttFogControls from "$lib/vtt/panels/VttFogControls.svelte";
 	import VttTimelinePanel from "$lib/vtt/panels/VttTimelinePanel.svelte";
 	import VttMapPanel from "$lib/vtt/panels/VttMapPanel.svelte";
 	import VttCharacterSheetPanel from "$lib/vtt/panels/VttCharacterSheetPanel.svelte";
@@ -45,6 +44,7 @@
 
 	$effect(() => {
 		vttState.setIsGm(isGm);
+		vttState.setMyCharacterSheetId(mySheetId ?? null);
 	});
 
 	async function handleAddToken(label: string) {
@@ -166,7 +166,7 @@
 				: undefined}
 			onWallRemove={isGm
 				? (x, y) => {
-						// On trouve le mur le plus proche de (x, y) (seuil 0.2 cases)
+						// On trouve le mur le plus proche de (x, y) (seuil 20 pixels)
 						const wallId = vttState.walls.find((w) => {
 							// Distance d'un point à un segment
 							const l2 =
@@ -174,7 +174,7 @@
 								(Number(w.p1Y) - Number(w.p2Y)) ** 2;
 							if (l2 === 0)
 								return (
-									(x - Number(w.p1X)) ** 2 + (y - Number(w.p1Y)) ** 2 < 0.04
+									(x - Number(w.p1X)) ** 2 + (y - Number(w.p1Y)) ** 2 < 400
 								);
 							let t =
 								((x - Number(w.p1X)) * (Number(w.p2X) - Number(w.p1X)) +
@@ -186,7 +186,7 @@
 									2 +
 								(y - (Number(w.p1Y) + t * (Number(w.p2Y) - Number(w.p1Y)))) **
 									2;
-							return dist2 < 0.04; // distance < 0.2 case
+							return dist2 < 400; // distance < 20 pixels
 						})?.id;
 						if (wallId) ws?.send({ type: "WALL_REMOVE", wallId });
 					}
@@ -247,9 +247,6 @@
 	{/if}
 	{#if vttState.combatState.started}
 		<VttTimelinePanel combatState={vttState.combatState} {isGm} {ws} />
-	{/if}
-	{#if isGm}
-		<VttFogControls {ws} />
 	{/if}
 	<VttDiceRoller />
 	{#if showDice}

@@ -83,7 +83,7 @@ export class TokenSprite {
 	private onTick(ticker: Ticker) {
 		const dt = ticker.deltaTime;
 		// Vitesse d'interpolation
-		const speed = 0.15 * dt;
+		const speed = 0.1 * dt; // Légèrement plus lent pour bien voir l'animation
 
 		this.container.x += (this.targetX - this.container.x) * speed;
 		this.container.y += (this.targetY - this.container.y) * speed;
@@ -152,37 +152,55 @@ export class TokenSprite {
 			startContainerY = this.targetY;
 			this.container.zIndex = 1000;
 
-			this.container.addChild(rulerGraphics);
-			this.container.addChild(rulerText);
+			const canEdit =
+				vttState.isGm ||
+				(token.characterSheetId &&
+					token.characterSheetId === vttState.myCharacterSheetId);
+			if (canEdit) {
+				this.container.addChild(rulerGraphics);
+				this.container.addChild(rulerText);
+			}
 		});
 
 		this.container.on("globalpointermove", (e) => {
 			if (!isDragging) return;
+			const canEdit =
+				vttState.isGm ||
+				(token.characterSheetId &&
+					token.characterSheetId === vttState.myCharacterSheetId);
+			if (!canEdit) return;
 			const localPos = e.getLocalPosition(this.container.parent!);
 			const dx = localPos.x - dragStartLocal.x;
 			const dy = localPos.y - dragStartLocal.y;
 
-			// Le token reste à sa place (startContainerX, Y)
-			// La règle part du centre du token vers le curseur
+			// Le token suit le curseur visuellement (via this.targetX)
+			this.targetX = startContainerX + dx;
+			this.targetY = startContainerY + dy;
+
+			// La règle est enfant du container.
+			// Comme le container s'est déplacé de (dx, dy), l'origine de la règle (le point de départ)
+			// se trouve maintenant en (-dx, -dy) par rapport au token.
 			const cx = (token.width * this.gridSize) / 2;
 			const cy = (token.height * this.gridSize) / 2;
 
 			rulerGraphics.clear();
-			rulerGraphics.moveTo(cx, cy);
-			rulerGraphics.lineTo(cx + dx, cy + dy);
+			// Point de départ (ancienne position)
+			rulerGraphics.moveTo(cx - dx, cy - dy);
+			// Point final (position actuelle du token)
+			rulerGraphics.lineTo(cx, cy);
 			rulerGraphics.stroke({ color: 0xff0000, width: 3, alpha: 0.8 });
 
 			// Dessin des cercles aux extrémités
-			rulerGraphics.circle(cx, cy, 4).fill(0xff0000);
-			rulerGraphics.circle(cx + dx, cy + dy, 4).fill(0xffffff);
+			rulerGraphics.circle(cx - dx, cy - dy, 4).fill(0xff0000); // Origine
+			rulerGraphics.circle(cx, cy, 4).fill(0xffffff); // Token
 
 			const distPixels = Math.sqrt(dx * dx + dy * dy);
 			const distCells = distPixels / this.gridSize;
 			const distMeters = distCells * 1.5; // 1 case = 1.5m
 
 			rulerText.text = `${distMeters.toFixed(1)} m`;
-			rulerText.x = cx + dx / 2;
-			rulerText.y = cy + dy / 2 - 12;
+			rulerText.x = cx - dx / 2;
+			rulerText.y = cy - dy / 2 - 12;
 		});
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,8 +210,14 @@ export class TokenSprite {
 			vttState.setIsTokenDragging(false);
 			this.container.zIndex = 0;
 
-			this.container.removeChild(rulerGraphics);
-			this.container.removeChild(rulerText);
+			const canEdit =
+				vttState.isGm ||
+				(token.characterSheetId &&
+					token.characterSheetId === vttState.myCharacterSheetId);
+			if (canEdit) {
+				this.container.removeChild(rulerGraphics);
+				this.container.removeChild(rulerText);
+			}
 
 			const dist =
 				Math.abs(e.globalX - startMouseX) + Math.abs(e.globalY - startMouseY);
@@ -207,7 +231,7 @@ export class TokenSprite {
 					onSelect(token.id);
 					lastClickTime = now;
 				}
-			} else {
+			} else if (canEdit) {
 				const localPos = e.getLocalPosition(this.container.parent!);
 				const dx = localPos.x - dragStartLocal.x;
 				const dy = localPos.y - dragStartLocal.y;
@@ -216,12 +240,18 @@ export class TokenSprite {
 				const finalX = startContainerX + dx;
 				const finalY = startContainerY + dy;
 
+				// Repositionner temporairement à l'origine le temps que le serveur réponde
+				// pour voir la "glisse" du point A au point B (ou le garder à la position finale avec snap)
 				const gridX = snap
 					? Math.round(finalX / this.gridSize)
 					: finalX / this.gridSize;
 				const gridY = snap
 					? Math.round(finalY / this.gridSize)
 					: finalY / this.gridSize;
+
+				// Maj optimiste pour voir l'animation se déclencher depuis l'endroit où on a lâché vers le snap
+				this.targetX = gridX * this.gridSize;
+				this.targetY = gridY * this.gridSize;
 
 				onMove(token.id, gridX, gridY);
 			}

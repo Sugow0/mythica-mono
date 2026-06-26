@@ -37,6 +37,7 @@ export const vttState = (() => {
 	let diceRolls = $state<DiceRollEvent[]>([]);
 	let isTokenDragging = $state(false);
 	let focusedTokenId: string | null = $state(null);
+	let myCharacterSheetId: string | null = $state(null);
 
 	return {
 		get tokens() {
@@ -71,6 +72,9 @@ export const vttState = (() => {
 		},
 		get focusedTokenId() {
 			return focusedTokenId;
+		},
+		get myCharacterSheetId() {
+			return myCharacterSheetId;
 		},
 
 		get walls() {
@@ -131,6 +135,9 @@ export const vttState = (() => {
 		},
 		setFocusedTokenId(id: string | null) {
 			focusedTokenId = id;
+		},
+		setMyCharacterSheetId(id: string | null) {
+			myCharacterSheetId = id;
 		},
 	};
 })();

@@ -874,10 +874,16 @@
 	class="fixed inset-0"
 	ondragover={handleDragOver}
 	ondrop={handleDrop}
-	style="cursor: {vttState.selectedToolId === 'fog-paint' ||
-	vttState.selectedToolId === 'fog-erase'
+	style="cursor: {['fog-paint', 'fog-erase', 'ruler', 'wall-add'].includes(
+		vttState.selectedToolId
+	)
 		? 'crosshair'
-		: 'grab'}"
+		: ['wall-remove', 'wall-move'].includes(vttState.selectedToolId)
+			? 'pointer'
+			: vttState.selectedToolId === 'select' ||
+				  vttState.selectedToolId === 'move'
+				? 'grab'
+				: 'default'};"
 >
 	<!-- Canvas PixiJS plein écran -->
 	<canvas bind:this={canvasEl} class="block h-full w-full"></canvas>
