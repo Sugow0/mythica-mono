@@ -485,6 +485,7 @@
 		let dragging = false;
 		let lastX = 0;
 		let lastY = 0;
+		let dragDist = 0;
 
 		function onWheel(e: WheelEvent) {
 			e.preventDefault();
@@ -513,6 +514,7 @@
 		}
 
 		function onMouseDown(e: MouseEvent) {
+			dragDist = 0;
 			const tool = vttState.selectedToolId;
 			const isFogTool = tool === "fog-paint" || tool === "fog-erase";
 			const isRulerTool = tool === "ruler";
@@ -808,14 +810,20 @@
 
 		function onMouseMove(e: MouseEvent) {
 			if (!dragging) return;
-			stage.x += e.clientX - lastX;
-			stage.y += e.clientY - lastY;
+			const dx = e.clientX - lastX;
+			const dy = e.clientY - lastY;
+			dragDist += Math.abs(dx) + Math.abs(dy);
+			stage.x += dx;
+			stage.y += dy;
 			lastX = e.clientX;
 			lastY = e.clientY;
 			drawFog();
 		}
 
 		function onMouseUp() {
+			if (dragging && dragDist < 5 && vttState.selectedToolId === "select") {
+				vttState.setSelectedTokenId(null);
+			}
 			dragging = false;
 		}
 

@@ -72,6 +72,36 @@
 	}
 
 	// ── Batch review ──────────────────────────────────────────────────────────
+	let selectedIds = $state<string[]>([]);
+
+	function toggleSelection(id: string) {
+		if (selectedIds.includes(id)) {
+			selectedIds = selectedIds.filter((i) => i !== id);
+		} else {
+			selectedIds = [...selectedIds, id];
+		}
+	}
+
+	function toggleAll() {
+		if (selectedIds.length === items.length) {
+			selectedIds = [];
+		} else {
+			selectedIds = items.map((i) => i.id);
+		}
+	}
+
+	async function batchApproveSelected() {
+		await contentImportService.batchReview(jobId, "approve", selectedIds);
+		selectedIds = [];
+		await load(currentPage);
+	}
+
+	async function batchRejectSelected() {
+		await contentImportService.batchReview(jobId, "reject", selectedIds);
+		selectedIds = [];
+		await load(currentPage);
+	}
+
 	async function batchApproveAll() {
 		await contentImportService.batchReview(jobId, "approve");
 		await load(currentPage);
@@ -97,6 +127,8 @@
 			applying = false;
 		}
 	}
+
+	let selectedItemForDetails = $state<ContentImportItem | null>(null);
 
 	// ── Helpers ────────────────────────────────────────────────────────────────
 	const pendingCount = $derived(
@@ -139,12 +171,21 @@
 					<span class="text-red-400">{rejectedCount} rejetés</span>
 				</div>
 				<!-- Batch -->
-				<Button variant="outline" size="sm" onclick={batchApproveAll}>
-					<CheckCheckIcon class="h-4 w-4" /> Tout approuver
-				</Button>
-				<Button variant="outline" size="sm" onclick={batchRejectAll}>
-					<XIcon class="h-4 w-4" /> Tout rejeter
-				</Button>
+				{#if selectedIds.length > 0}
+					<Button variant="outline" size="sm" onclick={batchApproveSelected}>
+						<CheckIcon class="h-4 w-4" /> Approuver la sélection ({selectedIds.length})
+					</Button>
+					<Button variant="outline" size="sm" onclick={batchRejectSelected}>
+						<XIcon class="h-4 w-4" /> Rejeter la sélection ({selectedIds.length})
+					</Button>
+				{:else}
+					<Button variant="outline" size="sm" onclick={batchApproveAll}>
+						<CheckCheckIcon class="h-4 w-4" /> Tout approuver
+					</Button>
+					<Button variant="outline" size="sm" onclick={batchRejectAll}>
+						<XIcon class="h-4 w-4" /> Tout rejeter
+					</Button>
+				{/if}
 				<!-- Apply -->
 				<Button
 					class="bg-red-600 hover:bg-red-700"
@@ -211,6 +252,15 @@
 			<table class="w-full text-sm">
 				<thead class="border-b border-slate-700 bg-slate-900/60">
 					<tr>
+						<th class="px-4 py-3 text-left">
+							<input
+								type="checkbox"
+								class="rounded border-slate-600 bg-slate-800"
+								checked={selectedIds.length === items.length &&
+									items.length > 0}
+								onchange={toggleAll}
+							/>
+						</th>
 						<th class="px-4 py-3 text-left font-medium text-slate-400">Slug</th>
 						<th class="px-4 py-3 text-left font-medium text-slate-400">Nom</th>
 						<th class="px-4 py-3 text-left font-medium text-slate-400">Type</th>
@@ -226,6 +276,14 @@
 				<tbody class="divide-y divide-slate-800 bg-slate-950">
 					{#each items as item (item.id)}
 						<tr class="group hover:bg-slate-900/30">
+							<td class="px-4 py-3">
+								<input
+									type="checkbox"
+									class="rounded border-slate-600 bg-slate-800"
+									checked={selectedIds.includes(item.id)}
+									onchange={() => toggleSelection(item.id)}
+								/>
+							</td>
 							<td class="px-4 py-3 font-mono text-xs text-slate-400"
 								>{item.slug}</td
 							>
@@ -246,15 +304,16 @@
 							</td>
 							<td class="max-w-xs px-4 py-3">
 								{#if item.description}
-									<p
-										class="truncate text-xs text-slate-400"
-										title={item.description}
+									<button
+										type="button"
+										class="text-left text-xs text-slate-400 hover:text-slate-200"
+										onclick={() => (selectedItemForDetails = item)}
 									>
 										{item.description.slice(0, 120)}{item.description.length >
 										120
 											? "…"
 											: ""}
-									</p>
+									</button>
 								{:else}
 									<span class="text-xs text-slate-600">—</span>
 								{/if}
@@ -332,3 +391,78 @@
 		{/if}
 	{/if}
 </div>
+
+{#if selectedItemForDetails}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+		role="dialog"
+		aria-modal="true"
+	>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="absolute inset-0"
+			onclick={() => (selectedItemForDetails = null)}
+		></div>
+		<div
+			class="relative z-10 w-full max-w-2xl max-h-[80vh] flex flex-col rounded-xl border border-slate-700 bg-slate-900 shadow-xl"
+		>
+			<div
+				class="flex items-center justify-between border-b border-slate-800 p-4"
+			>
+				<h2 class="text-lg font-semibold text-white">
+					{selectedItemForDetails.name ?? selectedItemForDetails.slug}
+				</h2>
+				<button
+					type="button"
+					class="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+					onclick={() => (selectedItemForDetails = null)}
+				>
+					<XIcon class="h-5 w-5" />
+				</button>
+			</div>
+			<div class="overflow-y-auto p-4 text-sm text-slate-300">
+				{#if selectedItemForDetails.description}
+					<div class="whitespace-pre-wrap">
+						{selectedItemForDetails.description}
+					</div>
+				{:else}
+					<span class="italic text-slate-500"
+						>Aucune description disponible.</span
+					>
+				{/if}
+			</div>
+			<div class="border-t border-slate-800 p-4 flex justify-end gap-3">
+				{#if job?.status === "ready"}
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							review(selectedItemForDetails!, "approved");
+							selectedItemForDetails = null;
+						}}
+					>
+						<CheckIcon class="h-4 w-4 text-green-400" /> Approuver
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							review(selectedItemForDetails!, "rejected");
+							selectedItemForDetails = null;
+						}}
+					>
+						<XIcon class="h-4 w-4 text-red-400" /> Rejeter
+					</Button>
+				{/if}
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => (selectedItemForDetails = null)}
+				>
+					Fermer
+				</Button>
+			</div>
+		</div>
+	</div>
+{/if}
