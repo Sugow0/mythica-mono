@@ -30,7 +30,6 @@
 	let error = $state<string | null>(null);
 	let showCreate = $state(false);
 	let newName = $state("");
-	let newGridType = $state<"square" | "hex" | "free">("square");
 	let busy = $state(false);
 
 	let editMap = $state<MapItem | null>(null);
@@ -56,13 +55,14 @@
 		busy = true;
 		try {
 			await campaignService.createMap(campaignId, {
-				nom: newName.trim(),
-				gridType: newGridType,
+				nom: newName,
+				gridType: "square",
+				gridSize: 100,
 			});
 			newName = "";
 			showCreate = false;
 			await loadMaps();
-		} catch {
+		} catch (e: any) {
 			error = "Erreur lors de la création.";
 		} finally {
 			busy = false;
@@ -132,15 +132,7 @@
 				autofocus
 				class="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-600"
 			/>
-			<select
-				bind:value={newGridType}
-				class="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-600"
-			>
-				<option value="square">Grille carrée</option>
-				<option value="hex">Grille hexagonale</option>
-				<option value="free">Sans grille</option>
-			</select>
-			<div class="flex gap-2">
+			<div class="flex justify-end gap-2">
 				<button
 					onclick={createMap}
 					disabled={busy || !newName.trim()}

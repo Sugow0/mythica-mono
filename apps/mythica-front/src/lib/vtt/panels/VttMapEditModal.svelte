@@ -135,13 +135,10 @@
 			<div class="grid grid-cols-2 gap-4">
 				<div class="grid gap-2">
 					<Label for="map-type">Type de grille</Label>
-					<NativeSelect.Root>
-						<NativeSelect.Select bind:value={editGridType} disabled={busy}>
-							<NativeSelect.Option value="square">Carrée</NativeSelect.Option>
-							<NativeSelect.Option value="hex">Hexagonale</NativeSelect.Option>
-							<NativeSelect.Option value="free">Sans grille</NativeSelect.Option
-							>
-						</NativeSelect.Select>
+					<NativeSelect.Root bind:value={editGridType} disabled={busy}>
+						<NativeSelect.Option value="square">Carrée</NativeSelect.Option>
+						<NativeSelect.Option value="hex">Hexagonale</NativeSelect.Option>
+						<NativeSelect.Option value="free">Sans grille</NativeSelect.Option>
 					</NativeSelect.Root>
 				</div>
 				<div class="grid gap-2">
