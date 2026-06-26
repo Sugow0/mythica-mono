@@ -64,6 +64,9 @@
 		return "#" + "00000".substring(0, 6 - c.length) + c;
 	}
 
+	let fadeDiceTimeout: ReturnType<typeof setTimeout> | null = null;
+	let clearDiceTimeout: ReturnType<typeof setTimeout> | null = null;
+
 	$effect(() => {
 		const newRolls = vttState.diceRolls.slice(processedCount);
 		if (newRolls.length > 0) {
@@ -77,6 +80,10 @@
 					const matches = r.formula.match(/\d*[dD]\d+/g);
 					if (matches && matches.length > 0) {
 						hide3DDice = false; // Make sure container is visible
+
+						if (fadeDiceTimeout) clearTimeout(fadeDiceTimeout);
+						if (clearDiceTimeout) clearTimeout(clearDiceTimeout);
+
 						if (typeof diceBoxInstance.resizeWorld === "function") {
 							diceBoxInstance.resizeWorld();
 						}
@@ -84,9 +91,9 @@
 						diceBoxInstance
 							.roll(matches, { themeColor: rollerColor })
 							.then(() => {
-								setTimeout(() => {
+								fadeDiceTimeout = setTimeout(() => {
 									hide3DDice = true; // Trigger CSS fade out
-									setTimeout(() => {
+									clearDiceTimeout = setTimeout(() => {
 										if (
 											diceBoxInstance &&
 											typeof diceBoxInstance.clear === "function"
