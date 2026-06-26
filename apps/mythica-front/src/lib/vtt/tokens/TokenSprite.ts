@@ -218,6 +218,8 @@ export class TokenSprite {
 		let lastClickTime = 0;
 
 		this.container.on("pointerdown", (e) => {
+			if (vttState.selectedToolId !== "select") return;
+
 			e.stopPropagation();
 			this.isDragging = true;
 			vttState.setIsTokenDragging(true);
