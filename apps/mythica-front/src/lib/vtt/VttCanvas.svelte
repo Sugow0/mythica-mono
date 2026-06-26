@@ -189,7 +189,8 @@
 
 		// Fond sombre = brouillard sur toute la map
 		ctx.globalCompositeOperation = "source-over";
-		ctx.fillStyle = "rgba(10, 10, 20, 0.85)";
+		const fogAlpha = vttState.isGm ? 0.45 : 0.98;
+		ctx.fillStyle = `rgba(10, 10, 20, ${fogAlpha})`;
 		ctx.fillRect(stage.x, stage.y, sx, sy);
 
 		// Zones révélées : destination-out perce des trous dans le fog
@@ -198,12 +199,37 @@
 		// 1. Manuel
 		const polygonsToDraw = [...vttState.fog.revealed];
 
-		// 2. Dynamique : ligne de vue du token sélectionné
-		if (vttState.fog.mode === "dynamic" && vttState.selectedTokenId) {
-			const token = vttState.tokens.find(
-				(t) => t.id === vttState.selectedTokenId
-			);
-			if (token && mapConfig) {
+		// 2. Dynamique : ligne de vue
+		if (vttState.fog.mode === "dynamic" && mapConfig) {
+			let tokensToCompute = [];
+
+			if (vttState.isGm) {
+				if (vttState.selectedTokenId) {
+					// MJ avec token sélectionné : on ne voit que ce que ce token voit
+					const t = vttState.tokens.find(
+						(t) => t.id === vttState.selectedTokenId
+					);
+					if (t) tokensToCompute.push(t);
+				} else {
+					// MJ sans sélection : vision combinée de tous les joueurs (tokens avec characterSheetId)
+					tokensToCompute = vttState.tokens.filter((t) => t.characterSheetId);
+				}
+			} else {
+				// Joueur : vision combinée du groupe (tous les tokens joueurs)
+				// On pourrait limiter à `t.characterSheetId === vttState.myCharacterSheetId`
+				// Mais partager la vision du groupe est souvent préféré en VTT.
+				tokensToCompute = vttState.tokens.filter((t) => t.characterSheetId);
+			}
+
+			const walls = displayWalls
+				.filter((w) => w.type !== "invisible")
+				.map((w) => ({
+					p1: { x: Number(w.p1X), y: Number(w.p1Y) },
+					p2: { x: Number(w.p2X), y: Number(w.p2Y) },
+				}));
+			const radius = 12 * mapConfig.gridSize; // Vision de 12 cases par défaut
+
+			for (const token of tokensToCompute) {
 				const origin = {
 					x:
 						parseFloat(token.posX as unknown as string) * mapConfig.gridSize +
@@ -212,13 +238,6 @@
 						parseFloat(token.posY as unknown as string) * mapConfig.gridSize +
 						(token.height * mapConfig.gridSize) / 2,
 				};
-				const walls = displayWalls
-					.filter((w) => w.type !== "invisible")
-					.map((w) => ({
-						p1: { x: Number(w.p1X), y: Number(w.p1Y) },
-						p2: { x: Number(w.p2X), y: Number(w.p2Y) },
-					}));
-				const radius = 12 * mapConfig.gridSize; // Vision de 12 cases par défaut
 				const losPolygon = computeVisibilityPolygon(
 					origin,
 					walls,
@@ -227,11 +246,6 @@
 					radius
 				);
 				if (losPolygon.length > 2) {
-					// Diviser les coordonnées monde par gridSize ?
-					// Non, computeVisibilityPolygon utilise les mêmes coordonnées que origin/walls, donc des pixels monde.
-					// Wait, p1X et p1Y dans SessionWall sont stockés en quoi ? En coordonnées monde (pixels) ou grille ?
-					// Si on regarde onWallAdd: wStart.x, wStart.y = screenToWorld -> monde (pixels)
-					// Donc les murs sont en monde (pixels). origin est en monde (pixels).
 					polygonsToDraw.push(losPolygon);
 				}
 			}
