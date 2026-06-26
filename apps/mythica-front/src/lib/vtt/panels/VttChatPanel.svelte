@@ -89,13 +89,16 @@
 </script>
 
 <div
-	class="fixed bottom-4 right-4 z-50 flex w-80 flex-col overflow-hidden rounded-[1.5rem] border border-border/40 bg-background/70 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-3xl transition-all duration-300 ease-out"
+	class="fixed bottom-4 right-4 z-50 flex flex-col overflow-hidden rounded-[1.5rem] border border-border/40 bg-background/70 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-3xl transition-all duration-300 ease-out {isOpen
+		? 'h-[calc(100vh-2rem)] w-80'
+		: 'h-12 w-48'}"
 >
 	<button
 		onclick={() => {
 			isOpen = !isOpen;
+			if (isOpen) scrollBottom();
 		}}
-		class="group flex items-center justify-between border-b border-border/30 px-4 py-3 transition-colors hover:bg-secondary/40"
+		class="group flex h-12 shrink-0 items-center justify-between border-b border-border/30 px-4 transition-colors hover:bg-secondary/40"
 	>
 		<div class="flex items-center gap-2">
 			<div
@@ -104,7 +107,7 @@
 				<MessageSquareIcon class="h-4 w-4" />
 			</div>
 			<span class="text-sm font-medium tracking-tight text-foreground"
-				>Chat</span
+				>Chat & Historique</span
 			>
 		</div>
 		<div
@@ -121,65 +124,65 @@
 	{#if isOpen}
 		<ul
 			bind:this={listEl}
-			class="flex max-h-72 flex-col gap-3 overflow-x-hidden overflow-y-auto p-4 scrollbar-none"
+			class="flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto p-4 scrollbar-none"
 		>
 			{#each messages as msg (msg.id)}
-				{@const mine = msg.userId === currentUserId}
 				{@const isDice = msg.content.includes("🎲")}
 
-				<li class="flex w-full {mine ? 'justify-end' : 'justify-start'}">
-					<div
-						class="flex max-w-[85%] flex-col {mine
-							? 'items-end'
-							: 'items-start'}"
-					>
-						{#if !mine}
-							<span
-								class="mb-1 pl-2 text-[10px] font-medium text-muted-foreground"
-								>{msg.user?.pseudo ?? "?"}</span
-							>
-						{/if}
-						<div
-							class="break-words rounded-2xl px-4 py-2 text-[13px] leading-relaxed shadow-sm {isDice
-								? 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border border-orange-500/20'
-								: mine
-									? 'bg-primary text-primary-foreground'
-									: 'bg-secondary/60 text-foreground border border-border/20'}"
+				<li
+					class="flex w-full flex-col rounded-xl border border-border/50 bg-background/60 p-3 shadow-sm transition-colors hover:bg-background/80"
+				>
+					<div class="mb-1.5 flex items-center justify-between">
+						<span class="text-xs font-semibold text-foreground"
+							>{msg.user?.pseudo ?? "Inconnu"}</span
 						>
-							{#if isDice}
-								<span class="font-medium">{msg.content}</span>
-							{:else}
+						<span class="text-[10px] text-muted-foreground"
+							>{new Date(msg.createdAt).toLocaleTimeString([], {
+								hour: "2-digit",
+								minute: "2-digit",
+							})}</span
+						>
+					</div>
+
+					<div class="text-[13px] leading-relaxed text-foreground/90">
+						{#if isDice}
+							<div
+								class="mt-1 flex items-center justify-center rounded-lg border border-primary/20 bg-primary/5 py-2.5 px-3 text-center font-medium text-primary shadow-inner"
+							>
 								{msg.content}
-							{/if}
-						</div>
+							</div>
+						{:else}
+							{msg.content}
+						{/if}
 					</div>
 				</li>
 			{/each}
 			{#if messages.length === 0}
 				<div
-					class="flex h-32 flex-col items-center justify-center gap-2 text-center text-muted-foreground"
+					class="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground"
 				>
 					<MessageSquareIcon class="h-8 w-8 opacity-20" />
-					<p class="text-sm">Le chat est vide.<br />Dites bonjour !</p>
+					<p class="text-sm">Le journal est vide.</p>
 				</div>
 			{/if}
 		</ul>
 		<div
-			class="border-t border-border/30 bg-background/50 p-3 backdrop-blur-md"
+			class="shrink-0 border-t border-border/30 bg-background/50 p-3 backdrop-blur-md"
 		>
 			<div
-				class="flex items-center gap-2 rounded-full border border-border/40 bg-secondary/30 p-1 pl-4 shadow-inner transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50"
+				class="flex items-end gap-2 rounded-xl border border-border/40 bg-secondary/30 p-1 pl-3 pr-1 shadow-inner transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/50"
 			>
-				<input
+				<textarea
 					bind:value={input}
 					onkeydown={onKey}
 					placeholder="Votre message…"
-					class="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-				/>
+					rows="2"
+					class="w-full resize-none bg-transparent py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none scrollbar-none"
+				></textarea>
 				<button
 					onclick={send}
 					disabled={!input.trim()}
-					class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
+					class="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition-all hover:opacity-90 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
 				>
 					<SendIcon class="h-4 w-4" />
 				</button>
