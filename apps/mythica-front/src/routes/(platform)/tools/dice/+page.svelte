@@ -20,11 +20,19 @@
 			return;
 		}
 
-		const endMatch = /(^|[\s+-]+)(\d*)[dD](\d+)\s*$/.exec(formula);
-		if (endMatch && parseInt(endMatch[3], 10) === faces) {
-			const currentCount = parseInt(endMatch[2] || "1", 10);
-			const index = endMatch.index + endMatch[1].length;
-			formula = formula.substring(0, index) + `${currentCount + 1}d${faces}`;
+		const regex = new RegExp(
+			`(^|[\\s+-]+)(\\d*)[dD]${faces}(?![0-9])([kK][hHlL]\\d+)?`
+		);
+		const match = regex.exec(formula);
+
+		if (match) {
+			const currentCount = parseInt(match[2] || "1", 10);
+			const keepStr = match[3] || "";
+			formula =
+				formula.substring(0, match.index) +
+				match[1] +
+				`${currentCount + 1}d${faces}${keepStr}` +
+				formula.substring(match.index + match[0].length);
 		} else {
 			formula = `${formula.trim()} + 1d${faces}`;
 		}
