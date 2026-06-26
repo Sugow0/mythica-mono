@@ -118,13 +118,12 @@ export class TokenSprite {
 		let totalDist = 0;
 		let prev = this.waypoints[0];
 
+		// 1. Tracer les lignes en continu
 		this.rulerGraphics.moveTo(prev.x + cx, prev.y + cy);
-		this.rulerGraphics.circle(prev.x + cx, prev.y + cy, 4).fill(0xff0000);
 
 		for (let i = 1; i < this.waypoints.length; i++) {
 			const wp = this.waypoints[i];
 			this.rulerGraphics.lineTo(wp.x + cx, wp.y + cy);
-			this.rulerGraphics.circle(wp.x + cx, wp.y + cy, 4).fill(0xffff00);
 			const dx = wp.x - prev.x;
 			const dy = wp.y - prev.y;
 			totalDist += Math.sqrt(dx * dx + dy * dy);
@@ -133,13 +132,22 @@ export class TokenSprite {
 
 		this.rulerGraphics.lineTo(this.targetX + cx, this.targetY + cy);
 		this.rulerGraphics.stroke({ color: 0xff0000, width: 3, alpha: 0.8 });
+
+		// 2. Calculer la distance du dernier segment
+		const dxFinal = this.targetX - prev.x;
+		const dyFinal = this.targetY - prev.y;
+		totalDist += Math.sqrt(dxFinal * dxFinal + dyFinal * dyFinal);
+
+		// 3. Dessiner les points par dessus
+		prev = this.waypoints[0];
+		this.rulerGraphics.circle(prev.x + cx, prev.y + cy, 4).fill(0xff0000);
+		for (let i = 1; i < this.waypoints.length; i++) {
+			const wp = this.waypoints[i];
+			this.rulerGraphics.circle(wp.x + cx, wp.y + cy, 4).fill(0xffff00);
+		}
 		this.rulerGraphics
 			.circle(this.targetX + cx, this.targetY + cy, 4)
 			.fill(0xffffff);
-
-		const dx = this.targetX - prev.x;
-		const dy = this.targetY - prev.y;
-		totalDist += Math.sqrt(dx * dx + dy * dy);
 
 		const distCells = totalDist / this.gridSize;
 		const distMeters = distCells * 1.5;
