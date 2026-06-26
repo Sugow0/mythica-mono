@@ -46,6 +46,8 @@ export class TokenSprite {
 	});
 	private tokenWidth: number;
 	private tokenHeight: number;
+	private hp: number | undefined;
+	private maxHp: number | undefined;
 	private mapConfig: MapConfig | null = null;
 
 	constructor(
@@ -62,6 +64,8 @@ export class TokenSprite {
 		this.ticker = ticker;
 		this.tokenWidth = token.width;
 		this.tokenHeight = token.height;
+		this.hp = token.hp !== null ? token.hp : undefined;
+		this.maxHp = token.maxHp !== null ? token.maxHp : undefined;
 		this.mapConfig = mapConfig;
 
 		this.targetX = parseFloat(token.posX) * this.gridSize;
@@ -115,6 +119,53 @@ export class TokenSprite {
 
 	setMapConfig(config: MapConfig | null) {
 		this.mapConfig = config;
+	}
+
+	setGridSize(size: number) {
+		if (this.gridSize === size) return;
+
+		const ratio = size / this.gridSize;
+		this.gridSize = size;
+
+		this.targetX *= ratio;
+		this.targetY *= ratio;
+		this.container.x *= ratio;
+		this.container.y *= ratio;
+
+		for (const wp of this.waypoints) {
+			wp.x *= ratio;
+			wp.y *= ratio;
+		}
+		for (const wp of this.movementQueue) {
+			wp.x *= ratio;
+			wp.y *= ratio;
+		}
+
+		if (this.sprite instanceof Sprite) {
+			this.sprite.width = this.tokenWidth * this.gridSize;
+			this.sprite.height = this.tokenHeight * this.gridSize;
+		} else if (this.sprite instanceof Graphics) {
+			this.sprite.clear();
+			this.sprite
+				.roundRect(
+					0,
+					0,
+					this.tokenWidth * this.gridSize,
+					this.tokenHeight * this.gridSize,
+					8
+				)
+				.fill({ color: 0xdc2626, alpha: 0.85 })
+				.stroke({ color: 0xffffff, alpha: 0.5, width: 2 });
+		}
+
+		if (this.label) {
+			this.label.x = (this.tokenWidth * this.gridSize) / 2;
+			this.label.y = this.tokenHeight * this.gridSize + 4;
+		}
+
+		if (this.maxHp !== undefined && this.hp !== undefined) {
+			this.createOrUpdateHpBar();
+		}
 	}
 
 	private handleKeyDown = (e: KeyboardEvent) => {
@@ -461,6 +512,9 @@ export class TokenSprite {
 
 		this.container.visible = token.isVisible;
 
+		this.hp = token.hp !== null ? token.hp : undefined;
+		this.maxHp = token.maxHp !== null ? token.maxHp : undefined;
+
 		if (token.maxHp && token.hp !== undefined && token.hp !== null) {
 			this.createOrUpdateHpBar(token);
 		} else {
@@ -483,10 +537,10 @@ export class TokenSprite {
 		this.container.destroy({ children: true });
 	}
 
-	private createOrUpdateHpBar(token: SessionTokenDto) {
-		const width = token.width * this.gridSize;
-		const hp = token.hp ?? 0;
-		const maxHp = token.maxHp ?? 1;
+	private createOrUpdateHpBar(token?: SessionTokenDto) {
+		const width = this.tokenWidth * this.gridSize;
+		const hp = token?.hp ?? this.hp ?? 0;
+		const maxHp = token?.maxHp ?? this.maxHp ?? 1;
 		const ratio = Math.max(0, Math.min(1, hp / maxHp));
 
 		if (!this.hpBarBg) {
@@ -499,7 +553,7 @@ export class TokenSprite {
 		}
 
 		const barHeight = 6;
-		const barY = token.height * this.gridSize - barHeight;
+		const barY = this.tokenHeight * this.gridSize - barHeight;
 
 		this.hpBarBg
 			.clear()

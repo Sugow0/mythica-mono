@@ -39,6 +39,9 @@ export class TokensLayer {
 
 	setGridSize(size: number) {
 		this.gridSize = size;
+		for (const sprite of this.sprites.values()) {
+			sprite.setGridSize(size);
+		}
 	}
 
 	setMapConfig(config: MapConfig | null) {
@@ -88,7 +91,8 @@ export class TokensLayer {
 			this.onSelect,
 			this.onDoubleClick,
 			this.gridSize,
-			this.app.ticker
+			this.app.ticker,
+			this.mapConfig
 		);
 		this.container.addChild(sprite.container);
 		this.sprites.set(token.id, sprite);
