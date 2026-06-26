@@ -26,9 +26,9 @@
 				assetPath: "/assets/dice-box/",
 				theme: "default",
 				themeColor: "#991b1b",
-				scale: 6,
-				spinForce: 6,
-				throwForce: 6,
+				scale: 8,
+				spinForce: 8,
+				throwForce: 8,
 				startingHeight: 8,
 			});
 
@@ -102,7 +102,8 @@
 
 <div
 	id="dice-box-container"
-	class="pointer-events-none fixed inset-0 z-[100] w-full h-full overflow-hidden transition-opacity duration-300"
+	class="pointer-events-none z-[100] transition-opacity duration-300"
+	style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden;"
 	class:opacity-0={!vttState.use3DDice}
 ></div>
 
