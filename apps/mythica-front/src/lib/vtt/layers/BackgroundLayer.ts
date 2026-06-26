@@ -24,7 +24,18 @@ export class BackgroundLayer {
 			// L'URL est construite par le gateway — adapter selon l'implémentation réelle.
 			// Chercher comment les URLs des fichiers sont construites dans la codebase (ex: avatars).
 			const url = `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay/files/${config.fileId}/content`;
-			const texture: Texture = await Assets.load(url);
+			
+			// Utiliser une balise Image manuellement pour contourner le système
+			// d'extensions de PIXI.Assets qui ne trouve pas d'extension ".png"
+			const img = new Image();
+			img.crossOrigin = "anonymous";
+			img.src = url;
+			await new Promise((resolve, reject) => {
+				img.onload = resolve;
+				img.onerror = reject;
+			});
+			
+			const texture = Texture.from(img);
 			this.sprite = new Sprite(texture);
 			this.sprite.width = config.widthPx;
 			this.sprite.height = config.heightPx;

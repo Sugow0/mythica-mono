@@ -11,7 +11,12 @@ import {
 import type { SessionTokenDto } from "../types";
 import { vttState } from "../vtt.svelte";
 
-export type TokenMoveCallback = (tokenId: string, x: number, y: number, waypoints?: {x: number, y: number}[]) => void;
+export type TokenMoveCallback = (
+	tokenId: string,
+	x: number,
+	y: number,
+	waypoints?: { x: number; y: number }[]
+) => void;
 export type TokenSelectCallback = (tokenId: string) => void;
 
 export class TokenSprite {
@@ -171,8 +176,8 @@ export class TokenSprite {
 		}
 
 		const dt = ticker.deltaTime;
-		// Vitesse d'interpolation
-		const speed = 0.2 * dt;
+		// Vitesse d'interpolation ralentie pour mieux voir le chemin
+		const speed = 0.08 * dt;
 
 		this.container.x += (this.targetX - this.container.x) * speed;
 		this.container.y += (this.targetY - this.container.y) * speed;
@@ -184,7 +189,11 @@ export class TokenSprite {
 			this.container.y = this.targetY;
 
 		// Move to next waypoint if reached current target
-		if (this.container.x === this.targetX && this.container.y === this.targetY && this.movementQueue.length > 0) {
+		if (
+			this.container.x === this.targetX &&
+			this.container.y === this.targetY &&
+			this.movementQueue.length > 0
+		) {
 			const next = this.movementQueue.shift()!;
 			this.targetX = next.x;
 			this.targetY = next.y;
@@ -194,7 +203,15 @@ export class TokenSprite {
 	private async loadImage(token: SessionTokenDto) {
 		try {
 			const url = `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay/files/${token.fileId}/content`;
-			const texture: Texture = await Assets.load(url);
+			const img = new Image();
+			img.crossOrigin = "anonymous";
+			img.src = url;
+			await new Promise((resolve, reject) => {
+				img.onload = resolve;
+				img.onerror = reject;
+			});
+			
+			const texture = Texture.from(img);
 			const s = new Sprite(texture);
 			s.width = token.width * this.gridSize;
 			s.height = token.height * this.gridSize;
@@ -318,19 +335,19 @@ export class TokenSprite {
 					: finalY / this.gridSize;
 
 				// Construction des waypoints pour le backend (en coordonnées de grille)
-				const finalWaypoints = this.waypoints.slice(1).map(wp => ({
+				const finalWaypoints = this.waypoints.slice(1).map((wp) => ({
 					x: snap ? Math.round(wp.x / this.gridSize) : wp.x / this.gridSize,
-					y: snap ? Math.round(wp.y / this.gridSize) : wp.y / this.gridSize
+					y: snap ? Math.round(wp.y / this.gridSize) : wp.y / this.gridSize,
 				}));
 
 				// Lancement de l'animation locale immédiatement
-				this.movementQueue = this.waypoints.slice(1).map(wp => ({
+				this.movementQueue = this.waypoints.slice(1).map((wp) => ({
 					x: snap ? Math.round(wp.x / this.gridSize) * this.gridSize : wp.x,
-					y: snap ? Math.round(wp.y / this.gridSize) * this.gridSize : wp.y
+					y: snap ? Math.round(wp.y / this.gridSize) * this.gridSize : wp.y,
 				}));
 				this.movementQueue.push({
 					x: gridX * this.gridSize,
-					y: gridY * this.gridSize
+					y: gridY * this.gridSize,
 				});
 
 				// On replace physiquement le token au point de départ pour qu'il anime vers la destination
@@ -340,7 +357,12 @@ export class TokenSprite {
 				this.targetX = first.x;
 				this.targetY = first.y;
 
-				onMove(token.id, gridX, gridY, finalWaypoints.length > 0 ? finalWaypoints : undefined);
+				onMove(
+					token.id,
+					gridX,
+					gridY,
+					finalWaypoints.length > 0 ? finalWaypoints : undefined
+				);
 			}
 		};
 
@@ -348,32 +370,41 @@ export class TokenSprite {
 		this.container.on("pointerupoutside", handlePointerUp);
 	}
 
-	private movementQueue: {x: number, y: number}[] = [];
+	private movementQueue: { x: number; y: number }[] = [];
 
-	update(token: SessionTokenDto & { waypoints?: {x: number, y: number}[] }) {
+	update(token: SessionTokenDto & { waypoints?: { x: number; y: number }[] }) {
 		const newTargetX = parseFloat(token.posX) * this.gridSize;
 		const newTargetY = parseFloat(token.posY) * this.gridSize;
 
 		// Si on a des waypoints du backend (un autre joueur a bougé le token)
 		if (token.waypoints && token.waypoints.length > 0) {
-			this.movementQueue = token.waypoints.map(wp => ({
+			this.movementQueue = token.waypoints.map((wp) => ({
 				x: wp.x * this.gridSize,
-				y: wp.y * this.gridSize
+				y: wp.y * this.gridSize,
 			}));
 			this.movementQueue.push({ x: newTargetX, y: newTargetY });
-			
+
 			const first = this.movementQueue.shift()!;
 			this.targetX = first.x;
 			this.targetY = first.y;
-			
+
 			delete token.waypoints; // On consomme l'événement
 		} else {
 			// Calcul de la destination finale si on est en train d'animer
-			const finalDestX = this.movementQueue.length > 0 ? this.movementQueue[this.movementQueue.length - 1].x : this.targetX;
-			const finalDestY = this.movementQueue.length > 0 ? this.movementQueue[this.movementQueue.length - 1].y : this.targetY;
-			
+			const finalDestX =
+				this.movementQueue.length > 0
+					? this.movementQueue[this.movementQueue.length - 1].x
+					: this.targetX;
+			const finalDestY =
+				this.movementQueue.length > 0
+					? this.movementQueue[this.movementQueue.length - 1].y
+					: this.targetY;
+
 			// Si on reçoit notre propre echo WS (même destination), on ne coupe pas l'animation
-			if (Math.abs(finalDestX - newTargetX) < 1 && Math.abs(finalDestY - newTargetY) < 1) {
+			if (
+				Math.abs(finalDestX - newTargetX) < 1 &&
+				Math.abs(finalDestY - newTargetY) < 1
+			) {
 				// On laisse l'animation se terminer
 			} else {
 				this.targetX = newTargetX;
