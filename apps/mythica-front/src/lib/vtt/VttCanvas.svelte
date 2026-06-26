@@ -18,7 +18,7 @@
 		onWallRemove,
 	}: {
 		mapConfig: MapConfig | null;
-		onTokenMove?: (tokenId: string, x: number, y: number) => void;
+		onTokenMove?: (tokenId: string, x: number, y: number, waypoints?: {x: number, y: number}[]) => void;
 		onTokenDoubleClick?: (tokenId: string) => void;
 		onDropToken?: (
 			sheetId: string,

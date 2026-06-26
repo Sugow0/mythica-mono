@@ -2,7 +2,7 @@ import { prisma } from "../lib/prisma";
 import { isGameMaster, resolveSessionAccess } from "./session-access";
 
 export type TokenCommand =
-	| { type: "TOKEN_MOVE"; tokenId: string; x: number; y: number }
+	| { type: "TOKEN_MOVE"; tokenId: string; x: number; y: number; waypoints?: {x: number, y: number}[] }
 	| { type: "TOKEN_REMOVE"; tokenId: string }
 	| {
 			type: "TOKEN_UPDATE";
@@ -23,7 +23,7 @@ export type TokenCommand =
 	  };
 
 export type TokenEvent =
-	| { type: "TOKEN_MOVED"; tokenId: string; x: number; y: number }
+	| { type: "TOKEN_MOVED"; tokenId: string; x: number; y: number; waypoints?: {x: number, y: number}[] }
 	| { type: "TOKEN_REMOVED"; tokenId: string }
 	| { type: "TOKEN_UPDATED"; tokenId: string; [key: string]: unknown };
 
@@ -45,7 +45,13 @@ export function parseTokenCommand(raw: unknown): TokenCommand | null {
 				typeof cmd.x === "number" &&
 				typeof cmd.y === "number"
 			) {
-				return { type: "TOKEN_MOVE", tokenId: cmd.tokenId, x: cmd.x, y: cmd.y };
+				return { 
+					type: "TOKEN_MOVE", 
+					tokenId: cmd.tokenId, 
+					x: cmd.x, 
+					y: cmd.y,
+					waypoints: Array.isArray(cmd.waypoints) ? cmd.waypoints : undefined
+				};
 			}
 			return null;
 		case "TOKEN_REMOVE":
@@ -127,6 +133,7 @@ export async function handleTokenCommand(
 				tokenId: command.tokenId,
 				x: command.x,
 				y: command.y,
+				waypoints: command.waypoints,
 			};
 		}
 		case "TOKEN_REMOVE": {

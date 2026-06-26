@@ -11,7 +11,7 @@ import {
 import type { SessionTokenDto } from "../types";
 import { vttState } from "../vtt.svelte";
 
-export type TokenMoveCallback = (tokenId: string, x: number, y: number) => void;
+export type TokenMoveCallback = (tokenId: string, x: number, y: number, waypoints?: {x: number, y: number}[]) => void;
 export type TokenSelectCallback = (tokenId: string) => void;
 
 export class TokenSprite {
@@ -172,16 +172,23 @@ export class TokenSprite {
 
 		const dt = ticker.deltaTime;
 		// Vitesse d'interpolation
-		const speed = 0.1 * dt;
+		const speed = 0.2 * dt;
 
 		this.container.x += (this.targetX - this.container.x) * speed;
 		this.container.y += (this.targetY - this.container.y) * speed;
 
 		// Si on est très proche, on s'arrête (snap)
-		if (Math.abs(this.targetX - this.container.x) < 0.5)
+		if (Math.abs(this.targetX - this.container.x) < 1)
 			this.container.x = this.targetX;
-		if (Math.abs(this.targetY - this.container.y) < 0.5)
+		if (Math.abs(this.targetY - this.container.y) < 1)
 			this.container.y = this.targetY;
+
+		// Move to next waypoint if reached current target
+		if (this.container.x === this.targetX && this.container.y === this.targetY && this.movementQueue.length > 0) {
+			const next = this.movementQueue.shift()!;
+			this.targetX = next.x;
+			this.targetY = next.y;
+		}
 	}
 
 	private async loadImage(token: SessionTokenDto) {
@@ -310,7 +317,30 @@ export class TokenSprite {
 					? Math.round(finalY / this.gridSize)
 					: finalY / this.gridSize;
 
-				onMove(token.id, gridX, gridY);
+				// Construction des waypoints pour le backend (en coordonnées de grille)
+				const finalWaypoints = this.waypoints.slice(1).map(wp => ({
+					x: snap ? Math.round(wp.x / this.gridSize) : wp.x / this.gridSize,
+					y: snap ? Math.round(wp.y / this.gridSize) : wp.y / this.gridSize
+				}));
+
+				// Lancement de l'animation locale immédiatement
+				this.movementQueue = this.waypoints.slice(1).map(wp => ({
+					x: snap ? Math.round(wp.x / this.gridSize) * this.gridSize : wp.x,
+					y: snap ? Math.round(wp.y / this.gridSize) * this.gridSize : wp.y
+				}));
+				this.movementQueue.push({
+					x: gridX * this.gridSize,
+					y: gridY * this.gridSize
+				});
+
+				// On replace physiquement le token au point de départ pour qu'il anime vers la destination
+				this.container.x = startContainerX;
+				this.container.y = startContainerY;
+				const first = this.movementQueue.shift()!;
+				this.targetX = first.x;
+				this.targetY = first.y;
+
+				onMove(token.id, gridX, gridY, finalWaypoints.length > 0 ? finalWaypoints : undefined);
 			}
 		};
 
@@ -318,9 +348,40 @@ export class TokenSprite {
 		this.container.on("pointerupoutside", handlePointerUp);
 	}
 
-	update(token: SessionTokenDto) {
-		this.targetX = parseFloat(token.posX) * this.gridSize;
-		this.targetY = parseFloat(token.posY) * this.gridSize;
+	private movementQueue: {x: number, y: number}[] = [];
+
+	update(token: SessionTokenDto & { waypoints?: {x: number, y: number}[] }) {
+		const newTargetX = parseFloat(token.posX) * this.gridSize;
+		const newTargetY = parseFloat(token.posY) * this.gridSize;
+
+		// Si on a des waypoints du backend (un autre joueur a bougé le token)
+		if (token.waypoints && token.waypoints.length > 0) {
+			this.movementQueue = token.waypoints.map(wp => ({
+				x: wp.x * this.gridSize,
+				y: wp.y * this.gridSize
+			}));
+			this.movementQueue.push({ x: newTargetX, y: newTargetY });
+			
+			const first = this.movementQueue.shift()!;
+			this.targetX = first.x;
+			this.targetY = first.y;
+			
+			delete token.waypoints; // On consomme l'événement
+		} else {
+			// Calcul de la destination finale si on est en train d'animer
+			const finalDestX = this.movementQueue.length > 0 ? this.movementQueue[this.movementQueue.length - 1].x : this.targetX;
+			const finalDestY = this.movementQueue.length > 0 ? this.movementQueue[this.movementQueue.length - 1].y : this.targetY;
+			
+			// Si on reçoit notre propre echo WS (même destination), on ne coupe pas l'animation
+			if (Math.abs(finalDestX - newTargetX) < 1 && Math.abs(finalDestY - newTargetY) < 1) {
+				// On laisse l'animation se terminer
+			} else {
+				this.targetX = newTargetX;
+				this.targetY = newTargetY;
+				this.movementQueue = []; // On annule l'animation en cours car nouvelle destination
+			}
+		}
+
 		this.container.visible = token.isVisible;
 
 		if (token.maxHp && token.hp !== undefined && token.hp !== null) {

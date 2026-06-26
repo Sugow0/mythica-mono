@@ -158,8 +158,8 @@
 	<div class="absolute inset-0">
 		<VttCanvas
 			mapConfig={vttState.activeMap}
-			onTokenMove={(id, x, y) =>
-				ws?.send({ type: "TOKEN_MOVE", tokenId: id, x, y })}
+			onTokenMove={(id, x, y, waypoints) =>
+				ws?.send({ type: "TOKEN_MOVE", tokenId: id, x, y, waypoints })}
 			onTokenDoubleClick={(id) => (openedSheetTokenId = id)}
 			onDropToken={handleDropToken}
 			onFogPaint={isGm ? handleFogPaint : undefined}
