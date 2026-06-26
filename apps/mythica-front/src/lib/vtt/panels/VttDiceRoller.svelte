@@ -64,6 +64,9 @@
 					if (matches && matches.length > 0) {
 						const cleanFormula = matches.join(" + ");
 						console.log("Rolling 3D dice:", cleanFormula);
+						if (typeof diceBoxInstance.resizeWorld === "function") {
+							diceBoxInstance.resizeWorld();
+						}
 						diceBoxInstance.roll(cleanFormula).catch((err: any) => {
 							console.error("Error rolling 3D dice:", err);
 						});
@@ -127,6 +130,12 @@
 </div>
 
 <style>
+	:global(#dice-box-container canvas) {
+		width: 100vw !important;
+		height: 100vh !important;
+		display: block;
+	}
+
 	@keyframes fadeOut {
 		0% {
 			opacity: 0;
