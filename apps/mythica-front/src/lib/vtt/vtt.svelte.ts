@@ -39,6 +39,7 @@ export const vttState = (() => {
 	let focusedTokenId: string | null = $state(null);
 	let myCharacterSheetId: string | null = $state(null);
 	const customNames = $state<Record<string, string>>({});
+	let use3DDice = $state(true);
 
 	return {
 		get tokens() {
@@ -145,6 +146,12 @@ export const vttState = (() => {
 		},
 		setCustomName(userId: string, name: string) {
 			customNames[userId] = name;
+		},
+		get use3DDice() {
+			return use3DDice;
+		},
+		setUse3DDice(v: boolean) {
+			use3DDice = v;
 		},
 	};
 })();

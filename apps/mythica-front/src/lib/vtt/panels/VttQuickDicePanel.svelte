@@ -197,9 +197,24 @@
 			>
 				<DicesIcon class="h-4 w-4" />
 			</div>
-			<h2 class="text-sm font-medium tracking-tight text-foreground">
-				Lancer de dés
-			</h2>
+			<div class="flex items-center justify-between">
+				<h3
+					class="text-sm font-semibold text-foreground flex items-center gap-2"
+				>
+					Lancer rapide
+				</h3>
+				<label
+					class="ml-4 flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+				>
+					<input
+						type="checkbox"
+						checked={vttState.use3DDice}
+						onchange={(e) => vttState.setUse3DDice(e.currentTarget.checked)}
+						class="rounded border-border/30 bg-secondary/50 text-primary focus:ring-primary focus:ring-offset-0 w-3.5 h-3.5 cursor-pointer"
+					/>
+					Dés 3D
+				</label>
+			</div>
 		</div>
 		<button
 			onclick={onClose}
