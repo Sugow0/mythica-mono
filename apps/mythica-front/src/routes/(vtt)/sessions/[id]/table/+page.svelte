@@ -32,7 +32,9 @@
 	let showMaps = $state(false);
 	let showActors = $state(false);
 	let showMySheet = $state(false);
+	let openedSheetId = $state<string | null>(null);
 	let showDice = $state(false);
+	let openedSheetTokenId = $state<string | null>(null);
 
 	const mySheetId = $derived(
 		data.campaignSheets?.find(
@@ -151,11 +153,43 @@
 			mapConfig={vttState.activeMap}
 			onTokenMove={(id, x, y) =>
 				ws?.send({ type: "TOKEN_MOVE", tokenId: id, x, y })}
+			onTokenDoubleClick={(id) => (openedSheetTokenId = id)}
 			onDropToken={handleDropToken}
 			onFogPaint={isGm ? handleFogPaint : undefined}
 			onFogHide={isGm ? handleFogHide : undefined}
 			onTokenDelete={isGm
 				? (id) => ws?.send({ type: "TOKEN_REMOVE", tokenId: id })
+				: undefined}
+			onWallAdd={isGm
+				? (p1X, p1Y, p2X, p2Y, type) =>
+						ws?.send({ type: "WALL_ADD", p1X, p1Y, p2X, p2Y, wallType: type })
+				: undefined}
+			onWallRemove={isGm
+				? (x, y) => {
+						// On trouve le mur le plus proche de (x, y) (seuil 0.2 cases)
+						const wallId = vttState.walls.find((w) => {
+							// Distance d'un point à un segment
+							const l2 =
+								(Number(w.p1X) - Number(w.p2X)) ** 2 +
+								(Number(w.p1Y) - Number(w.p2Y)) ** 2;
+							if (l2 === 0)
+								return (
+									(x - Number(w.p1X)) ** 2 + (y - Number(w.p1Y)) ** 2 < 0.04
+								);
+							let t =
+								((x - Number(w.p1X)) * (Number(w.p2X) - Number(w.p1X)) +
+									(y - Number(w.p1Y)) * (Number(w.p2Y) - Number(w.p1Y))) /
+								l2;
+							t = Math.max(0, Math.min(1, t));
+							const dist2 =
+								(x - (Number(w.p1X) + t * (Number(w.p2X) - Number(w.p1X)))) **
+									2 +
+								(y - (Number(w.p1Y) + t * (Number(w.p2Y) - Number(w.p1Y)))) **
+									2;
+							return dist2 < 0.04; // distance < 0.2 case
+						})?.id;
+						if (wallId) ws?.send({ type: "WALL_REMOVE", wallId });
+					}
 				: undefined}
 		/>
 	</div>
@@ -204,6 +238,11 @@
 		<VttActorsPanel
 			campaignSheets={data.campaignSheets ?? []}
 			onClose={() => (showActors = false)}
+			onOpenSheet={(sheetId) => {
+				openedSheetId = sheetId;
+				openedSheetTokenId = null;
+				showMySheet = false;
+			}}
 		/>
 	{/if}
 	{#if vttState.combatState.started}
@@ -223,8 +262,13 @@
 	<VttCharacterSheetPanel
 		{ws}
 		campaignId={data.campaign?.id ?? ""}
-		sheetId={showMySheet ? (mySheetId ?? null) : undefined}
-		onClose={() => (showMySheet = false)}
+		sheetId={openedSheetId ?? (showMySheet ? (mySheetId ?? null) : undefined)}
+		tokenId={openedSheetTokenId}
+		onClose={() => {
+			showMySheet = false;
+			openedSheetId = null;
+			openedSheetTokenId = null;
+		}}
 	/>
 	<VttChatPanel {sessionId} campaignId={data.campaign?.id ?? ""} />
 </div>

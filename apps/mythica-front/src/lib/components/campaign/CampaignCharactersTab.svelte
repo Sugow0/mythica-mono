@@ -22,6 +22,8 @@
 	import CharacterSheetCard from "./CharacterSheetCard.svelte";
 	import ImportSheetModal from "./ImportSheetModal.svelte";
 	import ActivateSheetDialog from "./ActivateSheetDialog.svelte";
+	import * as Sheet from "$lib/components/ui/sheet";
+	import CharacterSheetViewer from "$lib/components/character-sheet/character-sheet-viewer.svelte";
 
 	interface Props {
 		campaignId: string;
@@ -45,6 +47,7 @@
 	let importOpen = $state(false);
 	let importForPool = $state(false);
 	let activateDialogSheet = $state<CampaignCharacterSheet | null>(null);
+	let viewSheetId = $state<string | null>(null);
 
 	// ── Computed ───────────────────────────────────────────────────────────────
 	const hasActiveSheet = $derived(mySheets.some((s) => s.status === "active"));
@@ -287,7 +290,7 @@
 							{hasActiveSheet}
 							onActivate={() => (activateDialogSheet = sheet)}
 							onRequestChange={() => handleRequestChange(sheet)}
-							onView={() => goto(`/characters/${sheet.characterSheetId}`)}
+							onView={() => (viewSheetId = sheet.characterSheetId)}
 						/>
 					{/each}
 				</div>
@@ -345,7 +348,7 @@
 									isGm={true}
 									onDisable={() => handleDisable(sheet)}
 									onReactivate={() => handleReactivate(sheet)}
-									onView={() => goto(`/characters/${sheet.characterSheetId}`)}
+									onView={() => (viewSheetId = sheet.characterSheetId)}
 								/>
 							{/each}
 						</div>
@@ -506,3 +509,16 @@
 		onCancel={() => (activateDialogSheet = null)}
 	/>
 {/if}
+
+<Sheet.Root
+	open={viewSheetId !== null}
+	onOpenChange={(v) => {
+		if (!v) viewSheetId = null;
+	}}
+>
+	<Sheet.Content side="right" class="w-full sm:max-w-2xl overflow-y-auto p-0">
+		{#if viewSheetId}
+			<CharacterSheetViewer sheetId={viewSheetId} />
+		{/if}
+	</Sheet.Content>
+</Sheet.Root>

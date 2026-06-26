@@ -8,6 +8,7 @@ import { sessionPresence } from "./session-presence-ws";
 import { sessionRooms } from "./session-rooms";
 import { buildSessionSnapshot } from "./session-snapshot";
 import { handleTokenCommand, parseTokenCommand } from "./session-tokens";
+import { handleWallCommand, parseWallCommand } from "./session-walls";
 
 /**
  * Serveur WebSocket des sessions de jeu.
@@ -76,6 +77,13 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 		const mapCmd = parseMapCommand(raw);
 		if (mapCmd) {
 			const event = await handleMapCommand(id, userId, mapCmd);
+			if (event) await sessionRooms.broadcast(id, event);
+			return;
+		}
+
+		const wallCmd = parseWallCommand(raw);
+		if (wallCmd) {
+			const event = await handleWallCommand(id, userId, wallCmd);
 			if (event) await sessionRooms.broadcast(id, event);
 			return;
 		}

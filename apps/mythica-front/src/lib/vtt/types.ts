@@ -56,3 +56,13 @@ export type DiceRollEvent = {
 	isPrivate: boolean;
 	rollerId: string;
 };
+
+export type SessionWallDto = {
+	id: string;
+	sessionId: string;
+	p1X: string | number;
+	p1Y: string | number;
+	p2X: string | number;
+	p2Y: string | number;
+	type: "normal" | "invisible" | "door" | "window";
+};

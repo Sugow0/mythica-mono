@@ -10,6 +10,7 @@ export interface CampaignCharacterSheet {
 	userId: string;
 	name: string;
 	avatarFileId: string | null;
+	avatarUrl: string | null;
 	status: CampaignSheetStatus;
 }
 

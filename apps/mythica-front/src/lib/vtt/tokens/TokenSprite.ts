@@ -29,6 +29,7 @@ export class TokenSprite {
 		token: SessionTokenDto,
 		onMove: TokenMoveCallback,
 		onSelect: TokenSelectCallback,
+		onDoubleClick: TokenSelectCallback | undefined,
 		gridSize = 100,
 		ticker: Ticker
 	) {
@@ -74,7 +75,7 @@ export class TokenSprite {
 			this.loadImage(token);
 		}
 
-		this.makeDraggable(onMove, onSelect, token);
+		this.makeDraggable(onMove, onSelect, onDoubleClick, token);
 
 		this.ticker.add(this.onTick, this);
 	}
@@ -114,6 +115,7 @@ export class TokenSprite {
 	private makeDraggable(
 		onMove: TokenMoveCallback,
 		onSelect: TokenSelectCallback,
+		onDoubleClick: TokenSelectCallback | undefined,
 		token: SessionTokenDto
 	) {
 		this.container.eventMode = "static";
@@ -125,6 +127,7 @@ export class TokenSprite {
 		let dragStartLocal = { x: 0, y: 0 };
 		let startContainerX = this.targetX;
 		let startContainerY = this.targetY;
+		let lastClickTime = 0;
 
 		const rulerGraphics = new Graphics();
 		const rulerText = new Text({
@@ -196,7 +199,14 @@ export class TokenSprite {
 				Math.abs(e.globalX - startMouseX) + Math.abs(e.globalY - startMouseY);
 
 			if (dist < 5) {
-				onSelect(token.id);
+				const now = Date.now();
+				if (now - lastClickTime < 300) {
+					onDoubleClick?.(token.id);
+					lastClickTime = 0;
+				} else {
+					onSelect(token.id);
+					lastClickTime = now;
+				}
 			} else {
 				const localPos = e.getLocalPosition(this.container.parent!);
 				const dx = localPos.x - dragStartLocal.x;

@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
+import { getPresignedAvatarUrl } from "../lib/avatar-storage";
 import { getPresignedCoverUrl } from "../lib/cover-storage";
 import { ErrorResponse, SuccessMessageResponse } from "../lib/http";
 import { newId } from "../lib/id";
@@ -173,6 +174,14 @@ async function coverUrlFor(c: {
 	return getPresignedCoverUrl(c.id).catch(() => null);
 }
 
+async function avatarUrlFor(sheet: {
+	id: string;
+	avatarFileId: string | null;
+}): Promise<string | null> {
+	if (!sheet.avatarFileId) return null;
+	return getPresignedAvatarUrl(sheet.id).catch(() => null);
+}
+
 const CampaignSheetStatus = t.Union([
 	t.Literal("active"),
 	t.Literal("inactive"),
@@ -186,6 +195,7 @@ const CampaignCharacterSheetSchema = t.Object({
 	userId: t.String({ format: "uuid" }),
 	name: t.String(),
 	avatarFileId: t.Nullable(t.String({ format: "uuid" })),
+	avatarUrl: t.Union([t.String(), t.Null()]),
 	status: CampaignSheetStatus,
 });
 
@@ -1311,19 +1321,22 @@ export const campaignsController = new Elysia({ prefix: "/campaigns" })
 				},
 				include: {
 					characterSheet: {
-						select: { userId: true, name: true, avatarFileId: true },
+						select: { id: true, userId: true, name: true, avatarFileId: true },
 					},
 				},
 			});
 
-			const sheets = rows.map((row) => ({
-				id: row.id,
-				characterSheetId: row.characterSheetId,
-				userId: row.characterSheet.userId,
-				name: row.characterSheet.name,
-				avatarFileId: row.characterSheet.avatarFileId,
-				status: row.status,
-			}));
+			const sheets = await Promise.all(
+				rows.map(async (row) => ({
+					id: row.id,
+					characterSheetId: row.characterSheetId,
+					userId: row.characterSheet.userId,
+					name: row.characterSheet.name,
+					avatarFileId: row.characterSheet.avatarFileId,
+					avatarUrl: await avatarUrlFor(row.characterSheet),
+					status: row.status,
+				})),
+			);
 			return { success: true as const, sheets };
 		},
 		{

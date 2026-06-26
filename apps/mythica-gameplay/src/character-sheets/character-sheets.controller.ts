@@ -526,9 +526,24 @@ export const characterSheetsController = new Elysia({
 				return { success: false as const, error: "Fiche introuvable" };
 			}
 			// Accès : le propriétaire toujours ; les autres seulement si la fiche
-			// est publique (le partage campagne passe par les routes de campagne).
+			// est publique, OU s'ils sont MJ d'une campagne dans laquelle la fiche est utilisée.
 			const isOwner = sheet.userId === currentUser.id;
-			if (!isOwner && sheet.visibility !== "public") {
+			let hasAccess = isOwner || sheet.visibility === "public";
+
+			if (!hasAccess) {
+				const linkedCampaigns = await prisma.campaignCharacterSheet.findMany({
+					where: { characterSheetId: sheet.id },
+					select: { campaign: { select: { ownerId: true } } },
+				});
+				for (const link of linkedCampaigns) {
+					if (link.campaign.ownerId === currentUser.id) {
+						hasAccess = true;
+						break;
+					}
+				}
+			}
+
+			if (!hasAccess) {
 				set.status = 403;
 				return { success: false as const, error: "Accès refusé" };
 			}

@@ -34,6 +34,7 @@ export type SessionSnapshot = {
 	activeMap: unknown | null;
 	mapState: unknown;
 	tokens: SnapshotToken[];
+	walls: unknown[];
 	activeTurn: string | null;
 	combatState: unknown;
 	messages: SnapshotMessage[];
@@ -58,7 +59,7 @@ export async function buildSessionSnapshot(
 	});
 	if (!session) return null;
 
-	const [messages, tokens] = await Promise.all([
+	const [messages, tokens, walls] = await Promise.all([
 		prisma.message.findMany({
 			where: { campaignId: session.campaignId },
 			orderBy: { createdAt: "desc" },
@@ -66,6 +67,10 @@ export async function buildSessionSnapshot(
 			include: { user: { select: { pseudo: true } } },
 		}),
 		prisma.sessionToken.findMany({
+			where: { sessionId },
+			orderBy: { createdAt: "asc" },
+		}),
+		prisma.sessionWall.findMany({
 			where: { sessionId },
 			orderBy: { createdAt: "asc" },
 		}),
@@ -77,6 +82,7 @@ export async function buildSessionSnapshot(
 		activeMap: session.activeMap ?? null,
 		mapState: session.mapState,
 		tokens: tokens as unknown as SnapshotToken[],
+		walls,
 		activeTurn:
 			(session.combatState as { activeTurn?: string | null })?.activeTurn ??
 			null,

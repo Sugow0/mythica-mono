@@ -14,9 +14,25 @@
 
 	// eslint-disable-next-line svelte/prefer-writable-derived -- isDark est aussi écrit dans toggleTheme
 	let isDark = $state(false);
+	let avatarUrl = $state<string | null>(null);
 
 	$effect(() => {
 		isDark = document.documentElement.classList.contains("dark");
+	});
+
+	$effect(() => {
+		if (user?.avatar) {
+			import("$lib/index.js").then(({ userService }) => {
+				userService
+					.getAvatarUrl()
+					.then((a) => {
+						avatarUrl = a?.avatarUrl ?? null;
+					})
+					.catch(() => {
+						avatarUrl = null;
+					});
+			});
+		}
 	});
 
 	function toggleTheme() {
@@ -53,8 +69,8 @@
 			aria-label={m.user_menu_label()}
 		>
 			<Avatar.Root class="h-9 w-9">
-				{#if user?.avatar}
-					<Avatar.Image src={user?.avatar} alt={user?.pseudo} />
+				{#if avatarUrl}
+					<Avatar.Image src={avatarUrl} alt={user?.pseudo} />
 				{/if}
 				<Avatar.Fallback
 					class="bg-linear-to-br from-red-500 to-red-600 text-xs font-bold text-white"

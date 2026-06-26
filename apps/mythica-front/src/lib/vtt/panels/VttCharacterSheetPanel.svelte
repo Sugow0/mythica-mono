@@ -9,26 +9,25 @@
 		ws,
 		campaignId,
 		sheetId: explicitSheetId,
+		tokenId,
 		onClose,
 	}: {
 		ws: VttWebSocket | null;
 		campaignId: string;
 		sheetId?: string | null;
+		tokenId?: string | null;
 		onClose?: () => void;
 	} = $props();
 
-	const selectedToken = $derived(
-		vttState.tokens.find((t) => t.id === vttState.selectedTokenId)
-	);
+	const openedToken = $derived(vttState.tokens.find((t) => t.id === tokenId));
 	const sheetId = $derived(
 		explicitSheetId !== undefined
 			? explicitSheetId
-			: selectedToken?.characterSheetId
+			: openedToken?.characterSheetId
 	);
 
 	function close() {
 		if (onClose) onClose();
-		vttState.setSelectedTokenId(null);
 	}
 
 	function handleRoll(formula: string, label: string) {
@@ -120,9 +119,11 @@
 			onpointermove={onPointerMove}
 			onpointerup={onPointerUp}
 			onpointercancel={onPointerUp}
+			role="button"
+			tabindex="0"
 		>
 			<h2 class="text-sm font-semibold text-slate-200">
-				{selectedToken?.label ?? "Fiche de personnage"}
+				{openedToken?.label ?? "Fiche de personnage"}
 			</h2>
 			<button
 				onpointerdown={(e) => e.stopPropagation()}
@@ -169,6 +170,8 @@
 			onpointermove={onPointerMove}
 			onpointerup={onPointerUp}
 			onpointercancel={onPointerUp}
+			role="button"
+			tabindex="0"
 		>
 			<h2 class="text-sm font-semibold text-slate-200">Fiche de personnage</h2>
 			<button

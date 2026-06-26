@@ -72,6 +72,15 @@ enum TokenLayer {
   @@map("token_layer")
 }
 
+enum WallType {
+  normal
+  invisible
+  door
+  window
+
+  @@map("wall_type")
+}
+
 enum FileDomain {
   map
   token
@@ -570,6 +579,7 @@ model Session {
   campaign        Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   activeMap       Map?           @relation("SessionActiveMap", fields: [activeMapId], references: [id], onDelete: SetNull)
   tokens          SessionToken[]
+  walls           SessionWall[]
   sessionMessages Message[]
 
   @@index([campaignId], name: "idx_sessions_campaign")
@@ -630,6 +640,28 @@ model SessionTokenOverride {
   @@index([sessionTokenId], name: "idx_token_overrides_token")
   @@index([propertyId], name: "idx_token_overrides_property")
   @@map("session_token_overrides")
+}
+
+// ------------------------------------------------------------
+// SESSION WALL
+// Murs de la session pour la ligne de vue / brouillard dynamique
+// ------------------------------------------------------------
+
+model SessionWall {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  p1X       Decimal  @map("p1_x") @db.Decimal
+  p1Y       Decimal  @map("p1_y") @db.Decimal
+  p2X       Decimal  @map("p2_x") @db.Decimal
+  p2Y       Decimal  @map("p2_y") @db.Decimal
+  type      WallType @default(normal)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId], name: "idx_session_walls_session")
+  @@map("session_walls")
 }
 
 // ------------------------------------------------------------
