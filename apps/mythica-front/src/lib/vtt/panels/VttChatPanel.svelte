@@ -52,6 +52,25 @@
 		}
 	}
 
+	function parseDiceRoll(content: string) {
+		try {
+			const colonIndex = content.indexOf(":");
+			const eqIndex = content.lastIndexOf("=");
+			const startTotal = content.indexOf("**");
+			const endTotal = content.lastIndexOf("**");
+
+			if (colonIndex > -1 && eqIndex > -1 && startTotal > -1 && endTotal > -1) {
+				const title = content.substring(2, colonIndex).trim(); // skip 🎲
+				const details = content.substring(colonIndex + 1, eqIndex).trim();
+				const total = content.substring(startTotal + 2, endTotal).trim();
+				const extra = content.substring(endTotal + 2).trim();
+
+				return { title, details, total, extra };
+			}
+		} catch (e) {}
+		return null;
+	}
+
 	onMount(async () => {
 		try {
 			const res = await campaignService.getMessages(campaignId);
@@ -90,7 +109,7 @@
 
 <div
 	class="fixed bottom-4 right-4 z-50 flex flex-col overflow-hidden rounded-[1.5rem] border border-border/40 bg-background/70 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-3xl transition-all duration-300 ease-out {isOpen
-		? 'h-[calc(100vh-2rem)] w-80'
+		? 'h-[66vh] w-80'
 		: 'h-12 w-48'}"
 >
 	<button
@@ -146,11 +165,50 @@
 
 					<div class="text-[13px] leading-relaxed text-foreground/90">
 						{#if isDice}
-							<div
-								class="mt-1 flex items-center justify-center rounded-lg border border-primary/20 bg-primary/5 py-2.5 px-3 text-center font-medium text-primary shadow-inner"
-							>
-								{msg.content}
-							</div>
+							{@const parsed = parseDiceRoll(msg.content)}
+							{#if parsed}
+								<div
+									class="mt-1 flex flex-col overflow-hidden rounded-xl border border-primary/20 bg-primary/5 shadow-inner"
+								>
+									<div
+										class="flex flex-col items-center justify-center p-3 text-center"
+									>
+										<span
+											class="text-[10px] font-semibold uppercase tracking-wider text-primary/70"
+											>{parsed.title}
+											<span class="text-muted-foreground/80 normal-case"
+												>{parsed.extra}</span
+											></span
+										>
+										<span
+											class="mt-1 text-4xl font-bold tracking-tighter text-primary"
+											>{parsed.total}</span
+										>
+									</div>
+									<details class="group/dice border-t border-primary/10">
+										<summary
+											class="list-none flex cursor-pointer items-center justify-center bg-primary/10 py-2 text-[10px] font-medium text-primary hover:bg-primary/20 [&::-webkit-details-marker]:hidden"
+										>
+											<span class="mr-1 uppercase tracking-widest">Détails</span
+											>
+											<ChevronDownIcon
+												class="h-3 w-3 transition-transform group-open/dice:rotate-180"
+											/>
+										</summary>
+										<div
+											class="border-t border-primary/10 bg-primary/5 px-3 py-2.5 text-center text-xs font-mono text-primary/80"
+										>
+											{parsed.details}
+										</div>
+									</details>
+								</div>
+							{:else}
+								<div
+									class="mt-1 flex items-center justify-center rounded-lg border border-primary/20 bg-primary/5 py-2.5 px-3 text-center font-medium text-primary shadow-inner"
+								>
+									{msg.content}
+								</div>
+							{/if}
 						{:else}
 							{msg.content}
 						{/if}
