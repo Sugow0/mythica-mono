@@ -102,15 +102,16 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 			raw &&
 			typeof raw === "object" &&
 			"type" in raw &&
-			raw.type === "PRESENCE_RENAME" &&
-			"name" in raw &&
-			typeof raw.name === "string"
+			raw.type === "PRESENCE_UPDATE"
 		) {
-			await sessionRooms.broadcast(id, {
-				type: "PRESENCE_RENAME",
-				userId,
-				name: raw.name.slice(0, 50),
-			});
+			const event: any = { type: "PRESENCE_UPDATE", userId };
+			if ("name" in raw && typeof raw.name === "string") {
+				event.name = raw.name.slice(0, 50);
+			}
+			if ("color" in raw && typeof raw.color === "string") {
+				event.color = raw.color.slice(0, 20);
+			}
+			await sessionRooms.broadcast(id, event);
 			return;
 		}
 	},

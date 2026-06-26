@@ -8,6 +8,7 @@
 		x: number;
 		y: number;
 		rotation: number;
+		color: string;
 	};
 
 	let visualRolls = $state<VisualRoll[]>([]);
@@ -52,21 +53,39 @@
 		};
 	});
 
+	function stringToColor(str: string) {
+		let hash = 0;
+		for (let i = 0; i < str.length; i++) {
+			hash = str.charCodeAt(i) + ((hash << 5) - hash);
+		}
+		const c = (hash & 0x00ffffff).toString(16).toUpperCase();
+		return "#" + "00000".substring(0, 6 - c.length) + c;
+	}
+
 	$effect(() => {
 		const newRolls = vttState.diceRolls.slice(processedCount);
 		if (newRolls.length > 0) {
 			processedCount = vttState.diceRolls.length;
 
 			newRolls.forEach((r) => {
+				const rollerColor =
+					vttState.customColors[r.rollerId] || stringToColor(r.rollerId);
 				if (vttState.use3DDice && diceBoxReady && diceBoxInstance) {
 					// Extract only valid dice strings (e.g. "1d20", "2d6") and join them
 					const matches = r.formula.match(/\d*[dD]\d+/g);
 					if (matches && matches.length > 0) {
 						const cleanFormula = matches.join(" + ");
-						console.log("Rolling 3D dice:", cleanFormula);
+						console.log(
+							"Rolling 3D dice:",
+							cleanFormula,
+							"with color:",
+							rollerColor
+						);
 						if (typeof diceBoxInstance.resizeWorld === "function") {
 							diceBoxInstance.resizeWorld();
 						}
+						// Use updateConfig or pass it directly. dice-box 1.1.4 accepts it in roll() or updateConfig()
+						diceBoxInstance.updateConfig({ themeColor: rollerColor });
 						diceBoxInstance.roll(cleanFormula).catch((err: any) => {
 							console.error("Error rolling 3D dice:", err);
 						});
@@ -87,6 +106,7 @@
 									x: startX,
 									y: startY,
 									rotation: Math.random() * 360 + 720,
+									color: rollerColor,
 								},
 							];
 						});
@@ -116,10 +136,12 @@
 >
 	{#each visualRolls as roll (roll.id)}
 		<div
-			class="absolute flex h-16 w-16 items-center justify-center rounded-xl border-2 border-red-500 bg-red-950 text-2xl font-bold text-white shadow-lg transition-all duration-1000 ease-out"
+			class="absolute flex h-16 w-16 items-center justify-center rounded-xl border-2 text-2xl font-bold text-white shadow-lg transition-all duration-1000 ease-out"
 			style="
 				left: {roll.x}px; 
 				top: {roll.y}px; 
+				background-color: {roll.color};
+				border-color: rgba(255,255,255,0.3);
 				transform: translate(-50%, -50%) rotate({roll.rotation}deg);
 				animation: fadeOut 2s forwards;
 			"

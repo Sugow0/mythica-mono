@@ -237,7 +237,8 @@
 		participants={vttState.participants}
 		members={data.members}
 		currentUserId={data.user?.id}
-		onRename={(name) => ws?.send({ type: "PRESENCE_RENAME", name })}
+		onUpdateProfile={(profile) =>
+			ws?.send({ type: "PRESENCE_UPDATE", ...profile })}
 	/>
 	<VttToolbar
 		{isGm}

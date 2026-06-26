@@ -39,6 +39,7 @@ export const vttState = (() => {
 	let focusedTokenId: string | null = $state(null);
 	let myCharacterSheetId: string | null = $state(null);
 	const customNames = $state<Record<string, string>>({});
+	const customColors = $state<Record<string, string>>({});
 	let use3DDice = $state(true);
 
 	return {
@@ -80,6 +81,9 @@ export const vttState = (() => {
 		},
 		get customNames() {
 			return customNames;
+		},
+		get customColors() {
+			return customColors;
 		},
 
 		get walls() {
@@ -146,6 +150,9 @@ export const vttState = (() => {
 		},
 		setCustomName(userId: string, name: string) {
 			customNames[userId] = name;
+		},
+		setCustomColor(userId: string, color: string) {
+			customColors[userId] = color;
 		},
 		get use3DDice() {
 			return use3DDice;

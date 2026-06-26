@@ -56,6 +56,7 @@ export type SessionTokenDto = {
 export type Participant = {
 	userId: string;
 	pseudo?: string | null;
+	color?: string | null;
 };
 
 export type DiceRollEvent = {

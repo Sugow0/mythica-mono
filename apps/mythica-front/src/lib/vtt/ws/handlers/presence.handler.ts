@@ -14,9 +14,12 @@ export function handlePresenceEvent(
 		}
 	} else if (event.type === "PRESENCE_LEAVE") {
 		state.setParticipants(state.participants.filter((p) => p !== userId));
-	} else if (event.type === "PRESENCE_RENAME") {
+	} else if (event.type === "PRESENCE_UPDATE") {
 		if (typeof event.name === "string") {
 			state.setCustomName(userId, event.name);
+		}
+		if (typeof event.color === "string") {
+			state.setCustomColor(userId, event.color);
 		}
 	}
 }

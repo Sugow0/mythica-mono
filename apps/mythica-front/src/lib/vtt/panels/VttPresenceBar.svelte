@@ -9,7 +9,7 @@
 		participants,
 		members = [],
 		currentUserId,
-		onRename,
+		onUpdateProfile,
 	}: {
 		participants: string[];
 		members?: {
@@ -18,20 +18,22 @@
 			user?: { pseudo: string | null };
 		}[];
 		currentUserId?: string;
-		onRename?: (name: string) => void;
+		onUpdateProfile?: (profile: { name?: string; color?: string }) => void;
 	} = $props();
 
-	let editingName = $state(false);
+	let editingUserId = $state<string | null>(null);
 	let newName = $state("");
+	let newColor = $state("");
 
 	function getMemberInfo(userId: string) {
 		const member = members.find((m) => m.userId === userId);
 		const customName = vttState.customNames[userId];
+		const customColor = vttState.customColors[userId];
 		return {
 			name:
 				customName || member?.user?.pseudo || `Joueur ${userId.slice(0, 4)}`,
 			role: member?.role || "player",
-			color: stringToColor(userId),
+			color: customColor || stringToColor(userId),
 		};
 	}
 
@@ -44,21 +46,26 @@
 		return "#" + "00000".substring(0, 6 - c.length) + c;
 	}
 
-	function startEdit(currentName: string) {
+	function startEdit(
+		userId: string,
+		currentName: string,
+		currentColor: string
+	) {
 		newName = currentName;
-		editingName = true;
+		newColor = currentColor;
+		editingUserId = userId;
 	}
 
 	function submitEdit() {
-		if (newName.trim() && onRename) {
-			onRename(newName.trim());
+		if (onUpdateProfile) {
+			onUpdateProfile({ name: newName.trim() || undefined, color: newColor });
 		}
-		editingName = false;
+		editingUserId = null;
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === "Enter") submitEdit();
-		if (e.key === "Escape") editingName = false;
+		if (e.key === "Escape") editingUserId = null;
 	}
 </script>
 
@@ -80,24 +87,32 @@
 				<div
 					class="group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-800/50"
 				>
-					<span
-						class="h-2.5 w-2.5 flex-shrink-0 rounded-full {info.role ===
-						'spectator'
-							? 'opacity-50'
-							: ''}"
-						style="background-color: {info.color}; box-shadow: 0 0 5px {info.color};"
-					></span>
-
-					{#if editingName && currentUserId === userId}
+					{#if editingUserId === userId}
+						<input
+							type="color"
+							bind:value={newColor}
+							class="h-5 w-5 cursor-pointer rounded border-0 p-0 outline-none"
+						/>
 						<input
 							type="text"
 							bind:value={newName}
 							onkeydown={handleKeydown}
-							onblur={submitEdit}
 							class="w-full min-w-0 rounded bg-slate-950 px-1 py-0.5 text-sm text-slate-200 outline-none focus:ring-1 focus:ring-red-500"
 							autofocus
 						/>
+						<button
+							class="text-xs text-green-400 hover:text-green-300"
+							onclick={submitEdit}>OK</button
+						>
 					{:else}
+						<span
+							class="h-2.5 w-2.5 flex-shrink-0 rounded-full {info.role ===
+							'spectator'
+								? 'opacity-50'
+								: ''}"
+							style="background-color: {info.color}; box-shadow: 0 0 5px {info.color};"
+						></span>
+
 						<span
 							class="truncate text-sm font-medium {info.role === 'spectator'
 								? 'text-slate-400 italic'
@@ -109,9 +124,9 @@
 
 						{#if currentUserId === userId && info.role !== "spectator"}
 							<button
-								onclick={() => startEdit(info.name)}
+								onclick={() => startEdit(userId, info.name, info.color)}
 								class="ml-1 opacity-0 transition-opacity group-hover:opacity-100 hover:text-white text-slate-400"
-								title="Renommer mon personnage"
+								title="Modifier mon profil"
 							>
 								<PencilIcon class="h-3 w-3" />
 							</button>
@@ -122,13 +137,11 @@
 								class="ml-auto h-3.5 w-3.5 flex-shrink-0 text-yellow-500"
 								title="Maître du Jeu"
 							/>
-						{:else}
-							{#if info.role === "spectator"}
-								<EyeIcon
-									class="ml-auto h-3.5 w-3.5 flex-shrink-0 text-slate-500"
-									title="Spectateur"
-								/>
-							{/if}
+						{:else if info.role === "spectator"}
+							<EyeIcon
+								class="ml-auto h-3.5 w-3.5 flex-shrink-0 text-slate-500"
+								title="Spectateur"
+							/>
 						{/if}
 					{/if}
 				</div>
