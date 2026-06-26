@@ -75,6 +75,14 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 				set.status = access.status;
 				return { success: false as const, error: access.error };
 			}
+			const gm = isGameMaster(access)(currentUser as CurrentUser);
+			if (access.session.status !== "active" && !gm) {
+				set.status = 403;
+				return {
+					success: false as const,
+					error: "La session n'a pas encore commencé",
+				};
+			}
 
 			const members = await prisma.campaignMember.findMany({
 				where: { campaignId: access.campaign.id, leftAt: null },
