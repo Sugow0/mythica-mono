@@ -22,7 +22,7 @@
 		import("@3d-dice/dice-box").then((mod) => {
 			if (!isMounted) return;
 			const DiceBox = mod.default;
-			diceBoxInstance = new DiceBox(diceBoxContainer, {
+			diceBoxInstance = new DiceBox("#dice-box-container", {
 				assetPath: "/assets/dice-box/",
 				theme: "default",
 				themeColor: "#991b1b",
@@ -32,15 +32,22 @@
 				startingHeight: 8,
 			});
 
-			diceBoxInstance.init().then(() => {
-				if (isMounted) diceBoxReady = true;
-			});
+			diceBoxInstance
+				.init()
+				.then(() => {
+					console.log("3D Dice Box initialized successfully!");
+					if (isMounted) diceBoxReady = true;
+				})
+				.catch((err: any) => {
+					console.error("Failed to initialize 3D Dice Box:", err);
+				});
 		});
 
 		return () => {
 			isMounted = false;
-			if (diceBoxInstance && diceBoxContainer) {
-				diceBoxContainer.innerHTML = "";
+			if (diceBoxInstance) {
+				const container = document.getElementById("dice-box-container");
+				if (container) container.innerHTML = "";
 			}
 		};
 	});
@@ -52,13 +59,17 @@
 
 			newRolls.forEach((r) => {
 				if (vttState.use3DDice && diceBoxReady && diceBoxInstance) {
-					let cleanFormula = r.formula.replace(/[kK][hHlL]\d+/g, "");
-					// dice-box also doesn't like pure modifiers sometimes, we can try to strip + 10
-					cleanFormula = cleanFormula.replace(/^[+-]?\s*\d+\s*([+-]|$)/g, "");
-					if (cleanFormula.trim()) {
-						diceBoxInstance.roll(cleanFormula).catch(() => {});
+					// Extract only valid dice strings (e.g. "1d20", "2d6") and join them
+					const matches = r.formula.match(/\d*[dD]\d+/g);
+					if (matches && matches.length > 0) {
+						const cleanFormula = matches.join(" + ");
+						console.log("Rolling 3D dice:", cleanFormula);
+						diceBoxInstance.roll(cleanFormula).catch((err: any) => {
+							console.error("Error rolling 3D dice:", err);
+						});
 					}
-				} else {
+				} else if (!vttState.use3DDice) {
+					// Fallback to 2D
 					r.results.forEach((val) => {
 						const id = Math.random().toString(36).substring(2);
 						const startX = window.innerWidth / 2 + (Math.random() * 100 - 50);
@@ -90,7 +101,7 @@
 </script>
 
 <div
-	bind:this={diceBoxContainer}
+	id="dice-box-container"
 	class="pointer-events-none fixed inset-0 z-[100] w-full h-full overflow-hidden transition-opacity duration-300"
 	class:opacity-0={!vttState.use3DDice}
 ></div>
