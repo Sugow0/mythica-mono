@@ -46,6 +46,7 @@ export class TokenSprite {
 	});
 	private tokenWidth: number;
 	private tokenHeight: number;
+	private mapConfig: MapConfig | null = null;
 
 	constructor(
 		token: SessionTokenDto,
@@ -53,13 +54,15 @@ export class TokenSprite {
 		onSelect: TokenSelectCallback,
 		onDoubleClick: TokenSelectCallback | undefined,
 		gridSize = 100,
-		ticker: Ticker
+		ticker: Ticker,
+		mapConfig: MapConfig | null = null
 	) {
 		this.tokenId = token.id;
 		this.gridSize = gridSize;
 		this.ticker = ticker;
 		this.tokenWidth = token.width;
 		this.tokenHeight = token.height;
+		this.mapConfig = mapConfig;
 
 		this.targetX = parseFloat(token.posX) * this.gridSize;
 		this.targetY = parseFloat(token.posY) * this.gridSize;
@@ -108,6 +111,10 @@ export class TokenSprite {
 		this.makeDraggable(onMove, onSelect, onDoubleClick, token);
 
 		this.ticker.add(this.onTick, this);
+	}
+
+	setMapConfig(config: MapConfig | null) {
+		this.mapConfig = config;
 	}
 
 	private handleKeyDown = (e: KeyboardEvent) => {
@@ -280,8 +287,29 @@ export class TokenSprite {
 			const dx = localPos.x - dragStartLocal.x;
 			const dy = localPos.y - dragStartLocal.y;
 
-			this.targetX = startContainerX + dx;
-			this.targetY = startContainerY + dy;
+			let newTargetX = startContainerX + dx;
+			let newTargetY = startContainerY + dy;
+
+			if (this.mapConfig) {
+				const snappedWidth =
+					Math.ceil(this.mapConfig.widthPx / this.gridSize) * this.gridSize;
+				const snappedHeight =
+					Math.ceil(this.mapConfig.heightPx / this.gridSize) * this.gridSize;
+				const tokenPixelWidth = this.tokenWidth * this.gridSize;
+				const tokenPixelHeight = this.tokenHeight * this.gridSize;
+
+				newTargetX = Math.max(
+					0,
+					Math.min(newTargetX, snappedWidth - tokenPixelWidth)
+				);
+				newTargetY = Math.max(
+					0,
+					Math.min(newTargetY, snappedHeight - tokenPixelHeight)
+				);
+			}
+
+			this.targetX = newTargetX;
+			this.targetY = newTargetY;
 
 			this.drawRuler();
 		});
@@ -324,8 +352,26 @@ export class TokenSprite {
 				const dy = localPos.y - dragStartLocal.y;
 
 				const snap = !e.shiftKey;
-				const finalX = startContainerX + dx;
-				const finalY = startContainerY + dy;
+				let finalX = startContainerX + dx;
+				let finalY = startContainerY + dy;
+
+				if (this.mapConfig) {
+					const snappedWidth =
+						Math.ceil(this.mapConfig.widthPx / this.gridSize) * this.gridSize;
+					const snappedHeight =
+						Math.ceil(this.mapConfig.heightPx / this.gridSize) * this.gridSize;
+					const tokenPixelWidth = this.tokenWidth * this.gridSize;
+					const tokenPixelHeight = this.tokenHeight * this.gridSize;
+
+					finalX = Math.max(
+						0,
+						Math.min(finalX, snappedWidth - tokenPixelWidth)
+					);
+					finalY = Math.max(
+						0,
+						Math.min(finalY, snappedHeight - tokenPixelHeight)
+					);
+				}
 
 				const gridX = snap
 					? Math.round(finalX / this.gridSize)

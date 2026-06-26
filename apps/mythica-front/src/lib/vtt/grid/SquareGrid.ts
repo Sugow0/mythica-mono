@@ -17,16 +17,24 @@ export function drawSquareGrid(graphics: Graphics, config: MapConfig) {
 
 	graphics.clear();
 
+	const cols = Math.ceil(config.widthPx / config.gridSize);
+	const rows = Math.ceil(config.heightPx / config.gridSize);
+	const snappedWidth = cols * config.gridSize;
+	const snappedHeight = rows * config.gridSize;
+
 	// Lignes verticales
-	for (let x = gridOffsetX % gridSize; x <= widthPx; x += gridSize) {
+	for (let x = gridOffsetX % gridSize; x <= snappedWidth; x += gridSize) {
 		graphics
 			.moveTo(x, 0)
-			.lineTo(x, heightPx)
+			.lineTo(x, snappedHeight)
 			.stroke({ color, alpha, width: 1 });
 	}
 	// Lignes horizontales
-	for (let y = gridOffsetY % gridSize; y <= heightPx; y += gridSize) {
-		graphics.moveTo(0, y).lineTo(widthPx, y).stroke({ color, alpha, width: 1 });
+	for (let y = gridOffsetY % gridSize; y <= snappedHeight; y += gridSize) {
+		graphics
+			.moveTo(0, y)
+			.lineTo(snappedWidth, y)
+			.stroke({ color, alpha, width: 1 });
 	}
 }
 

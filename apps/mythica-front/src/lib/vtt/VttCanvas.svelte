@@ -18,7 +18,12 @@
 		onWallRemove,
 	}: {
 		mapConfig: MapConfig | null;
-		onTokenMove?: (tokenId: string, x: number, y: number, waypoints?: {x: number, y: number}[]) => void;
+		onTokenMove?: (
+			tokenId: string,
+			x: number,
+			y: number,
+			waypoints?: { x: number; y: number }[]
+		) => void;
 		onTokenDoubleClick?: (tokenId: string) => void;
 		onDropToken?: (
 			sheetId: string,
@@ -188,9 +193,13 @@
 		if (!stage) return;
 
 		// Convertir les dimensions de la map en coordonnées écran
-		const cfg = mapConfig ?? { widthPx: 20000, heightPx: 20000 };
-		const sx = cfg.widthPx * stage.scale.x;
-		const sy = cfg.heightPx * stage.scale.y;
+		const cfg = mapConfig ?? { widthPx: 20000, heightPx: 20000, gridSize: 100 };
+		const maxCols = Math.ceil(cfg.widthPx / cfg.gridSize);
+		const maxRows = Math.ceil(cfg.heightPx / cfg.gridSize);
+		const snappedWidth = maxCols * cfg.gridSize;
+		const snappedHeight = maxRows * cfg.gridSize;
+		const sx = snappedWidth * stage.scale.x;
+		const sy = snappedHeight * stage.scale.y;
 
 		// Fond sombre = brouillard sur toute la map
 		ctx.globalCompositeOperation = "source-over";
@@ -369,8 +378,14 @@
 			// Prevent scrolling the page
 			e.preventDefault();
 
-			const newX = parseFloat(token.posX as unknown as string) + dx;
-			const newY = parseFloat(token.posY as unknown as string) + dy;
+			let newX = parseFloat(token.posX as unknown as string) + dx;
+			let newY = parseFloat(token.posY as unknown as string) + dy;
+
+			const maxCols = Math.ceil(mapConfig.widthPx / mapConfig.gridSize);
+			const maxRows = Math.ceil(mapConfig.heightPx / mapConfig.gridSize);
+
+			newX = Math.max(0, Math.min(newX, maxCols - token.width));
+			newY = Math.max(0, Math.min(newY, maxRows - token.height));
 
 			onTokenMove?.(token.id, newX, newY);
 		}
