@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from "svelte";
 	import { page } from "$app/state";
+	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import VttCanvas from "$lib/vtt/VttCanvas.svelte";
 	import VttToolbar from "$lib/vtt/panels/VttToolbar.svelte";
 	import VttChatPanel from "$lib/vtt/panels/VttChatPanel.svelte";
@@ -160,6 +161,8 @@
 			onTokenDelete={isGm
 				? (id) => ws?.send({ type: "TOKEN_REMOVE", tokenId: id })
 				: undefined}
+			onTokenUpdate={(id, updates) =>
+				ws?.send({ type: "TOKEN_UPDATE", tokenId: id, ...updates })}
 			onWallAdd={isGm
 				? (p1X, p1Y, p2X, p2Y, type) =>
 						ws?.send({ type: "WALL_ADD", p1X, p1Y, p2X, p2Y, wallType: type })
@@ -212,6 +215,16 @@
 		></span>
 		WS {wsStatus}
 	</div>
+
+	<!-- Bouton Quitter -->
+	<a
+		href="/campaigns/{data.campaign?.id}"
+		class="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-xl border border-border/40 bg-background/70 px-3 py-2 text-sm font-medium text-muted-foreground shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-3xl transition-all hover:bg-red-500/10 hover:text-red-500 dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)]"
+		title="Quitter la session"
+	>
+		<LogOutIcon class="h-4 w-4" />
+		<span class="hidden sm:inline">Quitter</span>
+	</a>
 
 	<!-- Overlays DOM -->
 	<VttPresenceBar participants={vttState.participants} />
