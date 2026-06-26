@@ -227,7 +227,12 @@
 	</a>
 
 	<!-- Overlays DOM -->
-	<VttPresenceBar participants={vttState.participants} members={data.members} />
+	<VttPresenceBar
+		participants={vttState.participants}
+		members={data.members}
+		currentUserId={data.user?.id}
+		onRename={(name) => ws?.send({ type: "PRESENCE_RENAME", name })}
+	/>
 	<VttToolbar
 		{isGm}
 		{ws}

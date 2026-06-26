@@ -38,6 +38,7 @@ export const vttState = (() => {
 	let isTokenDragging = $state(false);
 	let focusedTokenId: string | null = $state(null);
 	let myCharacterSheetId: string | null = $state(null);
+	const customNames = $state<Record<string, string>>({});
 
 	return {
 		get tokens() {
@@ -75,6 +76,9 @@ export const vttState = (() => {
 		},
 		get myCharacterSheetId() {
 			return myCharacterSheetId;
+		},
+		get customNames() {
+			return customNames;
 		},
 
 		get walls() {
@@ -138,6 +142,9 @@ export const vttState = (() => {
 		},
 		setMyCharacterSheetId(id: string | null) {
 			myCharacterSheetId = id;
+		},
+		setCustomName(userId: string, name: string) {
+			customNames[userId] = name;
 		},
 	};
 })();

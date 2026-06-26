@@ -18,6 +18,8 @@ export class TokenSprite {
 	public container: Container;
 	private sprite: Sprite | Graphics;
 	private label: Text | null = null;
+	private hpBarBg: Graphics | null = null;
+	private hpBarFg: Graphics | null = null;
 	public tokenId: string;
 	private gridSize: number;
 	private ticker: Ticker;
@@ -87,6 +89,10 @@ export class TokenSprite {
 			this.label.x = (token.width * this.gridSize) / 2;
 			this.label.y = token.height * this.gridSize + 4;
 			this.container.addChild(this.label);
+		}
+
+		if (token.maxHp && token.hp !== undefined && token.hp !== null) {
+			this.createOrUpdateHpBar(token);
 		}
 
 		// Charger l'image si disponible
@@ -314,6 +320,12 @@ export class TokenSprite {
 		this.targetX = parseFloat(token.posX) * this.gridSize;
 		this.targetY = parseFloat(token.posY) * this.gridSize;
 		this.container.visible = token.isVisible;
+
+		if (token.maxHp && token.hp !== undefined && token.hp !== null) {
+			this.createOrUpdateHpBar(token);
+		} else {
+			this.removeHpBar();
+		}
 	}
 
 	destroy() {
@@ -327,6 +339,50 @@ export class TokenSprite {
 		}
 		this.rulerGraphics.destroy();
 		this.rulerText.destroy();
+		this.removeHpBar();
 		this.container.destroy({ children: true });
+	}
+
+	private createOrUpdateHpBar(token: SessionTokenDto) {
+		const width = token.width * this.gridSize;
+		const hp = token.hp ?? 0;
+		const maxHp = token.maxHp ?? 1;
+		const ratio = Math.max(0, Math.min(1, hp / maxHp));
+
+		if (!this.hpBarBg) {
+			this.hpBarBg = new Graphics();
+			this.container.addChild(this.hpBarBg);
+		}
+		if (!this.hpBarFg) {
+			this.hpBarFg = new Graphics();
+			this.container.addChild(this.hpBarFg);
+		}
+
+		const barHeight = 6;
+		const barY = token.height * this.gridSize - barHeight;
+
+		this.hpBarBg
+			.clear()
+			.rect(0, barY, width, barHeight)
+			.fill({ color: 0x000000, alpha: 0.8 });
+
+		const fgColor = ratio > 0.5 ? 0x22c55e : ratio > 0.2 ? 0xeab308 : 0xef4444;
+		this.hpBarFg
+			.clear()
+			.rect(0, barY, width * ratio, barHeight)
+			.fill({ color: fgColor, alpha: 1.0 });
+	}
+
+	private removeHpBar() {
+		if (this.hpBarBg) {
+			this.container.removeChild(this.hpBarBg);
+			this.hpBarBg.destroy();
+			this.hpBarBg = null;
+		}
+		if (this.hpBarFg) {
+			this.container.removeChild(this.hpBarFg);
+			this.hpBarFg.destroy();
+			this.hpBarFg = null;
+		}
 	}
 }

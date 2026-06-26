@@ -87,6 +87,22 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 			if (event) await sessionRooms.broadcast(id, event);
 			return;
 		}
+
+		if (
+			raw &&
+			typeof raw === "object" &&
+			"type" in raw &&
+			raw.type === "PRESENCE_RENAME" &&
+			"name" in raw &&
+			typeof raw.name === "string"
+		) {
+			await sessionRooms.broadcast(id, {
+				type: "PRESENCE_RENAME",
+				userId,
+				name: raw.name.slice(0, 50),
+			});
+			return;
+		}
 	},
 
 	async close(ws) {

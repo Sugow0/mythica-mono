@@ -29,6 +29,10 @@
 		onFogPaint?: (polygon: { x: number; y: number }[]) => void;
 		onFogHide?: (polygon: { x: number; y: number }[]) => void;
 		onTokenDelete?: (tokenId: string) => void;
+		onTokenUpdate?: (
+			tokenId: string,
+			updates: Partial<SessionTokenDto>
+		) => void;
 		onWallAdd?: (
 			p1X: number,
 			p1Y: number,
@@ -995,6 +999,8 @@
 							(t) => t.id === vttState.selectedTokenId
 						)!}
 						onDelete={onTokenDelete}
+						onUpdate={(updates) =>
+							onTokenUpdate?.(vttState.selectedTokenId!, updates)}
 					/>
 				{/if}
 			{/if}

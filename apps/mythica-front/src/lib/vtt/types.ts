@@ -42,6 +42,15 @@ export type SessionTokenDto = {
 	height: number;
 	isVisible: boolean;
 	layer: "background" | "object" | "token" | "gm";
+	elevation?: number;
+	hp?: number | null;
+	maxHp?: number | null;
+	conditions?: any; // e.g. Array of strings or objects
+	auraRadius?: string | null;
+	auraColor?: string | null;
+	visionRadius?: string | null;
+	lightRadius?: string | null;
+	lightColor?: string | null;
 };
 
 export type Participant = {
