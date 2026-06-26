@@ -23,7 +23,7 @@ export class BackgroundLayer {
 		try {
 			// L'URL est construite par le gateway — adapter selon l'implémentation réelle.
 			// Chercher comment les URLs des fichiers sont construites dans la codebase (ex: avatars).
-			const url = `/api/gameplay/files/${config.fileId}/content`;
+			const url = `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay/files/${config.fileId}/content`;
 			const texture: Texture = await Assets.load(url);
 			this.sprite = new Sprite(texture);
 			this.sprite.width = config.widthPx;

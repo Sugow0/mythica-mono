@@ -50,6 +50,18 @@
 		}
 	});
 
+	function onFileChange() {
+		const file = fileInput?.files?.[0];
+		if (!file) return;
+
+		const img = new Image();
+		img.onload = () => {
+			editWidthPx = img.width;
+			editHeightPx = img.height;
+		};
+		img.src = URL.createObjectURL(file);
+	}
+
 	async function saveChanges() {
 		busy = true;
 		error = null;
@@ -174,6 +186,7 @@
 					type="file"
 					accept="image/png, image/jpeg, image/webp"
 					bind:ref={fileInput}
+					onchange={onFileChange}
 					disabled={busy}
 				/>
 				<p class="text-xs text-muted-foreground">

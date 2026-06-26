@@ -186,7 +186,7 @@ export class TokenSprite {
 
 	private async loadImage(token: SessionTokenDto) {
 		try {
-			const url = `/api/gameplay/files/${token.fileId}/content`;
+			const url = `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay/files/${token.fileId}/content`;
 			const texture: Texture = await Assets.load(url);
 			const s = new Sprite(texture);
 			s.width = token.width * this.gridSize;

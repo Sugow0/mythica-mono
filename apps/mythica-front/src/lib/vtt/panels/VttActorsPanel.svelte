@@ -84,7 +84,7 @@
 							/>
 						{:else if sheet.avatarFileId}
 							<img
-								src={`/api/gameplay/files/${sheet.avatarFileId}/content`}
+								src={`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay/files/${sheet.avatarFileId}/content`}
 								alt={sheet.name}
 								class="h-full w-full rounded-full border border-border/50 object-cover bg-secondary transition-colors"
 							/>

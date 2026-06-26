@@ -11,6 +11,7 @@ import { characterSheetsController } from "./character-sheets/character-sheets.c
 import { contentImportController } from "./content-import/content-import.controller";
 import { env } from "./env";
 import { startUserSync } from "./events/user-sync";
+import { filesController } from "./files/files.controller";
 import { characterSheetPropertiesController } from "./game-systems/character-sheet-properties.controller";
 import { gameSystemsController } from "./game-systems/game-systems.controller";
 import { healthController } from "./health.controller";
@@ -62,6 +63,7 @@ const app = new Elysia()
 	.use(campaignCharacterSheetsController)
 	.use(sessionsController)
 	.use(mapsController)
+	.use(filesController)
 	.use(contentImportController)
 	.listen(env.PORT);
 
