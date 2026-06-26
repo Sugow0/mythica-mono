@@ -13,6 +13,7 @@
 
 	let visualRolls = $state<VisualRoll[]>([]);
 	let processedCount = 0;
+	let hide3DDice = $state(false);
 
 	let diceBoxContainer: HTMLElement;
 	let diceBoxInstance: any = null;
@@ -27,10 +28,10 @@
 				assetPath: "/assets/dice-box/",
 				theme: "default",
 				themeColor: "#991b1b",
-				scale: 8,
-				spinForce: 8,
-				throwForce: 8,
-				startingHeight: 8,
+				scale: 6,
+				spinForce: 10,
+				throwForce: 10,
+				startingHeight: 12,
 			});
 
 			diceBoxInstance
@@ -75,13 +76,7 @@
 					// Extract only valid dice strings (e.g. "1d20", "2d6") and join them
 					const matches = r.formula.match(/\d*[dD]\d+/g);
 					if (matches && matches.length > 0) {
-						const cleanFormula = matches.join(" + ");
-						console.log(
-							"Rolling 3D dice:",
-							cleanFormula,
-							"with color:",
-							rollerColor
-						);
+						hide3DDice = false; // Make sure container is visible
 						if (typeof diceBoxInstance.resizeWorld === "function") {
 							diceBoxInstance.resizeWorld();
 						}
@@ -90,13 +85,16 @@
 							.roll(matches, { themeColor: rollerColor })
 							.then(() => {
 								setTimeout(() => {
-									if (
-										diceBoxInstance &&
-										typeof diceBoxInstance.clear === "function"
-									) {
-										diceBoxInstance.clear();
-									}
-								}, 3000);
+									hide3DDice = true; // Trigger CSS fade out
+									setTimeout(() => {
+										if (
+											diceBoxInstance &&
+											typeof diceBoxInstance.clear === "function"
+										) {
+											diceBoxInstance.clear();
+										}
+									}, 1000); // Wait for the transition to finish
+								}, 4000); // Wait 4 seconds before fading
 							})
 							.catch((err: any) => {
 								console.error("Error rolling 3D dice:", err);
@@ -137,9 +135,9 @@
 
 <div
 	id="dice-box-container"
-	class="pointer-events-none z-[100] transition-opacity duration-300"
+	class="pointer-events-none z-[100] transition-opacity duration-1000"
 	style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden;"
-	class:opacity-0={!vttState.use3DDice}
+	class:opacity-0={!vttState.use3DDice || hide3DDice}
 ></div>
 
 <div
