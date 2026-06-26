@@ -15,19 +15,49 @@
 	const diceTypes = [4, 6, 8, 10, 12, 20, 100];
 
 	function addDie(faces: number) {
-		const part = `1d${faces}`;
 		if (!formula.trim()) {
-			formula = part;
+			formula = `1d${faces}`;
+			return;
+		}
+
+		const endMatch = /(^|[\s+-]+)(\d*)[dD](\d+)\s*$/.exec(formula);
+		if (endMatch && parseInt(endMatch[3], 10) === faces) {
+			const currentCount = parseInt(endMatch[2] || "1", 10);
+			const index = endMatch.index + endMatch[1].length;
+			formula = formula.substring(0, index) + `${currentCount + 1}d${faces}`;
 		} else {
-			formula = `${formula} + ${part}`;
+			formula = `${formula.trim()} + 1d${faces}`;
 		}
 	}
 
 	function addMod(val: number) {
 		if (!formula.trim()) {
 			formula = `${val}`;
+			return;
+		}
+
+		const endMatch = /(^|[\s+-]+)(\d+)\s*$/.exec(formula);
+		if (endMatch) {
+			const currentVal = parseInt(endMatch[2], 10);
+			const signStr = endMatch[1].replace(/\s/g, "");
+			const sign = signStr === "-" ? -1 : 1;
+			const totalMod = sign * currentVal + val;
+
+			const index = endMatch.index;
+			let prefix = formula.substring(0, index).trimEnd();
+
+			if (totalMod === 0) {
+				if (prefix.endsWith("+") || prefix.endsWith("-")) {
+					prefix = prefix.substring(0, prefix.length - 1).trimEnd();
+				}
+				formula = prefix;
+			} else if (!prefix) {
+				formula = `${totalMod}`;
+			} else {
+				formula = `${prefix} ${totalMod > 0 ? "+" : "-"} ${Math.abs(totalMod)}`;
+			}
 		} else {
-			formula = `${formula} ${val >= 0 ? "+" : "-"} ${Math.abs(val)}`;
+			formula = `${formula.trim()} ${val >= 0 ? "+" : "-"} ${Math.abs(val)}`;
 		}
 	}
 
