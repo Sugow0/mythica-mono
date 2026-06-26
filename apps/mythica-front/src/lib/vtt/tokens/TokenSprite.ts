@@ -210,7 +210,7 @@ export class TokenSprite {
 				img.onload = resolve;
 				img.onerror = reject;
 			});
-			
+
 			const texture = Texture.from(img);
 			const s = new Sprite(texture);
 			s.width = token.width * this.gridSize;
