@@ -29,6 +29,7 @@ export type ContentImportJob = {
 	appliedAt: string | null;
 	errorMessage: string | null;
 	_count: { items: number };
+	counts?: { pending: number; approved: number; rejected: number };
 };
 
 export type ContentImportItem = {
