@@ -605,6 +605,18 @@ model SessionToken {
   height           Int        @default(1)
   isVisible        Boolean    @default(true) @map("is_visible")
   layer            TokenLayer @default(token)
+  
+  // Tactical & Visual VTT Fields
+  elevation        Int        @default(0)
+  hp               Int?
+  maxHp            Int?       @map("max_hp")
+  conditions       Json       @default("[]")
+  auraRadius       Decimal?   @map("aura_radius") @db.Decimal
+  auraColor        String?    @map("aura_color") @db.VarChar(9)
+  visionRadius     Decimal?   @map("vision_radius") @db.Decimal
+  lightRadius      Decimal?   @map("light_radius") @db.Decimal
+  lightColor       String?    @map("light_color") @db.VarChar(9)
+
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 

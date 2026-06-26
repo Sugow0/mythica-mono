@@ -50,9 +50,12 @@
 
 	async function handleAddToken(label: string) {
 		try {
-			await campaignService.createToken(sessionId, { label });
+			const res = await campaignService.createToken(sessionId, { label });
+			if (res.success && res.token) {
+				vttState.addToken(res.token);
+			}
 		} catch {
-			// Le token s'affichera via l'événement WS TOKEN_ADDED
+			// Ignore
 		}
 	}
 
@@ -65,13 +68,16 @@
 	) {
 		if (!isGm) return;
 		try {
-			await campaignService.createToken(sessionId, {
+			const res = await campaignService.createToken(sessionId, {
 				label,
 				characterSheetId: sheetId,
 				fileId: fileId ?? undefined,
 				posX: gridX,
 				posY: gridY,
 			});
+			if (res.success && res.token) {
+				vttState.addToken(res.token);
+			}
 		} catch (_err) {
 			// Ignore
 		}

@@ -12,7 +12,7 @@ import {
 } from "./commands/session-presence/session-presence.handler";
 import { isGameMaster, resolveSessionAccess } from "./session-access";
 import { sessionRooms } from "./session-rooms";
-import { getSessionTokens } from "./session-tokens";
+import { getSessionTokens, mapTokenDto } from "./session-tokens";
 
 // ------------------------------------------------------------
 // Schémas
@@ -292,12 +292,30 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 				set.status = 403;
 				return { success: false as const, error: "Réservé au MJ" };
 			}
-			const token = await prisma.sessionToken.create({
-				data: { id: randomUUID(), sessionId: params.id, ...body },
-			});
-			await sessionRooms.broadcast(params.id, { type: "TOKEN_ADDED", token });
-			set.status = 201;
-			return { success: true as const, token };
+			try {
+				const createdToken = await prisma.sessionToken.create({
+					data: { id: randomUUID(), sessionId: params.id, ...body },
+					include: {
+						file: true,
+						characterSheet: {
+							include: {
+								values: {
+									where: { property: { key: "hp" } },
+									select: { value: true },
+								},
+							},
+						},
+					},
+				});
+				const token = mapTokenDto(createdToken);
+				await sessionRooms.broadcast(params.id, { type: "TOKEN_ADDED", token });
+				set.status = 201;
+				return { success: true as const, token };
+			} catch (err: any) {
+				console.error("[POST /sessions/:id/tokens] Error creating token:", err);
+				set.status = 500;
+				return { success: false as const, error: err.message };
+			}
 		},
 		{
 			params: t.Object({ id: t.String() }),

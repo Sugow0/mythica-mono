@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from "svelte";
-	import type { MapConfig } from "./types";
+	import type { MapConfig, SessionTokenDto } from "./types";
 	import { vttState } from "./vtt.svelte";
 	import VttTokenHud from "./panels/VttTokenHud.svelte";
 	import { computeVisibilityPolygon } from "./utils/raycast";
@@ -13,6 +13,7 @@
 		onFogPaint,
 		onFogHide,
 		onTokenDelete,
+		onTokenUpdate,
 		onWallAdd,
 		onWallRemove,
 	}: {
