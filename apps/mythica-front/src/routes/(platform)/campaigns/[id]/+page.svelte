@@ -25,6 +25,7 @@
 	import * as Empty from "$lib/components/ui/empty";
 	import { Label } from "$lib/components/ui/label";
 	import * as NativeSelect from "$lib/components/ui/native-select";
+	import * as Tabs from "$lib/components/ui/tabs";
 	import SessionCalendar from "$lib/components/session-calendar.svelte";
 	import TagInput from "$lib/components/tag-input.svelte";
 	import { Input } from "$lib/components/ui/input";
@@ -809,200 +810,230 @@
 					</div>
 				{/if}
 
-				<!-- Description -->
-				<Card.Root class="mb-6">
-					<Card.Header><Card.Title>Description</Card.Title></Card.Header>
-					<Card.Content>
-						<p class="text-sm text-slate-600 dark:text-muted-foreground">
-							{campaign.description || "Aucune description."}
-						</p>
-					</Card.Content>
-				</Card.Root>
+				<!-- Onglets -->
+				<Tabs.Root value="sessions" class="w-full">
+					<Tabs.List class="grid w-full grid-cols-3 mb-6">
+						<Tabs.Trigger value="sessions">Sessions</Tabs.Trigger>
+						<Tabs.Trigger value="characters">Personnages</Tabs.Trigger>
+						<Tabs.Trigger value="about">À propos</Tabs.Trigger>
+					</Tabs.List>
 
-				<!-- Sessions -->
-				{#if isMember}
-					{#snippet sessionRow(
-						session: Session,
-						kind: "active" | "upcoming" | "past"
-					)}
-						<div
-							class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 {kind ===
-							'active'
-								? 'border-primary/40 bg-primary/5'
-								: 'border-slate-100 dark:border-border/40'}"
-						>
-							<div class="min-w-0">
-								<div class="flex items-center gap-2">
-									<span
-										class="truncate font-medium text-slate-900 dark:text-white"
-										>{session.nom}</span
-									>
-									<Badge
-										variant={kind === "active" ? "default" : "secondary"}
-										class="shrink-0 text-xs"
-									>
-										{sessionStatusLabel(session.status)}
-									</Badge>
+					<Tabs.Content value="sessions" class="space-y-6">
+						<!-- Sessions -->
+						{#if isMember}
+							{#snippet sessionRow(
+								session: Session,
+								kind: "active" | "upcoming" | "past"
+							)}
+								<div
+									class="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 {kind ===
+									'active'
+										? 'border-primary/40 bg-primary/5'
+										: 'border-slate-100 dark:border-border/40'}"
+								>
+									<div class="min-w-0">
+										<div class="flex items-center gap-2">
+											<span
+												class="truncate font-medium text-slate-900 dark:text-white"
+												>{session.nom}</span
+											>
+											<Badge
+												variant={kind === "active" ? "default" : "secondary"}
+												class="shrink-0 text-xs"
+											>
+												{sessionStatusLabel(session.status)}
+											</Badge>
+										</div>
+										{#if formatDateTime(session.scheduledAt ?? session.endedAt ?? session.startedAt)}
+											<span
+												class="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-muted-foreground"
+											>
+												<ClockIcon class="h-3 w-3" />
+												{formatDateTime(
+													session.scheduledAt ??
+														session.endedAt ??
+														session.startedAt
+												)}
+											</span>
+										{/if}
+									</div>
+									<div class="flex shrink-0 items-center gap-1.5">
+										{#if kind === "active"}
+											<Button
+												size="sm"
+												href={`/sessions/${session.id}/table`}
+												class="bg-red-600 text-white hover:bg-red-700"
+											>
+												<DoorOpenIcon class="h-3.5 w-3.5" />Rejoindre la table
+											</Button>
+										{/if}
+										{#if isGm}
+											{#if kind === "upcoming"}
+												<Button
+													size="sm"
+													onclick={() => setSessionStatus(session.id, "active")}
+													disabled={busy}
+													class="bg-primary text-primary-foreground hover:bg-primary/90"
+												>
+													<PlayIcon class="h-3.5 w-3.5" />Lancer
+												</Button>
+											{:else if kind === "active"}
+												<Button
+													size="sm"
+													variant="outline"
+													onclick={() => setSessionStatus(session.id, "ended")}
+													disabled={busy}
+												>
+													<CircleCheckIcon class="h-3.5 w-3.5" />Terminer
+												</Button>
+											{/if}
+											<button
+												type="button"
+												onclick={() => removeSession(session.id)}
+												class="rounded p-1.5 text-slate-400 hover:text-red-500"
+												title="Supprimer la session"
+												aria-label="Supprimer la session"
+											>
+												<Trash2Icon class="h-4 w-4" />
+											</button>
+										{/if}
+									</div>
 								</div>
-								{#if formatDateTime(session.scheduledAt ?? session.endedAt ?? session.startedAt)}
-									<span
-										class="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-muted-foreground"
-									>
-										<ClockIcon class="h-3 w-3" />
-										{formatDateTime(
-											session.scheduledAt ??
-												session.endedAt ??
-												session.startedAt
-										)}
-									</span>
-								{/if}
-							</div>
-							<div class="flex shrink-0 items-center gap-1.5">
-								{#if kind === "active"}
-									<Button
-										size="sm"
-										href={`/sessions/${session.id}/table`}
-										class="bg-red-600 text-white hover:bg-red-700"
-									>
-										<DoorOpenIcon class="h-3.5 w-3.5" />Rejoindre la table
-									</Button>
-								{/if}
-								{#if isGm}
-									{#if kind === "upcoming"}
-										<Button
-											size="sm"
-											onclick={() => setSessionStatus(session.id, "active")}
-											disabled={busy}
-											class="bg-primary text-primary-foreground hover:bg-primary/90"
+							{/snippet}
+
+							<Card.Root>
+								<Card.Header
+									class="flex flex-row items-center justify-between gap-2"
+								>
+									<Card.Title>Sessions</Card.Title>
+									<div class="flex rounded-lg border border-border p-0.5">
+										<button
+											type="button"
+											onclick={() => (sessionView = "list")}
+											class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
+											'list'
+												? 'bg-primary text-primary-foreground'
+												: 'text-muted-foreground hover:text-foreground'}"
 										>
-											<PlayIcon class="h-3.5 w-3.5" />Lancer
-										</Button>
-									{:else if kind === "active"}
-										<Button
-											size="sm"
-											variant="outline"
-											onclick={() => setSessionStatus(session.id, "ended")}
-											disabled={busy}
+											Liste
+										</button>
+										<button
+											type="button"
+											onclick={() => (sessionView = "calendar")}
+											class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
+											'calendar'
+												? 'bg-primary text-primary-foreground'
+												: 'text-muted-foreground hover:text-foreground'}"
 										>
-											<CircleCheckIcon class="h-3.5 w-3.5" />Terminer
-										</Button>
+											Calendrier
+										</button>
+									</div>
+								</Card.Header>
+								<Card.Content class="space-y-5">
+									{#if isGm}
+										<div class="flex flex-col gap-2 sm:flex-row">
+											<Input
+												placeholder="Nom de la session..."
+												bind:value={newSessionName}
+												disabled={busy}
+												class="sm:flex-1"
+											/>
+											<Input
+												type="datetime-local"
+												bind:value={newSessionDate}
+												disabled={busy}
+												class="sm:w-52"
+											/>
+											<Button
+												onclick={createSession}
+												disabled={busy || !newSessionName.trim()}
+												class="bg-red-600 text-white hover:bg-red-700"
+											>
+												<PlusIcon class="h-4 w-4" />Planifier
+											</Button>
+										</div>
 									{/if}
-									<button
-										type="button"
-										onclick={() => removeSession(session.id)}
-										class="rounded p-1.5 text-slate-400 hover:text-red-500"
-										title="Supprimer la session"
-										aria-label="Supprimer la session"
-									>
-										<Trash2Icon class="h-4 w-4" />
-									</button>
-								{/if}
-							</div>
-						</div>
-					{/snippet}
 
-					<Card.Root>
-						<Card.Header
-							class="flex flex-row items-center justify-between gap-2"
-						>
-							<Card.Title>Sessions</Card.Title>
-							<div class="flex rounded-lg border border-border p-0.5">
-								<button
-									type="button"
-									onclick={() => (sessionView = "list")}
-									class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
-									'list'
-										? 'bg-primary text-primary-foreground'
-										: 'text-muted-foreground hover:text-foreground'}"
-								>
-									Liste
-								</button>
-								<button
-									type="button"
-									onclick={() => (sessionView = "calendar")}
-									class="rounded-md px-3 py-1 text-xs font-medium transition-colors {sessionView ===
-									'calendar'
-										? 'bg-primary text-primary-foreground'
-										: 'text-muted-foreground hover:text-foreground'}"
-								>
-									Calendrier
-								</button>
-							</div>
-						</Card.Header>
-						<Card.Content class="space-y-5">
-							{#if isGm}
-								<div class="flex flex-col gap-2 sm:flex-row">
-									<Input
-										placeholder="Nom de la session..."
-										bind:value={newSessionName}
-										disabled={busy}
-										class="sm:flex-1"
-									/>
-									<Input
-										type="datetime-local"
-										bind:value={newSessionDate}
-										disabled={busy}
-										class="sm:w-52"
-									/>
-									<Button
-										onclick={createSession}
-										disabled={busy || !newSessionName.trim()}
-										class="bg-red-600 text-white hover:bg-red-700"
-									>
-										<PlusIcon class="h-4 w-4" />Planifier
-									</Button>
-								</div>
-							{/if}
+									{#if sessions.length === 0}
+										<p class="text-sm text-slate-400">
+											Aucune session pour le moment.
+										</p>
+									{:else if sessionView === "calendar"}
+										<SessionCalendar {sessions} />
+									{/if}
 
-							{#if sessions.length === 0}
-								<p class="text-sm text-slate-400">
-									Aucune session pour le moment.
+									{#if sessionView === "list" && activeSessions.length > 0}
+										<div class="space-y-2">
+											<h3
+												class="text-xs font-semibold uppercase tracking-wide text-primary"
+											>
+												En cours
+											</h3>
+											{#each activeSessions as session (session.id)}
+												{@render sessionRow(session, "active")}
+											{/each}
+										</div>
+									{/if}
+
+									{#if sessionView === "list" && upcomingSessions.length > 0}
+										<div class="space-y-2">
+											<h3
+												class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-muted-foreground"
+											>
+												A venir ({upcomingSessions.length})
+											</h3>
+											{#each upcomingSessions as session (session.id)}
+												{@render sessionRow(session, "upcoming")}
+											{/each}
+										</div>
+									{/if}
+
+									{#if sessionView === "list" && pastSessions.length > 0}
+										<div class="space-y-2">
+											<h3
+												class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-muted-foreground/70"
+											>
+												Passees ({pastSessions.length})
+											</h3>
+											{#each pastSessions as session (session.id)}
+												{@render sessionRow(session, "past")}
+											{/each}
+										</div>
+									{/if}
+								</Card.Content>
+							</Card.Root>
+						{/if}
+					</Tabs.Content>
+
+					<Tabs.Content value="characters" class="space-y-6">
+						{#if isMember && campaign}
+							<Card.Root>
+								<Card.Content class="pt-6">
+									<CampaignCharactersTab
+										campaignId={campaign.id}
+										{isGm}
+										characterCreationLocked={campaign.characterCreationLocked ??
+											false}
+										currentUserId={data.user?.id ?? ""}
+									/>
+								</Card.Content>
+							</Card.Root>
+						{/if}
+					</Tabs.Content>
+
+					<Tabs.Content value="about" class="space-y-6">
+						<Card.Root>
+							<Card.Header><Card.Title>Description</Card.Title></Card.Header>
+							<Card.Content>
+								<p
+									class="text-sm text-slate-600 dark:text-muted-foreground whitespace-pre-wrap"
+								>
+									{campaign.description || "Aucune description."}
 								</p>
-							{:else if sessionView === "calendar"}
-								<SessionCalendar {sessions} />
-							{/if}
-
-							{#if sessionView === "list" && activeSessions.length > 0}
-								<div class="space-y-2">
-									<h3
-										class="text-xs font-semibold uppercase tracking-wide text-primary"
-									>
-										En cours
-									</h3>
-									{#each activeSessions as session (session.id)}
-										{@render sessionRow(session, "active")}
-									{/each}
-								</div>
-							{/if}
-
-							{#if sessionView === "list" && upcomingSessions.length > 0}
-								<div class="space-y-2">
-									<h3
-										class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-muted-foreground"
-									>
-										A venir ({upcomingSessions.length})
-									</h3>
-									{#each upcomingSessions as session (session.id)}
-										{@render sessionRow(session, "upcoming")}
-									{/each}
-								</div>
-							{/if}
-
-							{#if sessionView === "list" && pastSessions.length > 0}
-								<div class="space-y-2">
-									<h3
-										class="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-muted-foreground/70"
-									>
-										Passees ({pastSessions.length})
-									</h3>
-									{#each pastSessions as session (session.id)}
-										{@render sessionRow(session, "past")}
-									{/each}
-								</div>
-							{/if}
-						</Card.Content>
-					</Card.Root>
-				{/if}
+							</Card.Content>
+						</Card.Root>
+					</Tabs.Content>
+				</Tabs.Root>
 			</div>
 
 			<!-- Colonne latérale -->
@@ -1043,24 +1074,6 @@
 									</div>
 								</div>
 							{/each}
-						</Card.Content>
-					</Card.Root>
-				{/if}
-
-				<!-- Personnages -->
-				{#if isMember && campaign}
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>Personnages</Card.Title>
-						</Card.Header>
-						<Card.Content>
-							<CampaignCharactersTab
-								campaignId={campaign.id}
-								{isGm}
-								characterCreationLocked={campaign.characterCreationLocked ??
-									false}
-								currentUserId={data.user?.id ?? ""}
-							/>
 						</Card.Content>
 					</Card.Root>
 				{/if}
@@ -1130,7 +1143,7 @@
 						<Card.Content>
 							<div
 								bind:this={messagesEl}
-								class="mb-3 h-72 space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/20 p-3"
+								class="mb-3 h-[calc(100vh-32rem)] min-h-[400px] space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/20 p-3"
 							>
 								{#each messages as message (message.id)}
 									{@const mine = message.userId === data.user?.id}

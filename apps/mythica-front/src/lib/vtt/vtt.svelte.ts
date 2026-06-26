@@ -4,11 +4,13 @@ import type {
 	FogState,
 	MapConfig,
 	SessionTokenDto,
+	SessionWallDto,
 	DiceRollEvent,
 } from "./types";
 
 export const vttState = (() => {
 	let tokens = $state<SessionTokenDto[]>([]);
+	let walls = $state<SessionWallDto[]>([]);
 	let fog = $state<FogState>({ mode: "manual", revealed: [] });
 	let activeMap = $state<MapConfig | null>(null);
 	let combatState = $state<CombatState>({
@@ -20,12 +22,22 @@ export const vttState = (() => {
 	});
 	let participants = $state<string[]>([]);
 	let selectedToolId = $state<
-		"select" | "move" | "fog-paint" | "fog-erase" | "add-token"
+		| "select"
+		| "move"
+		| "fog-paint"
+		| "fog-erase"
+		| "add-token"
+		| "ruler"
+		| "wall-add"
+		| "wall-move"
+		| "wall-remove"
 	>("select");
 	let selectedTokenId = $state<string | null>(null);
 	let isGm = $state(false);
 	let diceRolls = $state<DiceRollEvent[]>([]);
 	let isTokenDragging = $state(false);
+	let focusedTokenId: string | null = $state(null);
+	let myCharacterSheetId: string | null = $state(null);
 
 	return {
 		get tokens() {
@@ -58,9 +70,31 @@ export const vttState = (() => {
 		get isTokenDragging() {
 			return isTokenDragging;
 		},
+		get focusedTokenId() {
+			return focusedTokenId;
+		},
+		get myCharacterSheetId() {
+			return myCharacterSheetId;
+		},
+
+		get walls() {
+			return walls;
+		},
 
 		setTokens(v: SessionTokenDto[]) {
 			tokens = v;
+		},
+		setWalls(v: SessionWallDto[]) {
+			walls = v;
+		},
+		addWall(wall: SessionWallDto) {
+			walls = [...walls, wall];
+		},
+		removeWall(id: string) {
+			walls = walls.filter((w) => w.id !== id);
+		},
+		clearWalls() {
+			walls = [];
 		},
 		updateToken(updated: Partial<SessionTokenDto> & { id: string }) {
 			const idx = tokens.findIndex((t) => t.id === updated.id);
@@ -98,6 +132,12 @@ export const vttState = (() => {
 		},
 		setIsTokenDragging(v: boolean) {
 			isTokenDragging = v;
+		},
+		setFocusedTokenId(id: string | null) {
+			focusedTokenId = id;
+		},
+		setMyCharacterSheetId(id: string | null) {
+			myCharacterSheetId = id;
 		},
 	};
 })();

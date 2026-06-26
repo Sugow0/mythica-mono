@@ -9,26 +9,25 @@
 		ws,
 		campaignId,
 		sheetId: explicitSheetId,
+		tokenId,
 		onClose,
 	}: {
 		ws: VttWebSocket | null;
 		campaignId: string;
 		sheetId?: string | null;
+		tokenId?: string | null;
 		onClose?: () => void;
 	} = $props();
 
-	const selectedToken = $derived(
-		vttState.tokens.find((t) => t.id === vttState.selectedTokenId)
-	);
+	const openedToken = $derived(vttState.tokens.find((t) => t.id === tokenId));
 	const sheetId = $derived(
 		explicitSheetId !== undefined
 			? explicitSheetId
-			: selectedToken?.characterSheetId
+			: openedToken?.characterSheetId
 	);
 
 	function close() {
 		if (onClose) onClose();
-		vttState.setSelectedTokenId(null);
 	}
 
 	function handleRoll(formula: string, label: string) {
@@ -74,43 +73,38 @@
 	let dragStart = { x: 0, y: 0, px: 0, py: 0 };
 
 	function onPointerDown(e: PointerEvent) {
-		e.preventDefault();
 		isDragging = true;
 		dragStart = { x: e.clientX, y: e.clientY, px: panelX, py: panelY };
-		e.currentTarget?.setPointerCapture(e.pointerId);
+		(e.currentTarget as HTMLElement)?.setPointerCapture(e.pointerId);
 	}
-
 	function onPointerMove(e: PointerEvent) {
-		if (!isDragging) return;
-		panelX = dragStart.px + (e.clientX - dragStart.x);
-		panelY = dragStart.py + (e.clientY - dragStart.y);
+		if (isDragging) {
+			panelX = dragStart.px + (e.clientX - dragStart.x);
+			panelY = dragStart.py + (e.clientY - dragStart.y);
+		}
 	}
-
 	function onPointerUp(e: PointerEvent) {
 		isDragging = false;
-		e.currentTarget?.releasePointerCapture(e.pointerId);
+		(e.currentTarget as HTMLElement)?.releasePointerCapture(e.pointerId);
 	}
 
 	let isResizing = false;
 	let resizeStart = { x: 0, y: 0, w: 0, h: 0 };
 
 	function onResizeDown(e: PointerEvent) {
-		e.preventDefault();
-		e.stopPropagation();
 		isResizing = true;
 		resizeStart = { x: e.clientX, y: e.clientY, w: panelW, h: panelH };
-		e.currentTarget?.setPointerCapture(e.pointerId);
+		(e.currentTarget as HTMLElement)?.setPointerCapture(e.pointerId);
 	}
-
 	function onResizeMove(e: PointerEvent) {
-		if (!isResizing) return;
-		panelW = Math.max(300, resizeStart.w + (e.clientX - resizeStart.x));
-		panelH = Math.max(300, resizeStart.h + (e.clientY - resizeStart.y));
+		if (isResizing) {
+			panelW = Math.max(300, resizeStart.w + (e.clientX - resizeStart.x));
+			panelH = Math.max(400, resizeStart.h + (e.clientY - resizeStart.y));
+		}
 	}
-
 	function onResizeUp(e: PointerEvent) {
 		isResizing = false;
-		e.currentTarget?.releasePointerCapture(e.pointerId);
+		(e.currentTarget as HTMLElement)?.releasePointerCapture(e.pointerId);
 	}
 </script>
 
@@ -125,9 +119,11 @@
 			onpointermove={onPointerMove}
 			onpointerup={onPointerUp}
 			onpointercancel={onPointerUp}
+			role="button"
+			tabindex="0"
 		>
 			<h2 class="text-sm font-semibold text-slate-200">
-				{selectedToken?.label ?? "Fiche de personnage"}
+				{openedToken?.label ?? "Fiche de personnage"}
 			</h2>
 			<button
 				onpointerdown={(e) => e.stopPropagation()}
@@ -174,6 +170,8 @@
 			onpointermove={onPointerMove}
 			onpointerup={onPointerUp}
 			onpointercancel={onPointerUp}
+			role="button"
+			tabindex="0"
 		>
 			<h2 class="text-sm font-semibold text-slate-200">Fiche de personnage</h2>
 			<button

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { vttState } from "$lib/vtt/vtt.svelte";
 
+	import { untrack } from "svelte";
+
 	type VisualRoll = {
 		id: string;
 		value: number;
@@ -22,20 +24,24 @@
 					const startX = window.innerWidth / 2 + (Math.random() * 100 - 50);
 					const startY = window.innerHeight / 2 + (Math.random() * 100 - 50);
 
-					visualRolls = [
-						...visualRolls,
-						{
-							id,
-							value: val,
-							x: startX,
-							y: startY,
-							rotation: Math.random() * 360 + 720,
-						},
-					];
+					untrack(() => {
+						visualRolls = [
+							...visualRolls,
+							{
+								id,
+								value: val,
+								x: startX,
+								y: startY,
+								rotation: Math.random() * 360 + 720,
+							},
+						];
+					});
 
 					// Remove after animation
 					setTimeout(() => {
-						visualRolls = visualRolls.filter((v) => v.id !== id);
+						untrack(() => {
+							visualRolls = visualRolls.filter((v) => v.id !== id);
+						});
 					}, 2000);
 				});
 			});

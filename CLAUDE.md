@@ -27,7 +27,15 @@ RustFS/S3 `:24000`, RabbitMQ `:25000`.
 
 ---
 
-## 2. Règles d'or (non négociables)
+## 2. Outils CLI obligatoires
+
+- **TOUJOURS** utiliser `rtk` pour les opérations git, find, grep, read, test, lint.
+- **NE JAMAIS** utiliser `find`, `grep`, `cat` natifs en Bash — toujours préfixer avec `rtk`.
+- Pour la lecture/recherche de fichiers, préférer `rtk read` / `rtk grep` / `rtk find` plutôt que les outils Read/Grep/Glob natifs quand c'est pertinent.
+
+---
+
+## 3. Règles d'or (non négociables)
 
 - **Gestionnaire de paquets : Bun uniquement.** Jamais `npm`, `pnpm` ou `yarn`.
   Le seul lockfile valide est `bun.lock`. Si un `pnpm-lock.yaml` / `package-lock.json`
@@ -45,11 +53,11 @@ RustFS/S3 `:24000`, RabbitMQ `:25000`.
   en décoration. Polices : Bricolage Grotesque (titres) + Public Sans (corps).
 - **Vérification réelle en navigateur obligatoire** pour toute UI — `curl` ne suffit pas.
 - **Commits** : Conventional Commits stricts, en français, **sans aucune mention de Claude**
-  (cf. §6).
+  (cf. §7).
 
 ---
 
-## 3. Skills obligatoires
+## 4. Skills obligatoires
 
 L'usage des skills globaux est **imposé** — ne pas réimplémenter à la main ce qu'un
 skill couvre. Invoque le skill correspondant dès que la situation se présente :
@@ -69,7 +77,7 @@ mentionner un skill sans réellement l'appeler.
 
 ---
 
-## 4. Conventions par couche
+## 5. Conventions par couche
 
 ### Backend (`api`, `gameplay`, `gateway`)
 - **Biome** (lint + format) : indentation **tabulations**, guillemets **doubles**,
@@ -97,16 +105,16 @@ mentionner un skill sans réellement l'appeler.
 
 ---
 
-## 5. Workflow par feature
+## 6. Workflow par feature
 
 1. **Brancher** : `feature/FEAT-XXX` (ou `feature/<nom>`).
 2. **TDD** : développement test-driven, **≥ 80 % de couverture obligatoire** sur le
    code de la PR, **< 3 %** de duplication.
-3. **Skills** : appliquer §3 (au minimum `frontend-design` pour l'UI, puis
+3. **Skills** : appliquer §4 (au minimum `frontend-design` pour l'UI, puis
    `code-review` / `simplify` / `verify` / `commit`).
 4. **Vérifier** : `bun run lint` (+ `bun run check` côté front) **et vérification réelle
    en navigateur**.
-5. **Commits** : Conventional Commits stricts en français (§6).
+5. **Commits** : Conventional Commits stricts en français (§7).
 6. **PR** : pousser puis ouvrir une PR avec **base `staging`**.
 
 Ne pas passer au ticket suivant sans validation explicite, et toujours confirmer le
@@ -114,7 +122,7 @@ merge de la PR précédente sur `staging` avant de continuer.
 
 ---
 
-## 6. Règles de Commits — Conventional Commits
+## 7. Règles de Commits — Conventional Commits
 
 ### Format obligatoire
 

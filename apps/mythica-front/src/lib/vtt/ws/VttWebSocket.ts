@@ -5,6 +5,7 @@ import type {
 	FogState,
 	MapConfig,
 	SessionTokenDto,
+	SessionWallDto,
 	DiceRollEvent,
 } from "../types";
 import { handleTokenEvent } from "./handlers/token.handler";
@@ -12,6 +13,7 @@ import { handleFogEvent } from "./handlers/fog.handler";
 import { handleMapEvent } from "./handlers/map.handler";
 import { handleCombatEvent } from "./handlers/combat.handler";
 import { handlePresenceEvent } from "./handlers/presence.handler";
+import { handleWallEvent } from "./handlers/wall.handler";
 
 type VttStateRef = typeof VttStateType;
 
@@ -83,12 +85,14 @@ export class VttWebSocket {
 			const snap = event as {
 				type: string;
 				tokens?: SessionTokenDto[];
+				walls?: SessionWallDto[];
 				activeMap?: MapConfig;
 				mapState?: { fog?: FogState };
 				combatState?: CombatState;
 				participants?: string[];
 			};
 			if (snap.tokens) this.state.setTokens(snap.tokens);
+			if (snap.walls) this.state.setWalls(snap.walls);
 			if (snap.activeMap !== undefined)
 				this.state.setActiveMap(snap.activeMap ?? null);
 			if (snap.mapState?.fog) this.state.setFog(snap.mapState.fog);
@@ -99,6 +103,10 @@ export class VttWebSocket {
 
 		if (type.startsWith("TOKEN_")) {
 			handleTokenEvent(this.state, event);
+			return;
+		}
+		if (type.startsWith("WALL_")) {
+			handleWallEvent(this.state, event);
 			return;
 		}
 		if (type.startsWith("FOG_")) {

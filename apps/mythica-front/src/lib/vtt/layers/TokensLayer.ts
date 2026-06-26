@@ -13,13 +13,22 @@ export class TokensLayer {
 	private sprites: Map<string, TokenSprite> = new Map();
 	private onMove: TokenMoveCallback;
 	private onSelect: TokenSelectCallback;
+	private onDoubleClick: TokenSelectCallback | undefined;
 	private gridSize = 100;
+	private app: Application;
 
-	constructor(stage: Container, _app: Application, onMove?: TokenMoveCallback) {
+	constructor(
+		stage: Container,
+		_app: Application,
+		onMove?: TokenMoveCallback,
+		onDoubleClick?: TokenSelectCallback
+	) {
 		this.container = new Container();
 		this.container.sortableChildren = true;
+		this.app = _app;
 		this.onMove = onMove ?? (() => {});
 		this.onSelect = (tokenId) => vttState.setSelectedTokenId(tokenId);
+		this.onDoubleClick = onDoubleClick;
 		stage.addChild(this.container);
 	}
 
@@ -49,7 +58,9 @@ export class TokensLayer {
 					token,
 					this.onMove,
 					this.onSelect,
-					this.gridSize
+					this.onDoubleClick,
+					this.gridSize,
+					this.app.ticker
 				);
 				this.container.addChild(sprite.container);
 				this.sprites.set(token.id, sprite);
@@ -66,7 +77,9 @@ export class TokensLayer {
 			token,
 			this.onMove,
 			this.onSelect,
-			this.gridSize
+			this.onDoubleClick,
+			this.gridSize,
+			this.app.ticker
 		);
 		this.container.addChild(sprite.container);
 		this.sprites.set(token.id, sprite);

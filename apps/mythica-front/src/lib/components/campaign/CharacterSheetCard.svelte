@@ -48,14 +48,24 @@
 
 <Card.Root class="gap-3 p-4">
 	<div class="flex items-start justify-between gap-2">
-		<div class="flex min-w-0 items-center gap-2">
-			{#if sheet.status === "active"}
-				<SwordIcon class="text-primary size-4 shrink-0" />
-			{:else if sheet.status === "disabled"}
-				<ShieldOffIcon class="size-4 shrink-0 text-muted-foreground" />
-			{:else}
-				<ScrollTextIcon class="size-4 shrink-0 text-muted-foreground" />
-			{/if}
+		<div class="flex min-w-0 items-center gap-3">
+			<div
+				class="border-primary/30 bg-muted flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border"
+			>
+				{#if sheet.avatarUrl}
+					<img
+						src={sheet.avatarUrl}
+						alt={sheet.name}
+						class="h-full w-full object-cover"
+					/>
+				{:else if sheet.status === "active"}
+					<SwordIcon class="text-primary size-4 shrink-0" />
+				{:else if sheet.status === "disabled"}
+					<ShieldOffIcon class="size-4 shrink-0 text-muted-foreground" />
+				{:else}
+					<ScrollTextIcon class="size-4 shrink-0 text-muted-foreground" />
+				{/if}
+			</div>
 			<span class="truncate text-sm font-medium">{sheet.name}</span>
 		</div>
 		<Badge variant={badge.variant}>{badge.label}</Badge>

@@ -36,11 +36,11 @@
 
 		if (isPrivate) {
 			vttState.addDiceRoll({
-				type: "DICE_ROLL",
 				formula,
 				results: rolls,
 				total,
 				isPrivate,
+				rollerId: vttState.participants[0] || "Unknown",
 			});
 		} else {
 			if (ws) {
@@ -58,48 +58,62 @@
 </script>
 
 <div
-	class="fixed bottom-20 left-1/2 z-40 w-72 -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900/95 shadow-2xl backdrop-blur"
+	class="fixed bottom-20 left-1/2 z-40 w-80 -translate-x-1/2 flex-col overflow-hidden rounded-[1.5rem] border border-border/40 bg-background/70 shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-3xl transition-all duration-300 ease-out"
 >
-	<div class="flex items-center justify-between border-b border-slate-700 p-3">
-		<h2 class="flex items-center gap-2 text-sm font-semibold text-slate-200">
-			<DicesIcon class="h-4 w-4 text-red-500" />
-			Lancer rapide
-		</h2>
+	<div
+		class="flex items-center justify-between border-b border-border/30 px-4 py-3"
+	>
+		<div class="flex items-center gap-2">
+			<div
+				class="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary"
+			>
+				<DicesIcon class="h-4 w-4" />
+			</div>
+			<h2 class="text-sm font-medium tracking-tight text-foreground">
+				Lancer rapide
+			</h2>
+		</div>
 		<button
 			onclick={onClose}
-			class="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+			class="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
 		>
 			<XIcon class="h-4 w-4" />
 		</button>
 	</div>
 	<div class="p-4 flex flex-col gap-4">
 		<div class="flex items-center gap-3">
-			<label class="text-xs text-slate-400 flex flex-col gap-1 w-1/2">
+			<label
+				class="text-xs text-muted-foreground flex flex-col gap-1.5 w-1/2 font-medium"
+			>
 				Nombre
 				<input
 					type="number"
 					min="1"
 					max="20"
 					bind:value={count}
-					class="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm text-white focus:border-red-500 focus:outline-none"
+					class="w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm text-foreground transition-all focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
 				/>
 			</label>
-			<label class="text-xs text-slate-400 flex flex-col gap-1 w-1/2">
+			<label
+				class="text-xs text-muted-foreground flex flex-col gap-1.5 w-1/2 font-medium"
+			>
 				Modificateur
 				<input
 					type="number"
 					bind:value={modifier}
-					class="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-sm text-white focus:border-red-500 focus:outline-none"
+					class="w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm text-foreground transition-all focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
 				/>
 			</label>
 		</div>
 
 		<div class="flex items-center gap-2">
-			<label class="flex items-center gap-2 text-xs text-slate-300">
+			<label
+				class="flex items-center gap-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+			>
 				<input
 					type="checkbox"
 					bind:checked={isPrivate}
-					class="rounded border-slate-700 bg-slate-800 text-red-600 focus:ring-red-600 focus:ring-offset-slate-900"
+					class="rounded border-border/50 bg-background/50 text-primary focus:ring-primary/50 focus:ring-offset-0 transition-colors"
 				/>
 				Jet privé (MJ uniquement)
 			</label>
@@ -109,7 +123,7 @@
 			{#each diceTypes as dice (dice)}
 				<button
 					onclick={() => roll(dice)}
-					class="flex items-center justify-center rounded-lg border border-slate-700 bg-slate-800 py-2 text-sm font-bold text-slate-300 transition-colors hover:border-red-500 hover:bg-red-900/20 hover:text-red-400"
+					class="flex items-center justify-center rounded-xl border border-border/20 bg-secondary/40 py-2.5 text-sm font-bold text-foreground shadow-sm transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-md active:scale-[0.97]"
 				>
 					d{dice}
 				</button>
