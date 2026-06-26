@@ -29,7 +29,8 @@ export class BackgroundLayer {
 			this.sprite.width = config.widthPx;
 			this.sprite.height = config.heightPx;
 			this.container.addChild(this.sprite);
-		} catch {
+		} catch (err) {
+			console.error("Erreur chargement image map:", err);
 			// Image non chargeable : fond uni
 		}
 	}

@@ -52,8 +52,18 @@ export const filesController = new Elysia({ prefix: "/files" }).get(
 			return { success: false, error: "Domaine de fichier non supporté" };
 		}
 
-		// Rediriger vers l'URL présignée Minio
-		set.redirect = url;
+		// Fetch et proxy du fichier pour éviter les erreurs CORS
+		const response = await fetch(url);
+		if (!response.ok) {
+			set.status = 500;
+			return { success: false, error: "Erreur lors du téléchargement" };
+		}
+		
+		set.headers["content-type"] = response.headers.get("content-type") || "application/octet-stream";
+		// Pour la mise en cache
+		set.headers["cache-control"] = "public, max-age=31536000";
+		
+		return response.blob();
 	},
 	{
 		params: t.Object({ fileId: t.String() }),
