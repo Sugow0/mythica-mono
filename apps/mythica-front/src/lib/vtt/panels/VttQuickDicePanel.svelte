@@ -36,41 +36,32 @@
 		}
 	}
 
-	function addMod(val: number) {
-		if (!formula.trim()) {
-			formula = `${val}`;
-			return;
-		}
-
-		const endMatch = /(^|[\s+-]+)(\d+)\s*$/.exec(formula);
-		if (endMatch) {
-			const currentVal = parseInt(endMatch[2], 10);
-			const signStr = endMatch[1].replace(/\s/g, "");
-			const sign = signStr === "-" ? -1 : 1;
-			const totalMod = sign * currentVal + val;
-
-			const index = endMatch.index;
-			let prefix = formula.substring(0, index).trimEnd();
-
-			if (totalMod === 0) {
-				if (prefix.endsWith("+") || prefix.endsWith("-")) {
-					prefix = prefix.substring(0, prefix.length - 1).trimEnd();
-				}
-				formula = prefix;
-			} else if (!prefix) {
-				formula = `${totalMod}`;
-			} else {
-				formula = `${prefix} ${totalMod > 0 ? "+" : "-"} ${Math.abs(totalMod)}`;
-			}
+	function setAdvantage() {
+		if (!/[dD]20/i.test(formula)) {
+			formula = formula.trim() ? `2d20kh1 + ${formula.trim()}` : `2d20kh1`;
 		} else {
-			formula = `${formula.trim()} ${val >= 0 ? "+" : "-"} ${Math.abs(val)}`;
+			formula = formula.replace(
+				/(^|[\s+-]+)\d*[dD]20(?:[kK][hHlL]\d+)?/,
+				"$12d20kh1"
+			);
+		}
+	}
+
+	function setDisadvantage() {
+		if (!/[dD]20/i.test(formula)) {
+			formula = formula.trim() ? `2d20kl1 + ${formula.trim()}` : `2d20kl1`;
+		} else {
+			formula = formula.replace(
+				/(^|[\s+-]+)\d*[dD]20(?:[kK][hHlL]\d+)?/,
+				"$12d20kl1"
+			);
 		}
 	}
 
 	function parseAndRoll() {
 		if (!formula.trim()) return;
 
-		const re = /([+-]?)\s*(?:(\d*)[dD](\d+)|(\d+))/g;
+		const re = /([+-]?)\s*(?:(\d*)[dD](\d+)(?:([kK][hHlL])(\d+))?|(\d+))/g;
 		let match;
 		let total = 0;
 		const results: number[] = [];
@@ -83,10 +74,10 @@
 			hasParsedAnything = true;
 			const signStr = match[1];
 			const sign = signStr === "-" ? -1 : 1;
-			const isFlat = match[4] !== undefined;
+			const isFlat = match[6] !== undefined;
 
 			if (isFlat) {
-				const mod = parseInt(match[4], 10);
+				const mod = parseInt(match[6], 10);
 				const val = sign * mod;
 				total += val;
 
@@ -98,23 +89,52 @@
 			} else {
 				const count = parseInt(match[2] || "1", 10);
 				const faces = parseInt(match[3], 10);
+				const keepType = match[4]?.toLowerCase();
+				const keepCount = parseInt(match[5] || "1", 10);
 
-				const currentRolls: number[] = [];
-				let currentSum = 0;
+				const currentRolls: { val: number; kept: boolean }[] = [];
 				for (let i = 0; i < count; i++) {
-					const r = Math.floor(Math.random() * faces) + 1;
-					currentRolls.push(r);
-					currentSum += r;
+					currentRolls.push({
+						val: Math.floor(Math.random() * faces) + 1,
+						kept: true,
+					});
+				}
+
+				if (keepType && keepCount < count) {
+					const sortedIndices = currentRolls
+						.map((r, i) => ({ val: r.val, idx: i }))
+						.sort((a, b) => a.val - b.val);
+					let indicesToDrop: number[] = [];
+					if (keepType === "kh") {
+						indicesToDrop = sortedIndices
+							.slice(0, count - keepCount)
+							.map((x) => x.idx);
+					} else if (keepType === "kl") {
+						indicesToDrop = sortedIndices.slice(keepCount).map((x) => x.idx);
+					}
+					for (const idx of indicesToDrop) {
+						currentRolls[idx].kept = false;
+					}
+				}
+
+				let currentSum = 0;
+				for (const r of currentRolls) {
+					if (r.kept) currentSum += r.val;
 				}
 
 				const val = sign * currentSum;
 				total += val;
-				results.push(...currentRolls.map((r) => sign * r)); // store flat absolute or signed values
+				results.push(
+					...currentRolls.filter((r) => r.kept).map((r) => sign * r.val)
+				);
 
+				const rollsStrs = currentRolls.map((r) =>
+					r.kept ? `${r.val}` : `~~${r.val}~~`
+				);
 				const groupStr =
-					currentRolls.length > 1
-						? `[${currentRolls.join(", ")}]`
-						: `${currentRolls[0]}`;
+					rollsStrs.length > 1
+						? `[${rollsStrs.join(", ")}]`
+						: `${rollsStrs[0]}`;
 
 				if (displayStr.length > 0) {
 					displayStr += ` ${signStr || "+"} ${groupStr}`;
@@ -217,15 +237,19 @@
 					</button>
 				{/each}
 			</div>
-			<div class="grid grid-cols-6 gap-1.5 mt-1">
-				{#each [1, 2, 5, -1, -2, -5] as mod (mod)}
-					<button
-						onclick={() => addMod(mod)}
-						class="flex items-center justify-center rounded-lg border border-border/20 bg-secondary/20 py-1 text-xs font-medium text-foreground transition-all hover:bg-secondary active:scale-[0.97]"
-					>
-						{mod > 0 ? "+" : ""}{mod}
-					</button>
-				{/each}
+			<div class="grid grid-cols-2 gap-2 mt-1">
+				<button
+					onclick={setAdvantage}
+					class="flex items-center justify-center rounded-lg border border-green-500/30 bg-green-500/10 py-1.5 text-xs font-bold text-green-600 dark:text-green-400 transition-all hover:bg-green-500/20 active:scale-[0.97]"
+				>
+					Avantage
+				</button>
+				<button
+					onclick={setDisadvantage}
+					class="flex items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 py-1.5 text-xs font-bold text-red-600 dark:text-red-400 transition-all hover:bg-red-500/20 active:scale-[0.97]"
+				>
+					Désavantage
+				</button>
 			</div>
 		</div>
 

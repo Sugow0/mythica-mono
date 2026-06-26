@@ -61,6 +61,28 @@
 		}
 	}
 
+	function setAdvantage() {
+		if (!/[dD]20/i.test(formula)) {
+			formula = formula.trim() ? `2d20kh1 + ${formula.trim()}` : `2d20kh1`;
+		} else {
+			formula = formula.replace(
+				/(^|[\s+-]+)\d*[dD]20(?:[kK][hHlL]\d+)?/,
+				"$12d20kh1"
+			);
+		}
+	}
+
+	function setDisadvantage() {
+		if (!/[dD]20/i.test(formula)) {
+			formula = formula.trim() ? `2d20kl1 + ${formula.trim()}` : `2d20kl1`;
+		} else {
+			formula = formula.replace(
+				/(^|[\s+-]+)\d*[dD]20(?:[kK][hHlL]\d+)?/,
+				"$12d20kl1"
+			);
+		}
+	}
+
 	function rollDice() {
 		if (!formula.trim()) return;
 		isRolling = true;
@@ -68,7 +90,7 @@
 
 		// Simulate network/physics delay
 		setTimeout(() => {
-			const re = /([+-]?)\s*(?:(\d*)[dD](\d+)|(\d+))/g;
+			const re = /([+-]?)\s*(?:(\d*)[dD](\d+)(?:([kK][hHlL])(\d+))?|(\d+))/g;
 			let match;
 			let total = 0;
 			let displayStr = "";
@@ -79,10 +101,10 @@
 				hasParsedAnything = true;
 				const signStr = match[1];
 				const sign = signStr === "-" ? -1 : 1;
-				const isFlat = match[4] !== undefined;
+				const isFlat = match[6] !== undefined;
 
 				if (isFlat) {
-					const mod = parseInt(match[4], 10);
+					const mod = parseInt(match[6], 10);
 					const val = sign * mod;
 					total += val;
 
@@ -94,22 +116,49 @@
 				} else {
 					const count = parseInt(match[2] || "1", 10);
 					const faces = parseInt(match[3], 10);
+					const keepType = match[4]?.toLowerCase();
+					const keepCount = parseInt(match[5] || "1", 10);
 
-					const currentRolls: number[] = [];
-					let currentSum = 0;
+					const currentRolls: { val: number; kept: boolean }[] = [];
 					for (let i = 0; i < count; i++) {
-						const r = Math.floor(Math.random() * faces) + 1;
-						currentRolls.push(r);
-						currentSum += r;
+						currentRolls.push({
+							val: Math.floor(Math.random() * faces) + 1,
+							kept: true,
+						});
+					}
+
+					if (keepType && keepCount < count) {
+						const sortedIndices = currentRolls
+							.map((r, i) => ({ val: r.val, idx: i }))
+							.sort((a, b) => a.val - b.val);
+						let indicesToDrop: number[] = [];
+						if (keepType === "kh") {
+							indicesToDrop = sortedIndices
+								.slice(0, count - keepCount)
+								.map((x) => x.idx);
+						} else if (keepType === "kl") {
+							indicesToDrop = sortedIndices.slice(keepCount).map((x) => x.idx);
+						}
+						for (const idx of indicesToDrop) {
+							currentRolls[idx].kept = false;
+						}
+					}
+
+					let currentSum = 0;
+					for (const r of currentRolls) {
+						if (r.kept) currentSum += r.val;
 					}
 
 					const val = sign * currentSum;
 					total += val;
 
+					const rollsStrs = currentRolls.map((r) =>
+						r.kept ? `${r.val}` : `~~${r.val}~~`
+					);
 					const groupStr =
-						currentRolls.length > 1
-							? `[${currentRolls.join(", ")}]`
-							: `${currentRolls[0]}`;
+						rollsStrs.length > 1
+							? `[${rollsStrs.join(", ")}]`
+							: `${rollsStrs[0]}`;
 
 					if (displayStr.length > 0) {
 						displayStr += ` ${signStr || "+"} ${groupStr}`;
@@ -197,17 +246,21 @@
 					<div>
 						<label
 							class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-							>Ajouter des modificateurs</label
+							>Avantage / Désavantage</label
 						>
-						<div class="grid grid-cols-4 gap-2">
-							{#each [1, 2, 5, 10, -1, -2, -5, -10] as mod}
-								<button
-									onclick={() => addMod(mod)}
-									class="rounded-lg border border-slate-200 bg-slate-50 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:border-border dark:bg-background dark:text-muted-foreground dark:hover:border-red-900 dark:hover:bg-red-950/30"
-								>
-									{mod > 0 ? "+" : ""}{mod}
-								</button>
-							{/each}
+						<div class="grid grid-cols-2 gap-2">
+							<button
+								onclick={setAdvantage}
+								class="rounded-lg border border-green-200 bg-green-50 py-2 text-sm font-bold text-green-700 transition-colors hover:border-green-300 hover:bg-green-100 dark:border-green-900/50 dark:bg-green-950/20 dark:text-green-400 dark:hover:bg-green-900/40"
+							>
+								Avantage (2d20kh1)
+							</button>
+							<button
+								onclick={setDisadvantage}
+								class="rounded-lg border border-red-200 bg-red-50 py-2 text-sm font-bold text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/40"
+							>
+								Désavantage (2d20kl1)
+							</button>
 						</div>
 					</div>
 
