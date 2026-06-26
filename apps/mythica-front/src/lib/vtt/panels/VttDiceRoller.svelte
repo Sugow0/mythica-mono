@@ -23,7 +23,7 @@
 			if (!isMounted) return;
 			const DiceBox = mod.default;
 			diceBoxInstance = new DiceBox(diceBoxContainer, {
-				assetPath: "https://unpkg.com/@3d-dice/dice-box@1.1.4/dist/assets/",
+				assetPath: "/assets/dice-box/",
 				theme: "default",
 				themeColor: "#991b1b",
 				scale: 6,
