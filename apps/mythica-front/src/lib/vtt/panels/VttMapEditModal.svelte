@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { campaignService } from "$lib/index.js";
 	import * as Dialog from "$lib/components/ui/dialog";
+	import * as AlertDialog from "$lib/components/ui/alert-dialog";
 	import { Button } from "$lib/components/ui/button";
 	import { Input } from "$lib/components/ui/input";
 	import { Label } from "$lib/components/ui/label";
@@ -22,6 +23,7 @@
 
 	let busy = $state(false);
 	let error = $state<string | null>(null);
+	let showDeleteConfirm = $state(false);
 
 	let editNom = $state("");
 	let editGridType = $state<"square" | "hex" | "free">("square");
@@ -89,6 +91,22 @@
 		} catch (err: unknown) {
 			error =
 				err instanceof Error ? err.message : "Erreur lors de la sauvegarde.";
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function confirmDeleteMap() {
+		busy = true;
+		error = null;
+		try {
+			await campaignService.deleteMap(campaignId, map!.id);
+			onSuccess();
+			onOpenChange(false);
+			showDeleteConfirm = false;
+		} catch (err: unknown) {
+			error =
+				err instanceof Error ? err.message : "Erreur lors de la suppression.";
 		} finally {
 			busy = false;
 		}
@@ -195,17 +213,48 @@
 			</div>
 		</div>
 
-		<Dialog.Footer>
+		<Dialog.Footer class="sm:justify-between">
 			<Button
-				variant="outline"
-				onclick={() => onOpenChange(false)}
+				variant="destructive"
+				onclick={() => (showDeleteConfirm = true)}
 				disabled={busy}
 			>
-				Annuler
+				Supprimer
 			</Button>
-			<Button onclick={saveChanges} disabled={busy || !editNom.trim()}>
-				Enregistrer
-			</Button>
+			<div class="flex items-center gap-2">
+				<Button
+					variant="outline"
+					onclick={() => onOpenChange(false)}
+					disabled={busy}
+				>
+					Annuler
+				</Button>
+				<Button onclick={saveChanges} disabled={busy || !editNom.trim()}>
+					Enregistrer
+				</Button>
+			</div>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<AlertDialog.Root bind:open={showDeleteConfirm}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Êtes-vous sûr ?</AlertDialog.Title>
+			<AlertDialog.Description>
+				Cette action est irréversible. Cela supprimera définitivement la map "{map?.nom}"
+				et tous les éléments associés.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel disabled={busy}>Annuler</AlertDialog.Cancel>
+			<AlertDialog.Action
+				onclick={confirmDeleteMap}
+				disabled={busy}
+				class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+			>
+				Continuer
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
