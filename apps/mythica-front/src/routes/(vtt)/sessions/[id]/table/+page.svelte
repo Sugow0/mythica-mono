@@ -227,7 +227,7 @@
 	</a>
 
 	<!-- Overlays DOM -->
-	<VttPresenceBar participants={vttState.participants} />
+	<VttPresenceBar participants={vttState.participants} members={data.members} />
 	<VttToolbar
 		{isGm}
 		{ws}
