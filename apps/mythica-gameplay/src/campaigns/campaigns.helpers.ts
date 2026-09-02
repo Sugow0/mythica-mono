@@ -23,3 +23,24 @@ export function isGmOf(
 ): boolean {
 	return campaign.ownerId === userId || role === "gm";
 }
+
+export type CampaignGmAccess =
+	| {
+			ok: true;
+			campaign: NonNullable<Awaited<ReturnType<typeof findActiveCampaign>>>;
+	  }
+	| { ok: false; status: 404 | 403; error: string };
+
+export async function requireCampaignGm(
+	campaignId: string,
+	userId: string,
+): Promise<CampaignGmAccess> {
+	const campaign = await findActiveCampaign(campaignId);
+	if (!campaign)
+		return { ok: false, status: 404, error: "Campagne introuvable" };
+	const role = await memberRole(campaignId, userId);
+	if (!isGmOf(campaign, userId, role)) {
+		return { ok: false, status: 403, error: "Droits MJ requis" };
+	}
+	return { ok: true, campaign };
+}

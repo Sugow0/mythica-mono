@@ -320,7 +320,7 @@ export async function listJobs(gameSystemId?: string) {
 }
 
 export async function getJob(jobId: string) {
-	return prisma.contentImportJob.findUnique({
+	const job = await prisma.contentImportJob.findUnique({
 		where: { id: jobId },
 		include: {
 			_count: {
@@ -330,6 +330,28 @@ export async function getJob(jobId: string) {
 			},
 		},
 	});
+
+	if (!job) return null;
+
+	const statusCounts = await prisma.contentImportItem.groupBy({
+		by: ["status"],
+		where: { jobId },
+		_count: { id: true },
+	});
+
+	const counts = {
+		pending: 0,
+		approved: 0,
+		rejected: 0,
+	};
+	for (const row of statusCounts) {
+		counts[row.status] = row._count.id;
+	}
+
+	return {
+		...job,
+		counts,
+	};
 }
 
 export async function listItems(

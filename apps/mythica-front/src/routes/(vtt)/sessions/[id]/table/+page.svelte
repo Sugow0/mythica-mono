@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onDestroy, onMount } from "svelte";
 	import { page } from "$app/state";
+	import LogOutIcon from "@lucide/svelte/icons/log-out";
 	import VttCanvas from "$lib/vtt/VttCanvas.svelte";
 	import VttToolbar from "$lib/vtt/panels/VttToolbar.svelte";
 	import VttChatPanel from "$lib/vtt/panels/VttChatPanel.svelte";
@@ -11,6 +12,7 @@
 	import VttDiceRoller from "$lib/vtt/panels/VttDiceRoller.svelte";
 	import VttQuickDicePanel from "$lib/vtt/panels/VttQuickDicePanel.svelte";
 	import VttActorsPanel from "$lib/vtt/panels/VttActorsPanel.svelte";
+	import VttEncountersPanel from "$lib/vtt/panels/VttEncountersPanel.svelte";
 	import type { CampaignCharacterSheet } from "$lib/api/services/campaign-character-sheets-service";
 	import { vttState } from "$lib/vtt/vtt.svelte";
 	import { VttWebSocket, type WsStatus } from "$lib/vtt/ws/VttWebSocket";
@@ -30,6 +32,7 @@
 	let wsStatus = $state<WsStatus>("connecting");
 	let showMaps = $state(false);
 	let showActors = $state(false);
+	let showEncounters = $state(false);
 	let showMySheet = $state(false);
 	let openedSheetId = $state<string | null>(null);
 	let showDice = $state(false);
@@ -49,9 +52,12 @@
 
 	async function handleAddToken(label: string) {
 		try {
-			await campaignService.createToken(sessionId, { label });
+			const res = await campaignService.createToken(sessionId, { label });
+			if (res.success && res.token) {
+				vttState.addToken(res.token);
+			}
 		} catch {
-			// Le token s'affichera via l'événement WS TOKEN_ADDED
+			// Ignore
 		}
 	}
 
@@ -64,13 +70,16 @@
 	) {
 		if (!isGm) return;
 		try {
-			await campaignService.createToken(sessionId, {
+			const res = await campaignService.createToken(sessionId, {
 				label,
 				characterSheetId: sheetId,
 				fileId: fileId ?? undefined,
 				posX: gridX,
 				posY: gridY,
 			});
+			if (res.success && res.token) {
+				vttState.addToken(res.token);
+			}
 		} catch (_err) {
 			// Ignore
 		}
@@ -151,8 +160,8 @@
 	<div class="absolute inset-0">
 		<VttCanvas
 			mapConfig={vttState.activeMap}
-			onTokenMove={(id, x, y) =>
-				ws?.send({ type: "TOKEN_MOVE", tokenId: id, x, y })}
+			onTokenMove={(id, x, y, waypoints) =>
+				ws?.send({ type: "TOKEN_MOVE", tokenId: id, x, y, waypoints })}
 			onTokenDoubleClick={(id) => (openedSheetTokenId = id)}
 			onDropToken={handleDropToken}
 			onFogPaint={isGm ? handleFogPaint : undefined}
@@ -160,6 +169,8 @@
 			onTokenDelete={isGm
 				? (id) => ws?.send({ type: "TOKEN_REMOVE", tokenId: id })
 				: undefined}
+			onTokenUpdate={(id, updates) =>
+				ws?.send({ type: "TOKEN_UPDATE", tokenId: id, ...updates })}
 			onWallAdd={isGm
 				? (p1X, p1Y, p2X, p2Y, type) =>
 						ws?.send({ type: "WALL_ADD", p1X, p1Y, p2X, p2Y, wallType: type })
@@ -213,8 +224,24 @@
 		WS {wsStatus}
 	</div>
 
+	<!-- Bouton Quitter -->
+	<a
+		href="/campaigns/{data.campaign?.id}"
+		class="fixed left-4 top-4 z-50 flex items-center gap-2 rounded-xl border border-border/40 bg-background/70 px-3 py-2 text-sm font-medium text-muted-foreground shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-3xl transition-all hover:bg-red-500/10 hover:text-red-500 dark:shadow-[0_8px_30px_rgb(0,0,0,0.5)]"
+		title="Quitter la session"
+	>
+		<LogOutIcon class="h-4 w-4" />
+		<span class="hidden sm:inline">Quitter</span>
+	</a>
+
 	<!-- Overlays DOM -->
-	<VttPresenceBar participants={vttState.participants} />
+	<VttPresenceBar
+		participants={vttState.participants}
+		members={data.members}
+		currentUserId={data.user?.id}
+		onUpdateProfile={(profile) =>
+			ws?.send({ type: "PRESENCE_UPDATE", ...profile })}
+	/>
 	<VttToolbar
 		{isGm}
 		{ws}
@@ -223,6 +250,10 @@
 		{showMaps}
 		onToggleActors={isGm ? () => (showActors = !showActors) : undefined}
 		{showActors}
+		onToggleEncounters={isGm
+			? () => (showEncounters = !showEncounters)
+			: undefined}
+		{showEncounters}
 		onToggleMySheet={() => {
 			showMySheet = !showMySheet;
 			if (showMySheet) vttState.setSelectedTokenId(null);
@@ -243,6 +274,13 @@
 				openedSheetTokenId = null;
 				showMySheet = false;
 			}}
+		/>
+	{/if}
+	{#if isGm && showEncounters}
+		<VttEncountersPanel
+			campaignId={data.campaign?.id ?? ""}
+			{sessionId}
+			onClose={() => (showEncounters = false)}
 		/>
 	{/if}
 	{#if vttState.combatState.started}

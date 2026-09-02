@@ -933,6 +933,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/campaigns/{id}/encounters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liste des rencontres */
+        get: operations["getCampaignsByIdEncounters"];
+        put?: never;
+        /** Créer une rencontre */
+        post: operations["postCampaignsByIdEncounters"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/campaigns/{id}/encounters/{encounterId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Supprimer une rencontre */
+        delete: operations["deleteCampaignsByIdEncountersByEncounterId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/campaigns/{id}/encounters/{encounterId}/monsters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ajouter un monstre à la rencontre */
+        post: operations["postCampaignsByIdEncountersByEncounterIdMonsters"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/campaigns/{id}/encounters/{encounterId}/monsters/{monsterId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Retirer un monstre */
+        delete: operations["deleteCampaignsByIdEncountersByEncounterIdMonstersByMonsterId"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/sessions/{id}": {
         parameters: {
             query?: never;
@@ -1084,6 +1153,23 @@ export interface paths {
         put?: never;
         /** Uploader l'image de fond d'une map */
         post: operations["postCampaignsByIdMapsByMapIdFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/files/{fileId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtenir le contenu d'un fichier (redirection) */
+        get: operations["getFilesByFileIdContent"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6396,6 +6482,8 @@ export interface operations {
                             /** Format: uuid */
                             userId: string;
                             name: string;
+                            avatarFileId: (string | null) | null;
+                            avatarUrl: string | null;
                             status: "active" | "inactive" | "disabled";
                         }[];
                     };
@@ -6410,6 +6498,8 @@ export interface operations {
                             /** Format: uuid */
                             userId: string;
                             name: string;
+                            avatarFileId: (string | null) | null;
+                            avatarUrl: string | null;
                             status: "active" | "inactive" | "disabled";
                         }[];
                     };
@@ -6424,6 +6514,8 @@ export interface operations {
                             /** Format: uuid */
                             userId: string;
                             name: string;
+                            avatarFileId: (string | null) | null;
+                            avatarUrl: string | null;
                             status: "active" | "inactive" | "disabled";
                         }[];
                     };
@@ -9024,6 +9116,138 @@ export interface operations {
             };
         };
     };
+    getCampaignsByIdEncounters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postCampaignsByIdEncounters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    nom: string;
+                    difficulty?: string;
+                };
+                "multipart/form-data": {
+                    nom: string;
+                    difficulty?: string;
+                };
+                "text/plain": {
+                    nom: string;
+                    difficulty?: string;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteCampaignsByIdEncountersByEncounterId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                encounterId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    postCampaignsByIdEncountersByEncounterIdMonsters: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                encounterId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    characterSheetId: string;
+                    quantity?: number;
+                };
+                "multipart/form-data": {
+                    /** Format: uuid */
+                    characterSheetId: string;
+                    quantity?: number;
+                };
+                "text/plain": {
+                    /** Format: uuid */
+                    characterSheetId: string;
+                    quantity?: number;
+                };
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    deleteCampaignsByIdEncountersByEncounterIdMonstersByMonsterId: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                encounterId: string;
+                monsterId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     getSessionsById: {
         parameters: {
             query?: never;
@@ -11081,6 +11305,41 @@ export interface operations {
                     };
                 };
             };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "multipart/form-data": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                    "text/plain": {
+                        /** @constant */
+                        success: false;
+                        error: string;
+                    };
+                };
+            };
+        };
+    };
+    getFilesByFileIdContent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
             404: {
                 headers: {
                     [name: string]: unknown;

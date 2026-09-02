@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { vttState } from "$lib/vtt/vtt.svelte";
-
-	import { untrack } from "svelte";
+	import { untrack, onMount } from "svelte";
 
 	type VisualRoll = {
 		id: string;
@@ -9,53 +8,157 @@
 		x: number;
 		y: number;
 		rotation: number;
+		color: string;
 	};
 
 	let visualRolls = $state<VisualRoll[]>([]);
 	let processedCount = 0;
+	let hide3DDice = $state(false);
+
+	let diceBoxContainer: HTMLElement;
+	let diceBoxInstance: any = null;
+	let diceBoxReady = false;
+
+	onMount(() => {
+		let isMounted = true;
+		import("@3d-dice/dice-box").then((mod) => {
+			if (!isMounted) return;
+			const DiceBox = mod.default;
+			diceBoxInstance = new DiceBox("#dice-box-container", {
+				assetPath: "/assets/dice-box/",
+				theme: "default",
+				themeColor: "#991b1b",
+				scale: 6,
+				spinForce: 10,
+				throwForce: 10,
+				startingHeight: 12,
+			});
+
+			diceBoxInstance
+				.init()
+				.then(() => {
+					console.log("3D Dice Box initialized successfully!");
+					if (isMounted) diceBoxReady = true;
+				})
+				.catch((err: any) => {
+					console.error("Failed to initialize 3D Dice Box:", err);
+				});
+		});
+
+		return () => {
+			isMounted = false;
+			if (diceBoxInstance) {
+				const container = document.getElementById("dice-box-container");
+				if (container) container.innerHTML = "";
+			}
+		};
+	});
+
+	function stringToColor(str?: string) {
+		if (!str) return "#991b1b";
+		let hash = 0;
+		for (let i = 0; i < str.length; i++) {
+			hash = str.charCodeAt(i) + ((hash << 5) - hash);
+		}
+		const c = (hash & 0x00ffffff).toString(16).toUpperCase();
+		return "#" + "00000".substring(0, 6 - c.length) + c;
+	}
+
+	let fadeDiceTimeout: ReturnType<typeof setTimeout> | null = null;
+	let clearDiceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 	$effect(() => {
 		const newRolls = vttState.diceRolls.slice(processedCount);
 		if (newRolls.length > 0) {
 			processedCount = vttState.diceRolls.length;
+
 			newRolls.forEach((r) => {
-				r.results.forEach((val) => {
-					const id = Math.random().toString(36).substring(2);
-					const startX = window.innerWidth / 2 + (Math.random() * 100 - 50);
-					const startY = window.innerHeight / 2 + (Math.random() * 100 - 50);
+				const rollerColor =
+					vttState.customColors[r.rollerId] || stringToColor(r.rollerId);
+				if (vttState.use3DDice && diceBoxReady && diceBoxInstance) {
+					// Extract only valid dice strings (e.g. "1d20", "2d6") and join them
+					const matches = r.formula.match(/\d*[dD]\d+/g);
+					if (matches && matches.length > 0) {
+						hide3DDice = false; // Make sure container is visible
 
-					untrack(() => {
-						visualRolls = [
-							...visualRolls,
-							{
-								id,
-								value: val,
-								x: startX,
-								y: startY,
-								rotation: Math.random() * 360 + 720,
-							},
-						];
-					});
+						if (fadeDiceTimeout) clearTimeout(fadeDiceTimeout);
+						if (clearDiceTimeout) clearTimeout(clearDiceTimeout);
 
-					// Remove after animation
-					setTimeout(() => {
+						if (typeof diceBoxInstance.resizeWorld === "function") {
+							diceBoxInstance.resizeWorld();
+						}
+
+						diceBoxInstance
+							.roll(matches, { themeColor: rollerColor })
+							.then(() => {
+								fadeDiceTimeout = setTimeout(() => {
+									hide3DDice = true; // Trigger CSS fade out
+									clearDiceTimeout = setTimeout(() => {
+										if (
+											diceBoxInstance &&
+											typeof diceBoxInstance.clear === "function"
+										) {
+											diceBoxInstance.clear();
+										}
+									}, 1000); // Wait for the transition to finish
+								}, 4000); // Wait 4 seconds before fading
+							})
+							.catch((err: any) => {
+								console.error("Error rolling 3D dice:", err);
+							});
+					}
+				} else if (!vttState.use3DDice) {
+					// Fallback to 2D
+					r.results.forEach((val) => {
+						const id = Math.random().toString(36).substring(2);
+						const startX = window.innerWidth / 2 + (Math.random() * 100 - 50);
+						const startY = window.innerHeight / 2 + (Math.random() * 100 - 50);
+
 						untrack(() => {
-							visualRolls = visualRolls.filter((v) => v.id !== id);
+							visualRolls = [
+								...visualRolls,
+								{
+									id,
+									value: val,
+									x: startX,
+									y: startY,
+									rotation: Math.random() * 360 + 720,
+									color: rollerColor,
+								},
+							];
 						});
-					}, 2000);
-				});
+
+						setTimeout(() => {
+							untrack(() => {
+								visualRolls = visualRolls.filter((v) => v.id !== id);
+							});
+						}, 2000);
+					});
+				}
 			});
 		}
 	});
 </script>
 
-<div class="pointer-events-none fixed inset-0 z-[100] overflow-hidden">
+<div
+	id="dice-box-container"
+	class="pointer-events-none z-[100] transition-opacity duration-1000"
+	style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; overflow: hidden;"
+	class:opacity-0={!vttState.use3DDice || hide3DDice}
+></div>
+
+<div
+	class="pointer-events-none fixed inset-0 z-[101] overflow-hidden transition-opacity duration-300"
+	class:opacity-0={vttState.use3DDice}
+>
 	{#each visualRolls as roll (roll.id)}
 		<div
-			class="absolute flex h-16 w-16 items-center justify-center rounded-xl border-2 border-red-500 bg-red-950 text-2xl font-bold text-white shadow-lg transition-all duration-1000 ease-out"
+			class="absolute flex h-16 w-16 items-center justify-center rounded-xl border-2 text-2xl font-bold text-white shadow-lg transition-all duration-1000 ease-out"
 			style="
 				left: {roll.x}px; 
 				top: {roll.y}px; 
+				background-color: {roll.color};
+				border-color: rgba(255,255,255,0.3);
 				transform: translate(-50%, -50%) rotate({roll.rotation}deg);
 				animation: fadeOut 2s forwards;
 			"
@@ -66,6 +169,12 @@
 </div>
 
 <style>
+	:global(#dice-box-container canvas) {
+		width: 100vw !important;
+		height: 100vh !important;
+		display: block;
+	}
+
 	@keyframes fadeOut {
 		0% {
 			opacity: 0;

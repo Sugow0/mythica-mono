@@ -72,14 +72,60 @@
 	}
 
 	// ── Batch review ──────────────────────────────────────────────────────────
+	let selectedIds = $state<string[]>([]);
+
+	function toggleSelection(id: string) {
+		if (selectedIds.includes(id)) {
+			selectedIds = selectedIds.filter((i) => i !== id);
+		} else {
+			selectedIds = [...selectedIds, id];
+		}
+	}
+
+	function toggleAll() {
+		if (selectedIds.length === items.length) {
+			selectedIds = [];
+		} else {
+			selectedIds = items.map((i) => i.id);
+		}
+	}
+
+	async function batchApproveSelected() {
+		try {
+			await contentImportService.batchReview(jobId, "approve", selectedIds);
+			selectedIds = [];
+			await load(currentPage);
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Erreur";
+		}
+	}
+
+	async function batchRejectSelected() {
+		try {
+			await contentImportService.batchReview(jobId, "reject", selectedIds);
+			selectedIds = [];
+			await load(currentPage);
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Erreur";
+		}
+	}
+
 	async function batchApproveAll() {
-		await contentImportService.batchReview(jobId, "approve");
-		await load(currentPage);
+		try {
+			await contentImportService.batchReview(jobId, "approve");
+			await load(currentPage);
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Erreur";
+		}
 	}
 
 	async function batchRejectAll() {
-		await contentImportService.batchReview(jobId, "reject");
-		await load(currentPage);
+		try {
+			await contentImportService.batchReview(jobId, "reject");
+			await load(currentPage);
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Erreur";
+		}
 	}
 
 	// ── Apply ─────────────────────────────────────────────────────────────────
@@ -98,16 +144,12 @@
 		}
 	}
 
+	let selectedItemForDetails = $state<ContentImportItem | null>(null);
+
 	// ── Helpers ────────────────────────────────────────────────────────────────
-	const pendingCount = $derived(
-		items.filter((i) => i.status === "pending").length
-	);
-	const approvedCount = $derived(
-		items.filter((i) => i.status === "approved").length
-	);
-	const rejectedCount = $derived(
-		items.filter((i) => i.status === "rejected").length
-	);
+	const pendingCount = $derived(job?.counts?.pending ?? 0);
+	const approvedCount = $derived(job?.counts?.approved ?? 0);
+	const rejectedCount = $derived(job?.counts?.rejected ?? 0);
 </script>
 
 <div class="p-8">
@@ -132,19 +174,36 @@
 		{#if job?.status === "ready"}
 			<div class="ml-auto flex items-center gap-3">
 				<!-- Compteurs -->
-				<div class="flex gap-3 text-xs">
-					<span class="text-slate-400">{total} items</span>
-					<span class="text-amber-400">{pendingCount} en attente</span>
-					<span class="text-green-400">{approvedCount} approuvés</span>
-					<span class="text-red-400">{rejectedCount} rejetés</span>
+				<div class="flex gap-3 text-xs font-medium">
+					<span class="text-slate-400 bg-slate-900 px-2 py-1 rounded"
+						>{total} items</span
+					>
+					<span class="text-amber-400 bg-amber-950 px-2 py-1 rounded"
+						>{pendingCount} en attente</span
+					>
+					<span class="text-green-400 bg-green-950 px-2 py-1 rounded"
+						>{approvedCount} approuvés</span
+					>
+					<span class="text-red-400 bg-red-950 px-2 py-1 rounded"
+						>{rejectedCount} rejetés</span
+					>
 				</div>
 				<!-- Batch -->
-				<Button variant="outline" size="sm" onclick={batchApproveAll}>
-					<CheckCheckIcon class="h-4 w-4" /> Tout approuver
-				</Button>
-				<Button variant="outline" size="sm" onclick={batchRejectAll}>
-					<XIcon class="h-4 w-4" /> Tout rejeter
-				</Button>
+				{#if selectedIds.length > 0}
+					<Button variant="outline" size="sm" onclick={batchApproveSelected}>
+						<CheckIcon class="h-4 w-4 text-green-400" /> Approuver la sélection ({selectedIds.length})
+					</Button>
+					<Button variant="outline" size="sm" onclick={batchRejectSelected}>
+						<XIcon class="h-4 w-4 text-red-400" /> Rejeter la sélection ({selectedIds.length})
+					</Button>
+				{:else}
+					<Button variant="outline" size="sm" onclick={batchApproveAll}>
+						<CheckCheckIcon class="h-4 w-4 text-green-400" /> Tout approuver ({pendingCount})
+					</Button>
+					<Button variant="outline" size="sm" onclick={batchRejectAll}>
+						<XIcon class="h-4 w-4 text-red-400" /> Tout rejeter ({pendingCount})
+					</Button>
+				{/if}
 				<!-- Apply -->
 				<Button
 					class="bg-red-600 hover:bg-red-700"
@@ -179,7 +238,7 @@
 		<select
 			bind:value={filterStatus}
 			onchange={() => load(1)}
-			class="h-8 rounded-md border border-slate-700 bg-slate-800 px-2 text-xs text-white outline-none focus:border-red-500"
+			class="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground outline-none focus:border-primary"
 		>
 			<option value="">Tous statuts</option>
 			<option value="pending">En attente</option>
@@ -189,113 +248,147 @@
 		<select
 			bind:value={filterNew}
 			onchange={() => load(1)}
-			class="h-8 rounded-md border border-slate-700 bg-slate-800 px-2 text-xs text-white outline-none focus:border-red-500"
+			class="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground outline-none focus:border-primary"
 		>
 			<option value="">Tous types</option>
 			<option value="true">Nouveaux seulement</option>
 			<option value="false">Mises à jour seulement</option>
 		</select>
-		<span class="text-xs text-slate-500">{total} résultat(s)</span>
+		<span class="text-xs text-muted-foreground">{total} résultat(s)</span>
 	</div>
 
 	<!-- Erreur / chargement -->
 	{#if error}
-		<p class="text-sm text-red-400">{error}</p>
+		<p class="text-sm text-destructive">{error}</p>
 	{:else if loading}
-		<div class="flex items-center gap-2 text-slate-400">
+		<div class="flex items-center gap-2 text-muted-foreground">
 			<LoaderIcon class="h-4 w-4 animate-spin" /> Chargement…
 		</div>
 	{:else}
 		<!-- Table des items -->
-		<div class="overflow-hidden rounded-xl border border-slate-700">
+		<div class="overflow-hidden rounded-xl border border-border shadow-sm">
 			<table class="w-full text-sm">
-				<thead class="border-b border-slate-700 bg-slate-900/60">
+				<thead class="border-b border-border bg-muted/50">
 					<tr>
-						<th class="px-4 py-3 text-left font-medium text-slate-400">Slug</th>
-						<th class="px-4 py-3 text-left font-medium text-slate-400">Nom</th>
-						<th class="px-4 py-3 text-left font-medium text-slate-400">Type</th>
-						<th class="px-4 py-3 text-left font-medium text-slate-400"
+						<th class="px-4 py-3 text-left w-12">
+							<input
+								type="checkbox"
+								class="rounded border-input bg-background accent-primary"
+								checked={selectedIds.length === items.length &&
+									items.length > 0}
+								onchange={toggleAll}
+							/>
+						</th>
+						<th class="px-4 py-3 text-left font-medium text-muted-foreground"
+							>Slug</th
+						>
+						<th class="px-4 py-3 text-left font-medium text-muted-foreground"
+							>Nom</th
+						>
+						<th class="px-4 py-3 text-left font-medium text-muted-foreground"
+							>Type</th
+						>
+						<th class="px-4 py-3 text-left font-medium text-muted-foreground"
 							>Aperçu</th
 						>
-						<th class="px-4 py-3 text-left font-medium text-slate-400"
+						<th class="px-4 py-3 text-left font-medium text-muted-foreground"
 							>Statut</th
 						>
 						<th class="px-4 py-3"></th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-slate-800 bg-slate-950">
+				<tbody class="divide-y divide-border bg-card">
 					{#each items as item (item.id)}
-						<tr class="group hover:bg-slate-900/30">
-							<td class="px-4 py-3 font-mono text-xs text-slate-400"
+						<tr class="group hover:bg-muted/30 transition-colors">
+							<td class="px-4 py-3">
+								<input
+									type="checkbox"
+									class="rounded border-input bg-background accent-primary"
+									checked={selectedIds.includes(item.id)}
+									onchange={() => toggleSelection(item.id)}
+								/>
+							</td>
+							<td class="px-4 py-3 font-mono text-xs text-muted-foreground"
 								>{item.slug}</td
 							>
-							<td class="px-4 py-3 font-medium text-white"
+							<td class="px-4 py-3 font-medium text-card-foreground"
 								>{item.name ?? "—"}</td
 							>
 							<td class="px-4 py-3">
 								{#if item.isNew}
-									<Badge class="bg-green-900/50 text-green-400 border-green-800"
+									<Badge
+										class="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
 										>Nouveau</Badge
 									>
 								{:else}
 									<Badge
 										variant="outline"
-										class="text-amber-400 border-amber-800">Mise à jour</Badge
+										class="text-amber-500 border-amber-500/30"
+										>Mise à jour</Badge
 									>
 								{/if}
 							</td>
 							<td class="max-w-xs px-4 py-3">
 								{#if item.description}
-									<p
-										class="truncate text-xs text-slate-400"
-										title={item.description}
+									<button
+										type="button"
+										class="text-left text-xs text-muted-foreground hover:text-foreground transition-colors"
+										onclick={() => (selectedItemForDetails = item)}
 									>
 										{item.description.slice(0, 120)}{item.description.length >
 										120
 											? "…"
 											: ""}
-									</p>
+									</button>
 								{:else}
-									<span class="text-xs text-slate-600">—</span>
+									<span class="text-xs text-muted-foreground/60">—</span>
 								{/if}
 							</td>
 							<td class="px-4 py-3">
 								{#if item.status === "approved"}
-									<span class="flex items-center gap-1 text-xs text-green-400">
-										<CheckIcon class="h-3 w-3" /> Approuvé
+									<span
+										class="flex items-center gap-1 text-xs font-medium text-green-500"
+									>
+										<CheckIcon class="h-3.5 w-3.5" /> Approuvé
 									</span>
 								{:else if item.status === "rejected"}
-									<span class="flex items-center gap-1 text-xs text-red-400">
-										<XIcon class="h-3 w-3" /> Rejeté
+									<span
+										class="flex items-center gap-1 text-xs font-medium text-red-500"
+									>
+										<XIcon class="h-3.5 w-3.5" /> Rejeté
 									</span>
 								{:else}
-									<span class="text-xs text-slate-500">En attente</span>
+									<span class="text-xs font-medium text-muted-foreground"
+										>En attente</span
+									>
 								{/if}
 							</td>
 							<td class="px-4 py-3">
 								{#if job?.status === "ready"}
 									<div
-										class="flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100"
+										class="flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100"
 									>
 										{#if item.status !== "approved"}
-											<button
-												type="button"
+											<Button
+												variant="ghost"
+												size="icon"
+												class="h-8 w-8 text-green-500 hover:text-green-600 hover:bg-green-500/10"
 												onclick={() => review(item, "approved")}
-												class="rounded p-1 text-green-400 hover:bg-green-900/30"
 												aria-label="Approuver"
 											>
 												<CheckIcon class="h-4 w-4" />
-											</button>
+											</Button>
 										{/if}
 										{#if item.status !== "rejected"}
-											<button
-												type="button"
+											<Button
+												variant="ghost"
+												size="icon"
+												class="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-500/10"
 												onclick={() => review(item, "rejected")}
-												class="rounded p-1 text-red-400 hover:bg-red-900/30"
 												aria-label="Rejeter"
 											>
 												<XIcon class="h-4 w-4" />
-											</button>
+											</Button>
 										{/if}
 									</div>
 								{/if}
@@ -332,3 +425,78 @@
 		{/if}
 	{/if}
 </div>
+
+{#if selectedItemForDetails}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+		role="dialog"
+		aria-modal="true"
+	>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="absolute inset-0"
+			onclick={() => (selectedItemForDetails = null)}
+		></div>
+		<div
+			class="relative z-10 w-full max-w-2xl max-h-[80vh] flex flex-col rounded-xl border border-slate-700 bg-slate-900 shadow-xl"
+		>
+			<div
+				class="flex items-center justify-between border-b border-slate-800 p-4"
+			>
+				<h2 class="text-lg font-semibold text-white">
+					{selectedItemForDetails.name ?? selectedItemForDetails.slug}
+				</h2>
+				<button
+					type="button"
+					class="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+					onclick={() => (selectedItemForDetails = null)}
+				>
+					<XIcon class="h-5 w-5" />
+				</button>
+			</div>
+			<div class="overflow-y-auto p-4 text-sm text-slate-300">
+				{#if selectedItemForDetails.description}
+					<div class="whitespace-pre-wrap">
+						{selectedItemForDetails.description}
+					</div>
+				{:else}
+					<span class="italic text-slate-500"
+						>Aucune description disponible.</span
+					>
+				{/if}
+			</div>
+			<div class="border-t border-slate-800 p-4 flex justify-end gap-3">
+				{#if job?.status === "ready"}
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							review(selectedItemForDetails!, "approved");
+							selectedItemForDetails = null;
+						}}
+					>
+						<CheckIcon class="h-4 w-4 text-green-400" /> Approuver
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							review(selectedItemForDetails!, "rejected");
+							selectedItemForDetails = null;
+						}}
+					>
+						<XIcon class="h-4 w-4 text-red-400" /> Rejeter
+					</Button>
+				{/if}
+				<Button
+					variant="outline"
+					size="sm"
+					onclick={() => (selectedItemForDetails = null)}
+				>
+					Fermer
+				</Button>
+			</div>
+		</div>
+	</div>
+{/if}

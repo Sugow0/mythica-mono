@@ -13,10 +13,15 @@ export function drawHexGrid(graphics: Graphics, config: MapConfig) {
 
 	graphics.clear();
 
+	const maxCols = Math.ceil(config.widthPx / config.gridSize);
+	const maxRows = Math.ceil(config.heightPx / config.gridSize);
+	const snappedWidth = maxCols * config.gridSize;
+	const snappedHeight = maxRows * config.gridSize;
+
 	let row = 0;
-	for (let y = 0; y < heightPx + h; y += h) {
+	for (let y = 0; y < snappedHeight + h; y += h) {
 		const xOffset = (row % 2) * (w * 0.75);
-		for (let x = -w; x < widthPx + w; x += w * 1.5) {
+		for (let x = -w; x < snappedWidth + w; x += w * 1.5) {
 			drawHex(graphics, x + xOffset, y, r, color, alpha);
 		}
 		row++;

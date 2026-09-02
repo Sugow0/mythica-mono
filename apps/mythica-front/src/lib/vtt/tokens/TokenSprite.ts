@@ -11,13 +11,20 @@ import {
 import type { SessionTokenDto } from "../types";
 import { vttState } from "../vtt.svelte";
 
-export type TokenMoveCallback = (tokenId: string, x: number, y: number) => void;
+export type TokenMoveCallback = (
+	tokenId: string,
+	x: number,
+	y: number,
+	waypoints?: { x: number; y: number }[]
+) => void;
 export type TokenSelectCallback = (tokenId: string) => void;
 
 export class TokenSprite {
 	public container: Container;
 	private sprite: Sprite | Graphics;
 	private label: Text | null = null;
+	private hpBarBg: Graphics | null = null;
+	private hpBarFg: Graphics | null = null;
 	public tokenId: string;
 	private gridSize: number;
 	private ticker: Ticker;
@@ -39,6 +46,9 @@ export class TokenSprite {
 	});
 	private tokenWidth: number;
 	private tokenHeight: number;
+	private hp: number | undefined;
+	private maxHp: number | undefined;
+	private mapConfig: MapConfig | null = null;
 
 	constructor(
 		token: SessionTokenDto,
@@ -46,13 +56,17 @@ export class TokenSprite {
 		onSelect: TokenSelectCallback,
 		onDoubleClick: TokenSelectCallback | undefined,
 		gridSize = 100,
-		ticker: Ticker
+		ticker: Ticker,
+		mapConfig: MapConfig | null = null
 	) {
 		this.tokenId = token.id;
 		this.gridSize = gridSize;
 		this.ticker = ticker;
 		this.tokenWidth = token.width;
 		this.tokenHeight = token.height;
+		this.hp = token.hp !== null ? token.hp : undefined;
+		this.maxHp = token.maxHp !== null ? token.maxHp : undefined;
+		this.mapConfig = mapConfig;
 
 		this.targetX = parseFloat(token.posX) * this.gridSize;
 		this.targetY = parseFloat(token.posY) * this.gridSize;
@@ -89,6 +103,10 @@ export class TokenSprite {
 			this.container.addChild(this.label);
 		}
 
+		if (token.maxHp && token.hp !== undefined && token.hp !== null) {
+			this.createOrUpdateHpBar(token);
+		}
+
 		// Charger l'image si disponible
 		if (token.fileId) {
 			this.loadImage(token);
@@ -97,6 +115,57 @@ export class TokenSprite {
 		this.makeDraggable(onMove, onSelect, onDoubleClick, token);
 
 		this.ticker.add(this.onTick, this);
+	}
+
+	setMapConfig(config: MapConfig | null) {
+		this.mapConfig = config;
+	}
+
+	setGridSize(size: number) {
+		if (this.gridSize === size) return;
+
+		const ratio = size / this.gridSize;
+		this.gridSize = size;
+
+		this.targetX *= ratio;
+		this.targetY *= ratio;
+		this.container.x *= ratio;
+		this.container.y *= ratio;
+
+		for (const wp of this.waypoints) {
+			wp.x *= ratio;
+			wp.y *= ratio;
+		}
+		for (const wp of this.movementQueue) {
+			wp.x *= ratio;
+			wp.y *= ratio;
+		}
+
+		if (this.sprite instanceof Sprite) {
+			this.sprite.width = this.tokenWidth * this.gridSize;
+			this.sprite.height = this.tokenHeight * this.gridSize;
+		} else if (this.sprite instanceof Graphics) {
+			this.sprite.clear();
+			this.sprite
+				.roundRect(
+					0,
+					0,
+					this.tokenWidth * this.gridSize,
+					this.tokenHeight * this.gridSize,
+					8
+				)
+				.fill({ color: 0xdc2626, alpha: 0.85 })
+				.stroke({ color: 0xffffff, alpha: 0.5, width: 2 });
+		}
+
+		if (this.label) {
+			this.label.x = (this.tokenWidth * this.gridSize) / 2;
+			this.label.y = this.tokenHeight * this.gridSize + 4;
+		}
+
+		if (this.maxHp !== undefined && this.hp !== undefined) {
+			this.createOrUpdateHpBar();
+		}
 	}
 
 	private handleKeyDown = (e: KeyboardEvent) => {
@@ -165,23 +234,42 @@ export class TokenSprite {
 		}
 
 		const dt = ticker.deltaTime;
-		// Vitesse d'interpolation
-		const speed = 0.1 * dt;
+		// Vitesse d'interpolation ralentie pour mieux voir le chemin
+		const speed = 0.08 * dt;
 
 		this.container.x += (this.targetX - this.container.x) * speed;
 		this.container.y += (this.targetY - this.container.y) * speed;
 
 		// Si on est très proche, on s'arrête (snap)
-		if (Math.abs(this.targetX - this.container.x) < 0.5)
+		if (Math.abs(this.targetX - this.container.x) < 1)
 			this.container.x = this.targetX;
-		if (Math.abs(this.targetY - this.container.y) < 0.5)
+		if (Math.abs(this.targetY - this.container.y) < 1)
 			this.container.y = this.targetY;
+
+		// Move to next waypoint if reached current target
+		if (
+			this.container.x === this.targetX &&
+			this.container.y === this.targetY &&
+			this.movementQueue.length > 0
+		) {
+			const next = this.movementQueue.shift()!;
+			this.targetX = next.x;
+			this.targetY = next.y;
+		}
 	}
 
 	private async loadImage(token: SessionTokenDto) {
 		try {
-			const url = `/api/gameplay/files/${token.fileId}/content`;
-			const texture: Texture = await Assets.load(url);
+			const url = `${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay/files/${token.fileId}/content`;
+			const img = new Image();
+			img.crossOrigin = "anonymous";
+			img.src = url;
+			await new Promise((resolve, reject) => {
+				img.onload = resolve;
+				img.onerror = reject;
+			});
+
+			const texture = Texture.from(img);
 			const s = new Sprite(texture);
 			s.width = token.width * this.gridSize;
 			s.height = token.height * this.gridSize;
@@ -212,6 +300,8 @@ export class TokenSprite {
 		let lastClickTime = 0;
 
 		this.container.on("pointerdown", (e) => {
+			if (vttState.selectedToolId !== "select") return;
+
 			e.stopPropagation();
 			this.isDragging = true;
 			vttState.setIsTokenDragging(true);
@@ -248,8 +338,29 @@ export class TokenSprite {
 			const dx = localPos.x - dragStartLocal.x;
 			const dy = localPos.y - dragStartLocal.y;
 
-			this.targetX = startContainerX + dx;
-			this.targetY = startContainerY + dy;
+			let newTargetX = startContainerX + dx;
+			let newTargetY = startContainerY + dy;
+
+			if (this.mapConfig) {
+				const snappedWidth =
+					Math.ceil(this.mapConfig.widthPx / this.gridSize) * this.gridSize;
+				const snappedHeight =
+					Math.ceil(this.mapConfig.heightPx / this.gridSize) * this.gridSize;
+				const tokenPixelWidth = this.tokenWidth * this.gridSize;
+				const tokenPixelHeight = this.tokenHeight * this.gridSize;
+
+				newTargetX = Math.max(
+					0,
+					Math.min(newTargetX, snappedWidth - tokenPixelWidth)
+				);
+				newTargetY = Math.max(
+					0,
+					Math.min(newTargetY, snappedHeight - tokenPixelHeight)
+				);
+			}
+
+			this.targetX = newTargetX;
+			this.targetY = newTargetY;
 
 			this.drawRuler();
 		});
@@ -292,8 +403,26 @@ export class TokenSprite {
 				const dy = localPos.y - dragStartLocal.y;
 
 				const snap = !e.shiftKey;
-				const finalX = startContainerX + dx;
-				const finalY = startContainerY + dy;
+				let finalX = startContainerX + dx;
+				let finalY = startContainerY + dy;
+
+				if (this.mapConfig) {
+					const snappedWidth =
+						Math.ceil(this.mapConfig.widthPx / this.gridSize) * this.gridSize;
+					const snappedHeight =
+						Math.ceil(this.mapConfig.heightPx / this.gridSize) * this.gridSize;
+					const tokenPixelWidth = this.tokenWidth * this.gridSize;
+					const tokenPixelHeight = this.tokenHeight * this.gridSize;
+
+					finalX = Math.max(
+						0,
+						Math.min(finalX, snappedWidth - tokenPixelWidth)
+					);
+					finalY = Math.max(
+						0,
+						Math.min(finalY, snappedHeight - tokenPixelHeight)
+					);
+				}
 
 				const gridX = snap
 					? Math.round(finalX / this.gridSize)
@@ -302,7 +431,35 @@ export class TokenSprite {
 					? Math.round(finalY / this.gridSize)
 					: finalY / this.gridSize;
 
-				onMove(token.id, gridX, gridY);
+				// Construction des waypoints pour le backend (en coordonnées de grille)
+				const finalWaypoints = this.waypoints.slice(1).map((wp) => ({
+					x: snap ? Math.round(wp.x / this.gridSize) : wp.x / this.gridSize,
+					y: snap ? Math.round(wp.y / this.gridSize) : wp.y / this.gridSize,
+				}));
+
+				// Lancement de l'animation locale immédiatement
+				this.movementQueue = this.waypoints.slice(1).map((wp) => ({
+					x: snap ? Math.round(wp.x / this.gridSize) * this.gridSize : wp.x,
+					y: snap ? Math.round(wp.y / this.gridSize) * this.gridSize : wp.y,
+				}));
+				this.movementQueue.push({
+					x: gridX * this.gridSize,
+					y: gridY * this.gridSize,
+				});
+
+				// On replace physiquement le token au point de départ pour qu'il anime vers la destination
+				this.container.x = startContainerX;
+				this.container.y = startContainerY;
+				const first = this.movementQueue.shift()!;
+				this.targetX = first.x;
+				this.targetY = first.y;
+
+				onMove(
+					token.id,
+					gridX,
+					gridY,
+					finalWaypoints.length > 0 ? finalWaypoints : undefined
+				);
 			}
 		};
 
@@ -310,10 +467,59 @@ export class TokenSprite {
 		this.container.on("pointerupoutside", handlePointerUp);
 	}
 
-	update(token: SessionTokenDto) {
-		this.targetX = parseFloat(token.posX) * this.gridSize;
-		this.targetY = parseFloat(token.posY) * this.gridSize;
+	private movementQueue: { x: number; y: number }[] = [];
+
+	update(token: SessionTokenDto & { waypoints?: { x: number; y: number }[] }) {
+		const newTargetX = parseFloat(token.posX) * this.gridSize;
+		const newTargetY = parseFloat(token.posY) * this.gridSize;
+
+		// Si on a des waypoints du backend (un autre joueur a bougé le token)
+		if (token.waypoints && token.waypoints.length > 0) {
+			this.movementQueue = token.waypoints.map((wp) => ({
+				x: wp.x * this.gridSize,
+				y: wp.y * this.gridSize,
+			}));
+			this.movementQueue.push({ x: newTargetX, y: newTargetY });
+
+			const first = this.movementQueue.shift()!;
+			this.targetX = first.x;
+			this.targetY = first.y;
+
+			delete token.waypoints; // On consomme l'événement
+		} else {
+			// Calcul de la destination finale si on est en train d'animer
+			const finalDestX =
+				this.movementQueue.length > 0
+					? this.movementQueue[this.movementQueue.length - 1].x
+					: this.targetX;
+			const finalDestY =
+				this.movementQueue.length > 0
+					? this.movementQueue[this.movementQueue.length - 1].y
+					: this.targetY;
+
+			// Si on reçoit notre propre echo WS (même destination), on ne coupe pas l'animation
+			if (
+				Math.abs(finalDestX - newTargetX) < 1 &&
+				Math.abs(finalDestY - newTargetY) < 1
+			) {
+				// On laisse l'animation se terminer
+			} else {
+				this.targetX = newTargetX;
+				this.targetY = newTargetY;
+				this.movementQueue = []; // On annule l'animation en cours car nouvelle destination
+			}
+		}
+
 		this.container.visible = token.isVisible;
+
+		this.hp = token.hp !== null ? token.hp : undefined;
+		this.maxHp = token.maxHp !== null ? token.maxHp : undefined;
+
+		if (token.maxHp && token.hp !== undefined && token.hp !== null) {
+			this.createOrUpdateHpBar(token);
+		} else {
+			this.removeHpBar();
+		}
 	}
 
 	destroy() {
@@ -327,6 +533,50 @@ export class TokenSprite {
 		}
 		this.rulerGraphics.destroy();
 		this.rulerText.destroy();
+		this.removeHpBar();
 		this.container.destroy({ children: true });
+	}
+
+	private createOrUpdateHpBar(token?: SessionTokenDto) {
+		const width = this.tokenWidth * this.gridSize;
+		const hp = token?.hp ?? this.hp ?? 0;
+		const maxHp = token?.maxHp ?? this.maxHp ?? 1;
+		const ratio = Math.max(0, Math.min(1, hp / maxHp));
+
+		if (!this.hpBarBg) {
+			this.hpBarBg = new Graphics();
+			this.container.addChild(this.hpBarBg);
+		}
+		if (!this.hpBarFg) {
+			this.hpBarFg = new Graphics();
+			this.container.addChild(this.hpBarFg);
+		}
+
+		const barHeight = 6;
+		const barY = this.tokenHeight * this.gridSize - barHeight;
+
+		this.hpBarBg
+			.clear()
+			.rect(0, barY, width, barHeight)
+			.fill({ color: 0x000000, alpha: 0.8 });
+
+		const fgColor = ratio > 0.5 ? 0x22c55e : ratio > 0.2 ? 0xeab308 : 0xef4444;
+		this.hpBarFg
+			.clear()
+			.rect(0, barY, width * ratio, barHeight)
+			.fill({ color: fgColor, alpha: 1.0 });
+	}
+
+	private removeHpBar() {
+		if (this.hpBarBg) {
+			this.container.removeChild(this.hpBarBg);
+			this.hpBarBg.destroy();
+			this.hpBarBg = null;
+		}
+		if (this.hpBarFg) {
+			this.container.removeChild(this.hpBarFg);
+			this.hpBarFg.destroy();
+			this.hpBarFg = null;
+		}
 	}
 }

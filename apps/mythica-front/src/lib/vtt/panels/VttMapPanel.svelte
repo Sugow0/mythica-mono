@@ -2,10 +2,12 @@
 	import MapIcon from "@lucide/svelte/icons/map";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import CheckIcon from "@lucide/svelte/icons/check";
+	import SettingsIcon from "@lucide/svelte/icons/settings";
 	import XIcon from "@lucide/svelte/icons/x";
 	import { onMount } from "svelte";
 	import { campaignService } from "$lib/index.js";
 	import { vttState } from "$lib/vtt/vtt.svelte";
+	import VttMapEditModal from "./VttMapEditModal.svelte";
 
 	let { campaignId, sessionId }: { campaignId: string; sessionId: string } =
 		$props();
@@ -15,6 +17,12 @@
 		nom: string;
 		gridType: string;
 		gridSize: number;
+		widthPx: number;
+		heightPx: number;
+		gridOffsetX: number;
+		gridOffsetY: number;
+		gridColor: string;
+		gridOpacity: number;
 	};
 
 	let maps = $state<MapItem[]>([]);
@@ -22,8 +30,10 @@
 	let error = $state<string | null>(null);
 	let showCreate = $state(false);
 	let newName = $state("");
-	let newGridType = $state<"square" | "hex" | "free">("square");
 	let busy = $state(false);
+
+	let editMap = $state<MapItem | null>(null);
+	let showEdit = $state(false);
 
 	const activeMapId = $derived(vttState.activeMap?.id ?? null);
 
@@ -45,13 +55,14 @@
 		busy = true;
 		try {
 			await campaignService.createMap(campaignId, {
-				nom: newName.trim(),
-				gridType: newGridType,
+				nom: newName,
+				gridType: "square",
+				gridSize: 100,
 			});
 			newName = "";
 			showCreate = false;
 			await loadMaps();
-		} catch {
+		} catch (e: any) {
 			error = "Erreur lors de la création.";
 		} finally {
 			busy = false;
@@ -121,15 +132,7 @@
 				autofocus
 				class="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-red-600"
 			/>
-			<select
-				bind:value={newGridType}
-				class="w-full rounded bg-slate-800 px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-red-600"
-			>
-				<option value="square">Grille carrée</option>
-				<option value="hex">Grille hexagonale</option>
-				<option value="free">Sans grille</option>
-			</select>
-			<div class="flex gap-2">
+			<div class="flex justify-end gap-2">
 				<button
 					onclick={createMap}
 					disabled={busy || !newName.trim()}
@@ -175,25 +178,51 @@
 							{map.gridType} · {map.gridSize}px
 						</p>
 					</div>
-					{#if isActive}
+					<div class="flex items-center gap-1 shrink-0">
 						<button
-							onclick={deactivateMap}
+							onclick={() => {
+								editMap = map;
+								showEdit = true;
+							}}
 							disabled={busy}
-							class="shrink-0 rounded bg-slate-700 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-600 disabled:opacity-40"
+							class="rounded p-1 text-slate-400 hover:text-white"
+							title="Modifier la map"
 						>
-							Désactiver
+							<SettingsIcon class="h-3.5 w-3.5" />
 						</button>
-					{:else}
-						<button
-							onclick={() => activateMap(map.id)}
-							disabled={busy}
-							class="shrink-0 rounded bg-red-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-red-700 disabled:opacity-40"
-						>
-							Activer
-						</button>
-					{/if}
+						{#if isActive}
+							<button
+								onclick={deactivateMap}
+								disabled={busy}
+								class="rounded bg-slate-700 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-600 disabled:opacity-40"
+							>
+								Désactiver
+							</button>
+						{:else}
+							<button
+								onclick={() => activateMap(map.id)}
+								disabled={busy}
+								class="rounded bg-red-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-red-700 disabled:opacity-40"
+							>
+								Activer
+							</button>
+						{/if}
+					</div>
 				</div>
 			{/each}
 		{/if}
 	</div>
 </div>
+
+<VttMapEditModal
+	map={editMap}
+	{campaignId}
+	open={showEdit}
+	onOpenChange={(o) => (showEdit = o)}
+	onSuccess={async () => {
+		await loadMaps();
+		if (editMap && editMap.id === activeMapId) {
+			await activateMap(editMap.id);
+		}
+	}}
+/>

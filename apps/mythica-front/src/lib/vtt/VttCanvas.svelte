@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from "svelte";
-	import type { MapConfig } from "./types";
+	import type { MapConfig, SessionTokenDto } from "./types";
 	import { vttState } from "./vtt.svelte";
 	import VttTokenHud from "./panels/VttTokenHud.svelte";
 	import { computeVisibilityPolygon } from "./utils/raycast";
@@ -13,11 +13,17 @@
 		onFogPaint,
 		onFogHide,
 		onTokenDelete,
+		onTokenUpdate,
 		onWallAdd,
 		onWallRemove,
 	}: {
 		mapConfig: MapConfig | null;
-		onTokenMove?: (tokenId: string, x: number, y: number) => void;
+		onTokenMove?: (
+			tokenId: string,
+			x: number,
+			y: number,
+			waypoints?: { x: number; y: number }[]
+		) => void;
 		onTokenDoubleClick?: (tokenId: string) => void;
 		onDropToken?: (
 			sheetId: string,
@@ -29,6 +35,10 @@
 		onFogPaint?: (polygon: { x: number; y: number }[]) => void;
 		onFogHide?: (polygon: { x: number; y: number }[]) => void;
 		onTokenDelete?: (tokenId: string) => void;
+		onTokenUpdate?: (
+			tokenId: string,
+			updates: Partial<SessionTokenDto>
+		) => void;
 		onWallAdd?: (
 			p1X: number,
 			p1Y: number,
@@ -183,9 +193,13 @@
 		if (!stage) return;
 
 		// Convertir les dimensions de la map en coordonnées écran
-		const cfg = mapConfig ?? { widthPx: 20000, heightPx: 20000 };
-		const sx = cfg.widthPx * stage.scale.x;
-		const sy = cfg.heightPx * stage.scale.y;
+		const cfg = mapConfig ?? { widthPx: 20000, heightPx: 20000, gridSize: 100 };
+		const maxCols = Math.ceil(cfg.widthPx / cfg.gridSize);
+		const maxRows = Math.ceil(cfg.heightPx / cfg.gridSize);
+		const snappedWidth = maxCols * cfg.gridSize;
+		const snappedHeight = maxRows * cfg.gridSize;
+		const sx = snappedWidth * stage.scale.x;
+		const sy = snappedHeight * stage.scale.y;
 
 		// Fond sombre = brouillard sur toute la map
 		ctx.globalCompositeOperation = "source-over";
@@ -364,8 +378,14 @@
 			// Prevent scrolling the page
 			e.preventDefault();
 
-			const newX = parseFloat(token.posX as unknown as string) + dx;
-			const newY = parseFloat(token.posY as unknown as string) + dy;
+			let newX = parseFloat(token.posX as unknown as string) + dx;
+			let newY = parseFloat(token.posY as unknown as string) + dy;
+
+			const maxCols = Math.ceil(mapConfig.widthPx / mapConfig.gridSize);
+			const maxRows = Math.ceil(mapConfig.heightPx / mapConfig.gridSize);
+
+			newX = Math.max(0, Math.min(newX, maxCols - token.width));
+			newY = Math.max(0, Math.min(newY, maxRows - token.height));
 
 			onTokenMove?.(token.id, newX, newY);
 		}
@@ -465,6 +485,7 @@
 		let dragging = false;
 		let lastX = 0;
 		let lastY = 0;
+		let dragDist = 0;
 
 		function onWheel(e: WheelEvent) {
 			e.preventDefault();
@@ -493,6 +514,7 @@
 		}
 
 		function onMouseDown(e: MouseEvent) {
+			dragDist = 0;
 			const tool = vttState.selectedToolId;
 			const isFogTool = tool === "fog-paint" || tool === "fog-erase";
 			const isRulerTool = tool === "ruler";
@@ -788,14 +810,20 @@
 
 		function onMouseMove(e: MouseEvent) {
 			if (!dragging) return;
-			stage.x += e.clientX - lastX;
-			stage.y += e.clientY - lastY;
+			const dx = e.clientX - lastX;
+			const dy = e.clientY - lastY;
+			dragDist += Math.abs(dx) + Math.abs(dy);
+			stage.x += dx;
+			stage.y += dy;
 			lastX = e.clientX;
 			lastY = e.clientY;
 			drawFog();
 		}
 
 		function onMouseUp() {
+			if (dragging && dragDist < 5 && vttState.selectedToolId === "select") {
+				vttState.setSelectedTokenId(null);
+			}
 			dragging = false;
 		}
 
@@ -995,6 +1023,8 @@
 							(t) => t.id === vttState.selectedTokenId
 						)!}
 						onDelete={onTokenDelete}
+						onUpdate={(updates) =>
+							onTokenUpdate?.(vttState.selectedTokenId!, updates)}
 					/>
 				{/if}
 			{/if}

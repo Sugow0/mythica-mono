@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { authContext } from "../auth/context";
 import { logger } from "../logger";
-import { resolveSessionAccess } from "./session-access";
+import { isGameMaster, resolveSessionAccess } from "./session-access";
 import { handleCombatCommand, parseCombatCommand } from "./session-combat";
 import { handleMapCommand, parseMapCommand } from "./session-map";
 import { sessionPresence } from "./session-presence-ws";
@@ -32,6 +32,16 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 			// Une valeur retournée par beforeHandle empêche l'upgrade WebSocket.
 			set.status = access.status;
 			return { success: false as const, error: access.error };
+		}
+		const gm = isGameMaster(access)(
+			currentUser as import("../auth/context").CurrentUser,
+		);
+		if (access.session.status !== "active" && !gm) {
+			set.status = 403;
+			return {
+				success: false as const,
+				error: "La session n'a pas encore commencé",
+			};
 		}
 	},
 
@@ -85,6 +95,39 @@ export const sessionsWs = new Elysia().use(authContext).ws("/sessions/:id/ws", {
 		if (wallCmd) {
 			const event = await handleWallCommand(id, userId, wallCmd);
 			if (event) await sessionRooms.broadcast(id, event);
+			return;
+		}
+
+		if (
+			raw &&
+			typeof raw === "object" &&
+			"type" in raw &&
+			raw.type === "PRESENCE_UPDATE"
+		) {
+			const event: Record<string, unknown> = {
+				type: "PRESENCE_UPDATE",
+				userId,
+			};
+			if ("name" in raw && typeof raw.name === "string") {
+				event.name = raw.name.slice(0, 50);
+			}
+			if ("color" in raw && typeof raw.color === "string") {
+				event.color = raw.color.slice(0, 20);
+			}
+			await sessionRooms.broadcast(id, event);
+			return;
+		}
+
+		if (
+			raw &&
+			typeof raw === "object" &&
+			"type" in raw &&
+			raw.type === "DICE_ROLL"
+		) {
+			await sessionRooms.broadcast(id, {
+				...raw,
+				rollerId: userId,
+			});
 			return;
 		}
 	},

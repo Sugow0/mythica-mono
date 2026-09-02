@@ -138,28 +138,28 @@
 
 <div class="p-8">
 	<div class="mb-8">
-		<h1 class="text-2xl font-bold text-white">Import de contenu</h1>
-		<p class="mt-1 text-sm text-slate-400">
+		<h1 class="text-2xl font-bold text-foreground">Import de contenu</h1>
+		<p class="mt-1 text-sm text-muted-foreground">
 			Scan aidedd.org → staging → review → import en prod
 		</p>
 	</div>
 
 	<!-- Formulaire de scan -->
-	<Card.Root class="mb-8 border-slate-700 bg-slate-900">
+	<Card.Root class="mb-8 border-border bg-card">
 		<Card.Header>
-			<Card.Title class="text-white">Nouveau scan</Card.Title>
+			<Card.Title class="text-card-foreground">Nouveau scan</Card.Title>
 		</Card.Header>
 		<Card.Content class="flex flex-wrap items-end gap-4">
 			<!-- Système de jeu -->
 			<div class="flex flex-col gap-1.5">
-				<label class="text-sm text-slate-400" for="gs-select"
+				<label class="text-sm text-muted-foreground" for="gs-select"
 					>Système de jeu</label
 				>
 				{#if gameSystems.length > 0}
 					<select
 						id="gs-select"
 						bind:value={gameSystemId}
-						class="h-9 w-64 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm text-white outline-none focus:border-red-500"
+						class="h-9 w-64 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary"
 					>
 						{#each gameSystems as gs (gs.id)}
 							<option value={gs.id}>{gs.nom}</option>
@@ -171,19 +171,20 @@
 						type="text"
 						placeholder="UUID du système de jeu"
 						bind:value={gameSystemId}
-						class="h-9 w-64 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm text-white placeholder-slate-500 outline-none focus:border-red-500"
+						class="h-9 w-64 rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
 					/>
 				{/if}
 			</div>
 
 			<!-- Collection -->
 			<div class="flex flex-col gap-1.5">
-				<label class="text-sm text-slate-400" for="collection">Collection</label
+				<label class="text-sm text-muted-foreground" for="collection"
+					>Collection</label
 				>
 				<select
 					id="collection"
 					bind:value={selectedCollection}
-					class="h-9 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm text-white outline-none focus:border-red-500"
+					class="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary"
 				>
 					{#each AIDEDD_COLLECTIONS as col (col)}
 						<option value={col}>{COLLECTION_LABELS[col]}</option>
@@ -191,11 +192,7 @@
 				</select>
 			</div>
 
-			<Button
-				onclick={startScan}
-				disabled={launching || !gameSystemId}
-				class="bg-red-600 hover:bg-red-700"
-			>
+			<Button onclick={startScan} disabled={launching || !gameSystemId}>
 				{#if launching}
 					<LoaderIcon class="h-4 w-4 animate-spin" />
 				{:else}
@@ -205,25 +202,27 @@
 			</Button>
 
 			{#if launchError}
-				<p class="text-sm text-red-400">{launchError}</p>
+				<p class="text-sm text-destructive">{launchError}</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>
 
 	<!-- Progression SSE -->
 	{#if activeProgress && activeProgress.status === "scanning"}
-		<Card.Root class="mb-6 border-slate-700 bg-slate-900">
+		<Card.Root class="mb-6 border-border bg-card">
 			<Card.Content class="pt-4">
 				<div class="mb-3 flex items-center justify-between">
-					<span class="text-sm font-medium text-white"> Scan en cours… </span>
-					<span class="text-xs text-slate-400">
+					<span class="text-sm font-medium text-card-foreground">
+						Scan en cours…
+					</span>
+					<span class="text-xs text-muted-foreground">
 						{activeProgress.totalFetched} / {activeProgress.totalFound || "?"}
 					</span>
 				</div>
 				<!-- Barre de progression -->
-				<div class="h-2 w-full overflow-hidden rounded-full bg-slate-700">
+				<div class="h-2 w-full overflow-hidden rounded-full bg-muted">
 					<div
-						class="h-full bg-red-600 transition-all"
+						class="h-full bg-primary transition-all"
 						style="width: {activeProgress.totalFound
 							? Math.round(
 									(activeProgress.totalFetched / activeProgress.totalFound) *
@@ -233,14 +232,14 @@
 					></div>
 				</div>
 				{#if activeProgress.currentSlug}
-					<p class="mt-2 truncate text-xs text-slate-500">
+					<p class="mt-2 truncate text-xs text-muted-foreground">
 						{activeProgress.currentSlug}
 					</p>
 				{/if}
-				<div class="mt-3 flex gap-4 text-xs text-slate-400">
-					<span class="text-green-400">+{activeProgress.totalNew} nouveaux</span
+				<div class="mt-3 flex gap-4 text-xs font-medium">
+					<span class="text-green-500">+{activeProgress.totalNew} nouveaux</span
 					>
-					<span class="text-amber-400"
+					<span class="text-amber-500"
 						>~{activeProgress.totalUpdated} mis à jour</span
 					>
 				</div>
@@ -250,85 +249,98 @@
 
 	<!-- Liste des jobs -->
 	{#if error}
-		<p class="text-sm text-red-400">{error}</p>
+		<p class="text-sm text-destructive">{error}</p>
 	{:else if loading}
-		<div class="flex items-center gap-2 text-slate-400">
+		<div class="flex items-center gap-2 text-muted-foreground">
 			<LoaderIcon class="h-4 w-4 animate-spin" />
 			Chargement…
 		</div>
 	{:else if jobs.length === 0}
-		<p class="text-sm text-slate-500">Aucun job. Lancez un scan ci-dessus.</p>
+		<p class="text-sm text-muted-foreground">
+			Aucun job. Lancez un scan ci-dessus.
+		</p>
 	{:else}
-		<div class="overflow-hidden rounded-xl border border-slate-700">
+		<div class="overflow-hidden rounded-xl border border-border shadow-sm">
 			<table class="w-full text-sm">
-				<thead class="border-b border-slate-700 bg-slate-900/60">
+				<thead class="border-b border-border bg-muted/50">
 					<tr>
-						<th class="px-4 py-3 text-left font-medium text-slate-400"
+						<th class="px-4 py-3 text-left font-medium text-muted-foreground"
 							>Collection</th
 						>
-						<th class="px-4 py-3 text-left font-medium text-slate-400"
+						<th class="px-4 py-3 text-left font-medium text-muted-foreground"
 							>Statut</th
 						>
-						<th class="px-4 py-3 text-right font-medium text-slate-400"
+						<th class="px-4 py-3 text-right font-medium text-muted-foreground"
 							>Trouvés</th
 						>
-						<th class="px-4 py-3 text-right font-medium text-slate-400"
+						<th class="px-4 py-3 text-right font-medium text-muted-foreground"
 							>Nouveaux</th
 						>
-						<th class="px-4 py-3 text-right font-medium text-slate-400"
+						<th class="px-4 py-3 text-right font-medium text-muted-foreground"
 							>Modifiés</th
 						>
-						<th class="px-4 py-3 text-left font-medium text-slate-400">Créé</th>
+						<th class="px-4 py-3 text-left font-medium text-muted-foreground"
+							>Créé</th
+						>
 						<th class="px-4 py-3"></th>
 					</tr>
 				</thead>
-				<tbody class="divide-y divide-slate-800 bg-slate-950">
+				<tbody class="divide-y divide-border bg-card">
 					{#each jobs as job (job.id)}
-						<tr class="group hover:bg-slate-900/40">
-							<td class="px-4 py-3 font-medium text-white">
+						<tr class="group hover:bg-muted/30 transition-colors">
+							<td class="px-4 py-3 font-medium text-card-foreground">
 								{COLLECTION_LABELS[job.collection as AideddCollection] ??
 									job.collection}
 							</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center gap-2">
 									{#if job.status === "scanning"}
-										<LoaderIcon class="h-3 w-3 animate-spin text-slate-400" />
+										<LoaderIcon
+											class="h-3.5 w-3.5 animate-spin text-muted-foreground"
+										/>
 									{:else if job.status === "applied"}
-										<CheckIcon class="h-3 w-3 text-green-400" />
+										<CheckIcon class="h-3.5 w-3.5 text-green-500" />
 									{:else if job.status === "failed"}
-										<XIcon class="h-3 w-3 text-red-400" />
+										<XIcon class="h-3.5 w-3.5 text-destructive" />
 									{/if}
 									<Badge variant={STATUS_VARIANT[job.status]}>
 										{STATUS_LABELS[job.status] ?? job.status}
 									</Badge>
 								</div>
 							</td>
-							<td class="px-4 py-3 text-right tabular-nums text-slate-300">
+							<td
+								class="px-4 py-3 text-right tabular-nums text-muted-foreground"
+							>
 								{job.totalFound}
 							</td>
-							<td class="px-4 py-3 text-right tabular-nums text-green-400">
+							<td class="px-4 py-3 text-right tabular-nums text-green-500">
 								{job.totalNew}
 							</td>
-							<td class="px-4 py-3 text-right tabular-nums text-amber-400">
+							<td class="px-4 py-3 text-right tabular-nums text-amber-500">
 								{job.totalUpdated}
 							</td>
-							<td class="px-4 py-3 text-slate-400">{fmtDate(job.createdAt)}</td>
+							<td class="px-4 py-3 text-muted-foreground"
+								>{fmtDate(job.createdAt)}</td
+							>
 							<td class="px-4 py-3 text-right">
 								{#if job.status === "ready" || job.status === "applied"}
-									<a
+									<Button
+										variant="ghost"
+										size="sm"
+										class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
 										href="/admin/content-imports/{job.id}"
-										class="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white"
 									>
-										Reviewer <ChevronRightIcon class="h-3 w-3" />
-									</a>
+										Reviewer <ChevronRightIcon class="h-3 w-3 ml-1" />
+									</Button>
 								{:else if job.status === "scanning"}
-									<button
-										type="button"
-										class="text-xs text-slate-500"
+									<Button
+										variant="ghost"
+										size="sm"
+										class="text-xs text-muted-foreground"
 										onclick={() => openStream(job.id)}
 									>
 										Suivre
-									</button>
+									</Button>
 								{/if}
 							</td>
 						</tr>

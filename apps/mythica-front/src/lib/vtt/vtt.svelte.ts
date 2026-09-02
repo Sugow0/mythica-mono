@@ -38,6 +38,9 @@ export const vttState = (() => {
 	let isTokenDragging = $state(false);
 	let focusedTokenId: string | null = $state(null);
 	let myCharacterSheetId: string | null = $state(null);
+	const customNames = $state<Record<string, string>>({});
+	const customColors = $state<Record<string, string>>({});
+	let use3DDice = $state(true);
 
 	return {
 		get tokens() {
@@ -75,6 +78,12 @@ export const vttState = (() => {
 		},
 		get myCharacterSheetId() {
 			return myCharacterSheetId;
+		},
+		get customNames() {
+			return customNames;
+		},
+		get customColors() {
+			return customColors;
 		},
 
 		get walls() {
@@ -138,6 +147,18 @@ export const vttState = (() => {
 		},
 		setMyCharacterSheetId(id: string | null) {
 			myCharacterSheetId = id;
+		},
+		setCustomName(userId: string, name: string) {
+			customNames[userId] = name;
+		},
+		setCustomColor(userId: string, color: string) {
+			customColors[userId] = color;
+		},
+		get use3DDice() {
+			return use3DDice;
+		},
+		setUse3DDice(v: boolean) {
+			use3DDice = v;
 		},
 	};
 })();

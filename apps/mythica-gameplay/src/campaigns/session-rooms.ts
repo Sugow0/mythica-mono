@@ -87,7 +87,10 @@ export function createRoomManager(client: RedisLike) {
 
 	/** Diffuse un message à tous les sockets de la room (toutes instances). */
 	async function broadcast(sessionId: string, message: unknown): Promise<void> {
-		await client.publish(roomChannel(sessionId), JSON.stringify(message));
+		const payload = JSON.stringify(message, (_, value) =>
+			typeof value === "bigint" ? value.toString() : value,
+		);
+		await client.publish(roomChannel(sessionId), payload);
 	}
 
 	/** Nombre de sockets connectés à la room sur cette instance. */

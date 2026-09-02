@@ -1,6 +1,5 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
-
 	"nav_campaigns": "Campaigns",
 	"nav_explore": "Explore",
 	"nav_explore_desc": "Public campaigns",
@@ -18,7 +17,6 @@
 	"nav_create_character_desc": "New standalone sheet",
 	"nav_forum": "Forum",
 	"nav_shop": "Shop",
-
 	"hero_badge": "New: AI GM available in beta",
 	"hero_title_line1": "Tabletop RPG",
 	"hero_title_line2": "reimagined.",
@@ -31,12 +29,10 @@
 	"hero_cta_demo": "Watch the demo",
 	"hero_social_proof": "Join {count} players who are reimagining TTRPGs",
 	"hero_scroll": "Discover",
-
 	"features_badge": "Features",
 	"features_title_prefix": "A new era for",
 	"features_title_highlight": "tabletop RPGs",
 	"features_subtitle": "Mythica combines the best modern tools to deliver a smooth, immersive and accessible gaming experience for everyone.",
-
 	"feature_ai_title": "AI GM",
 	"feature_ai_desc": "An intelligent game master that runs your sessions, adapts to your choices and creates unique stories.",
 	"feature_allinone_title": "All-in-one",
@@ -45,7 +41,6 @@
 	"feature_online_desc": "Play with your friends anywhere in the world, in real time, no installation needed.",
 	"feature_modern_title": "Modern",
 	"feature_modern_desc": "A smooth and elegant experience, designed for today's players.",
-
 	"ai_badge": "Powered by AI",
 	"ai_title_line1": "Meet your new",
 	"ai_title_line2": "Game Master",
@@ -54,39 +49,33 @@
 	"ai_feature_npc": "NPCs with unique personalities",
 	"ai_feature_adapt": "Adapts to your group's play style",
 	"ai_feature_rules": "Compatible with all rule systems",
-
 	"ai_preview_name": "Mythica GM",
 	"ai_preview_typing": "typing",
 	"ai_preview_story": "The tavern is shrouded in semi-darkness. The fire crackles softly in the hearth, casting dancing shadows on the stone walls. A hooded stranger approaches your table...",
 	"ai_action_talk": "Talk to them",
 	"ai_action_observe": "Observe",
 	"ai_action_leave": "Leave",
-
 	"cta_title_prefix": "Ready for",
 	"cta_title_highlight": "adventure",
 	"cta_subtitle_prefix": "Join the Mythica community and discover a new way to play.",
 	"cta_subtitle_highlight": "Free to get started.",
 	"cta_button": "Create a free account",
 	"cta_learn_more": "Learn more",
-
 	"footer_features": "Features",
 	"footer_pricing": "Pricing",
 	"footer_blog": "Blog",
 	"footer_contact": "Contact",
 	"footer_copyright": "© 2026 Mythica. Made with passion for RPG players.",
-
 	"user_menu_label": "User menu",
 	"user_menu_profile": "My profile",
 	"user_menu_admin": "Administration",
 	"user_menu_light_mode": "Light mode",
 	"user_menu_dark_mode": "Dark mode",
 	"user_menu_logout": "Log out",
-
 	"admin_nav_dashboard": "Dashboard",
 	"admin_nav_campaigns": "Campaigns",
 	"admin_nav_game_systems": "Game systems",
 	"admin_back_to_platform": "Back to platform",
-
 	"admin_dashboard_title": "Dashboard",
 	"admin_dashboard_total_users": "Total users",
 	"admin_dashboard_total_campaigns": "Total campaigns",
@@ -95,13 +84,10 @@
 	"admin_dashboard_archived_campaigns": "Archived campaigns",
 	"admin_dashboard_public_campaigns": "Public campaigns",
 	"admin_dashboard_private_campaigns": "Private campaigns",
-
 	"admin_campaigns_title": "Campaigns",
 	"admin_campaign_members": "Members",
 	"admin_campaign_characters": "Characters",
-
 	"admin_game_systems_title": "Game systems",
-
 	"admin_col_name": "Name",
 	"admin_col_status": "Status",
 	"admin_col_visibility": "Visibility",
@@ -110,7 +96,6 @@
 	"admin_col_game_system": "Game system",
 	"admin_col_date": "Date",
 	"admin_col_versions": "Versions",
-
 	"admin_btn_prev": "Previous",
 	"admin_btn_next": "Next",
 	"admin_btn_new_system": "New system",
@@ -119,7 +104,6 @@
 	"admin_btn_delete": "Delete",
 	"admin_btn_edit": "Edit",
 	"admin_btn_save": "Save",
-
 	"admin_form_name_label": "Name",
 	"admin_form_version_label": "Version",
 	"admin_form_slug_label": "Slug",
@@ -127,7 +111,6 @@
 	"admin_form_parent_label": "Parent system",
 	"admin_form_official_label": "Official system",
 	"admin_form_no_parent": "No parent",
-
 	"nav_characters": "Characters",
 	"nav_my_characters": "My characters",
 	"nav_my_characters_desc": "Your characters",
@@ -149,5 +132,16 @@
 	"character_not_found": "Sheet not found.",
 	"character_save_saved": "Saved",
 	"character_save_saving": "Saving…",
-	"character_save_error": "Save error"
+	"character_save_error": "Save error",
+	"nav_tools": "Tools",
+	"nav_tools_dice": "Dice Roller",
+	"nav_tools_dice_desc": "3D simulator and advanced rolls",
+	"nav_tools_encounter": "Encounter Builder",
+	"nav_tools_encounter_desc": "Balance and create combats",
+	"nav_tools_names": "Name Generator",
+	"nav_tools_names_desc": "Thousands of names for NPCs",
+	"nav_tools_miniatures": "Miniature Builder",
+	"nav_tools_miniatures_desc": "Customize your 3D avatars",
+	"nav_tools_tokens": "Token Maker",
+	"nav_tools_tokens_desc": "Generate VTT tokens"
 }

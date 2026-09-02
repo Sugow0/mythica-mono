@@ -63,7 +63,7 @@
 					>
 						{#if info.fileId}
 							<img
-								src={`/api/gameplay/files/${info.fileId}/content`}
+								src={`${import.meta.env.VITE_PUBLIC_API_URL ?? "http://localhost:2100"}/gameplay/files/${info.fileId}/content`}
 								alt={info.label}
 								class="h-full w-full rounded-full object-cover"
 							/>

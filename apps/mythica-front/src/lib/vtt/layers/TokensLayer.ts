@@ -16,6 +16,7 @@ export class TokensLayer {
 	private onDoubleClick: TokenSelectCallback | undefined;
 	private gridSize = 100;
 	private app: Application;
+	private mapConfig: MapConfig | null = null;
 
 	constructor(
 		stage: Container,
@@ -38,6 +39,16 @@ export class TokensLayer {
 
 	setGridSize(size: number) {
 		this.gridSize = size;
+		for (const sprite of this.sprites.values()) {
+			sprite.setGridSize(size);
+		}
+	}
+
+	setMapConfig(config: MapConfig | null) {
+		this.mapConfig = config;
+		for (const sprite of this.sprites.values()) {
+			sprite.setMapConfig(config);
+		}
 	}
 
 	setTokens(tokens: SessionTokenDto[]) {
@@ -60,7 +71,8 @@ export class TokensLayer {
 					this.onSelect,
 					this.onDoubleClick,
 					this.gridSize,
-					this.app.ticker
+					this.app.ticker,
+					this.mapConfig
 				);
 				this.container.addChild(sprite.container);
 				this.sprites.set(token.id, sprite);
@@ -79,7 +91,8 @@ export class TokensLayer {
 			this.onSelect,
 			this.onDoubleClick,
 			this.gridSize,
-			this.app.ticker
+			this.app.ticker,
+			this.mapConfig
 		);
 		this.container.addChild(sprite.container);
 		this.sprites.set(token.id, sprite);

@@ -305,6 +305,18 @@ export class CampaignService extends GameplayApiClient {
 		return data;
 	}
 
+	/** Déployer une rencontre sur le VTT d'une session (MJ). */
+	async deployEncounter(sessionId: string, encounterId: string) {
+		const { data, error } = await this.client.POST(
+			"/sessions/{id}/encounters/{encounterId}/deploy",
+			{
+				params: { path: { id: sessionId, encounterId } },
+			} as any
+		); // override type for openapi-ts generated typings which may not have it yet
+		if (error) throw error;
+		return data;
+	}
+
 	// ==================== Maps ====================
 
 	/** Lister les maps d'une campagne (MJ). */
@@ -329,6 +341,63 @@ export class CampaignService extends GameplayApiClient {
 			params: { path: { id: campaignId } },
 			body,
 		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Modifier une map (MJ). */
+	async updateMap(
+		campaignId: string,
+		mapId: string,
+		body: {
+			nom?: string;
+			gridType?: "square" | "hex" | "free";
+			gridSize?: number;
+			gridOffsetX?: number;
+			gridOffsetY?: number;
+			widthPx?: number;
+			heightPx?: number;
+			gridColor?: string;
+			gridOpacity?: number;
+		}
+	) {
+		const { data, error } = await this.client.PATCH(
+			"/campaigns/{id}/maps/{mapId}",
+			{
+				params: { path: { id: campaignId, mapId } },
+				body,
+			}
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Supprimer une map (MJ). */
+	async deleteMap(campaignId: string, mapId: string) {
+		const { data, error } = await this.client.DELETE(
+			"/campaigns/{id}/maps/{mapId}",
+			{
+				params: { path: { id: campaignId, mapId } },
+			}
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Uploader une image pour une map (MJ). */
+	async uploadMapFile(campaignId: string, mapId: string, file: File) {
+		const { data, error } = await this.client.POST(
+			"/campaigns/{id}/maps/{mapId}/file",
+			{
+				params: { path: { id: campaignId, mapId } },
+				body: { file },
+				bodySerializer: (b) => {
+					const fd = new FormData();
+					fd.append("file", b.file);
+					return fd;
+				},
+			}
+		);
 		if (error) throw error;
 		return data;
 	}
