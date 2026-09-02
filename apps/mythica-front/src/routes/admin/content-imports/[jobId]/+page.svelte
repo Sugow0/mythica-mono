@@ -91,25 +91,41 @@
 	}
 
 	async function batchApproveSelected() {
-		await contentImportService.batchReview(jobId, "approve", selectedIds);
-		selectedIds = [];
-		await load(currentPage);
+		try {
+			await contentImportService.batchReview(jobId, "approve", selectedIds);
+			selectedIds = [];
+			await load(currentPage);
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Erreur";
+		}
 	}
 
 	async function batchRejectSelected() {
-		await contentImportService.batchReview(jobId, "reject", selectedIds);
-		selectedIds = [];
-		await load(currentPage);
+		try {
+			await contentImportService.batchReview(jobId, "reject", selectedIds);
+			selectedIds = [];
+			await load(currentPage);
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Erreur";
+		}
 	}
 
 	async function batchApproveAll() {
-		await contentImportService.batchReview(jobId, "approve");
-		await load(currentPage);
+		try {
+			await contentImportService.batchReview(jobId, "approve");
+			await load(currentPage);
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Erreur";
+		}
 	}
 
 	async function batchRejectAll() {
-		await contentImportService.batchReview(jobId, "reject");
-		await load(currentPage);
+		try {
+			await contentImportService.batchReview(jobId, "reject");
+			await load(currentPage);
+		} catch (e) {
+			error = e instanceof Error ? e.message : "Erreur";
+		}
 	}
 
 	// ── Apply ─────────────────────────────────────────────────────────────────
