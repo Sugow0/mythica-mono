@@ -13,7 +13,7 @@
 		"@elysiajs/cors": "^1.4.1",
 		"@sinclair/typebox": "^0.34.15",
 		"elysia": "latest",
-		"ioredis": "^5.4.1",
+		"ioredis": "^6.0.0",
 		"pino": "^10.3.1",
 		"prom-client": "^15.1.3"
 	},
