@@ -12,7 +12,7 @@ export function handleTokenEvent(
 				id: event.tokenId as string,
 				posX: String(event.x),
 				posY: String(event.y),
-				waypoints: event.waypoints as {x: number, y: number}[] | undefined,
+				waypoints: event.waypoints as { x: number; y: number }[] | undefined,
 			});
 			break;
 		case "TOKEN_REMOVED":

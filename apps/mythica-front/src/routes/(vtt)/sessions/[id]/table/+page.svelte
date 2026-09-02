@@ -12,6 +12,7 @@
 	import VttDiceRoller from "$lib/vtt/panels/VttDiceRoller.svelte";
 	import VttQuickDicePanel from "$lib/vtt/panels/VttQuickDicePanel.svelte";
 	import VttActorsPanel from "$lib/vtt/panels/VttActorsPanel.svelte";
+	import VttEncountersPanel from "$lib/vtt/panels/VttEncountersPanel.svelte";
 	import type { CampaignCharacterSheet } from "$lib/api/services/campaign-character-sheets-service";
 	import { vttState } from "$lib/vtt/vtt.svelte";
 	import { VttWebSocket, type WsStatus } from "$lib/vtt/ws/VttWebSocket";
@@ -31,6 +32,7 @@
 	let wsStatus = $state<WsStatus>("connecting");
 	let showMaps = $state(false);
 	let showActors = $state(false);
+	let showEncounters = $state(false);
 	let showMySheet = $state(false);
 	let openedSheetId = $state<string | null>(null);
 	let showDice = $state(false);
@@ -248,6 +250,10 @@
 		{showMaps}
 		onToggleActors={isGm ? () => (showActors = !showActors) : undefined}
 		{showActors}
+		onToggleEncounters={isGm
+			? () => (showEncounters = !showEncounters)
+			: undefined}
+		{showEncounters}
 		onToggleMySheet={() => {
 			showMySheet = !showMySheet;
 			if (showMySheet) vttState.setSelectedTokenId(null);
@@ -268,6 +274,13 @@
 				openedSheetTokenId = null;
 				showMySheet = false;
 			}}
+		/>
+	{/if}
+	{#if isGm && showEncounters}
+		<VttEncountersPanel
+			campaignId={data.campaign?.id ?? ""}
+			{sessionId}
+			onClose={() => (showEncounters = false)}
 		/>
 	{/if}
 	{#if vttState.combatState.started}

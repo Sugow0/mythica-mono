@@ -44,3 +44,4 @@ export {
 
 // User Service
 export { UserService, userService } from "./user-service";
+export * from "./encounters-service";

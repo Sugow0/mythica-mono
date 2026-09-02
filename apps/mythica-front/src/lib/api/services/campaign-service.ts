@@ -305,6 +305,18 @@ export class CampaignService extends GameplayApiClient {
 		return data;
 	}
 
+	/** Déployer une rencontre sur le VTT d'une session (MJ). */
+	async deployEncounter(sessionId: string, encounterId: string) {
+		const { data, error } = await this.client.POST(
+			"/sessions/{id}/encounters/{encounterId}/deploy",
+			{
+				params: { path: { id: sessionId, encounterId } },
+			} as any
+		); // override type for openapi-ts generated typings which may not have it yet
+		if (error) throw error;
+		return data;
+	}
+
 	// ==================== Maps ====================
 
 	/** Lister les maps d'une campagne (MJ). */

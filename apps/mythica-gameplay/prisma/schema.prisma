@@ -305,6 +305,7 @@ model Campaign {
   characterSheets CampaignCharacterSheet[]
   poolSheets      CampaignPoolSheet[]
   changeRequests  CampaignCharacterChangeRequest[]
+  encounters      Encounter[]
   sessions        Session[]
   files           File[]                            @relation("CampaignFiles")
   maps            Map[]
@@ -436,6 +437,7 @@ model CharacterSheet {
   tokens     SessionToken[]
   poolSheet            CampaignPoolSheet?   @relation("PoolSheetCharacter")
   poolRequestAssignment CampaignPoolRequest? @relation("PoolRequestAssignment")
+  encounterMonsters EncounterMonster[]
 
   @@index([userId], name: "idx_character_sheets_user")
   @@index([gameSystemId], name: "idx_character_sheets_system")
@@ -604,6 +606,7 @@ model SessionToken {
   width            Int        @default(1)
   height           Int        @default(1)
   isVisible        Boolean    @default(true) @map("is_visible")
+  isLinked         Boolean    @default(false) @map("is_linked")
   layer            TokenLayer @default(token)
   
   // Tactical & Visual VTT Fields
@@ -798,6 +801,39 @@ model GameSystemCreationStep {
   @@index([gameSystemId, order], name: "idx_creation_steps_order")
   @@map("game_system_creation_steps")
 }
+
+// ------------------------------------------------------------
+// ENCOUNTER
+// ------------------------------------------------------------
+
+model Encounter {
+  id         String   @id @db.Uuid
+  campaignId String   @map("campaign_id") @db.Uuid
+  nom        String   @db.VarChar(255)
+  difficulty String?  @db.VarChar(50)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign   Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  monsters   EncounterMonster[]
+
+  @@index([campaignId], name: "idx_encounters_campaign")
+  @@map("encounters")
+}
+
+model EncounterMonster {
+  id               String   @id @db.Uuid
+  encounterId      String   @map("encounter_id") @db.Uuid
+  characterSheetId String   @map("character_sheet_id") @db.Uuid
+  quantity         Int      @default(1)
+  
+  encounter      Encounter      @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  characterSheet CharacterSheet @relation(fields: [characterSheetId], references: [id], onDelete: Restrict)
+
+  @@index([encounterId], name: "idx_encounter_monsters_encounter")
+  @@map("encounter_monsters")
+}
+
 
 // ------------------------------------------------------------
 // CHARACTER SHEET SELECTION

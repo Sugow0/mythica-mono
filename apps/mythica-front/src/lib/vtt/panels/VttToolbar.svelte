@@ -7,6 +7,7 @@
 	import PlusCircleIcon from "@lucide/svelte/icons/plus-circle";
 	import UserIcon from "@lucide/svelte/icons/user";
 	import UsersIcon from "@lucide/svelte/icons/users";
+	import SwordsIcon from "@lucide/svelte/icons/swords";
 	import DicesIcon from "@lucide/svelte/icons/dices";
 	import PenLineIcon from "@lucide/svelte/icons/pen-line";
 	import { vttState } from "$lib/vtt/vtt.svelte";
@@ -20,6 +21,8 @@
 		showMaps = false,
 		onToggleActors,
 		showActors = false,
+		onToggleEncounters,
+		showEncounters = false,
 		onToggleMySheet,
 		showMySheet = false,
 		onToggleDice,
@@ -32,6 +35,8 @@
 		showMaps?: boolean;
 		onToggleActors?: () => void;
 		showActors?: boolean;
+		onToggleEncounters?: () => void;
+		showEncounters?: boolean;
 		onToggleMySheet?: () => void;
 		showMySheet?: boolean;
 		onToggleDice?: () => void;
@@ -236,6 +241,16 @@
 		>
 			<UsersIcon class="h-5 w-5" />
 			<span>Acteurs</span>
+		</button>
+		<button
+			onclick={onToggleEncounters}
+			class="flex flex-col items-center gap-1 rounded-xl p-2 text-[10px] font-medium transition-all duration-300 active:scale-95 {showEncounters
+				? 'bg-primary text-primary-foreground shadow-sm'
+				: 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'}"
+			title="Déployer une rencontre"
+		>
+			<SwordsIcon class="h-5 w-5" />
+			<span>Rencontres</span>
 		</button>
 		<div class="mx-auto h-px w-8 rounded-full bg-border/50"></div>
 	{/if}

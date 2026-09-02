@@ -4,6 +4,7 @@ import { Elysia } from "elysia";
 import { authContext } from "./auth/context";
 import { campaignCharacterSheetsController } from "./campaigns/campaign-character-sheets.controller";
 import { campaignsController } from "./campaigns/campaigns.controller";
+import { encountersController } from "./campaigns/encounters.controller";
 import { sessionsController } from "./campaigns/sessions.controller";
 import { sessionsWs } from "./campaigns/sessions.ws";
 import { characterContentController } from "./character-content/character-content.controller";
@@ -47,6 +48,7 @@ const app = new Elysia()
 						description: "Contenu et parcours de création des systèmes",
 					},
 					{ name: "Campaigns", description: "Campagnes, membres et sessions" },
+					{ name: "Encounters", description: "Rencontres" },
 					{ name: "Sessions", description: "Sessions de jeu et présence" },
 					{ name: "Maps", description: "Maps des sessions de jeu" },
 				],
@@ -61,6 +63,7 @@ const app = new Elysia()
 	.use(characterSheetsController)
 	.use(campaignsController)
 	.use(campaignCharacterSheetsController)
+	.use(encountersController)
 	.use(sessionsController)
 	.use(mapsController)
 	.use(filesController)

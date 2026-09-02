@@ -308,7 +308,9 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 						characterSheet: {
 							include: {
 								values: {
-									where: { property: { key: "hp" } },
+									where: {
+										property: { key: { in: ["hp", "pv", "hit_points"] } },
+									},
 									select: { value: true },
 								},
 							},
@@ -336,6 +338,7 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 				width: t.Optional(t.Integer({ minimum: 1, default: 1 })),
 				height: t.Optional(t.Integer({ minimum: 1, default: 1 })),
 				isVisible: t.Optional(t.Boolean({ default: true })),
+				isLinked: t.Optional(t.Boolean({ default: false })),
 				layer: t.Optional(
 					t.Union([
 						t.Literal("background"),
@@ -347,11 +350,118 @@ export const sessionsController = new Elysia({ prefix: "/sessions" })
 			}),
 			response: {
 				201: t.Object({ success: t.Literal(true), token: t.Any() }),
+			},
+			detail: { tags: ["Sessions"], summary: "Créer un token (MJ)" },
+		},
+	)
+
+	/** POST /sessions/:id/encounters/:encounterId/deploy — Déployer une rencontre. */
+	.post(
+		"/:id/encounters/:encounterId/deploy",
+		async ({ set, currentUser, params }) => {
+			const access = await resolveSessionAccess(params.id, currentUser);
+			if (!access.ok) {
+				set.status = access.status;
+				return { success: false as const, error: access.error };
+			}
+			if (!isGameMaster(access)(currentUser as CurrentUser)) {
+				set.status = 403;
+				return { success: false as const, error: "Réservé au MJ" };
+			}
+			try {
+				const encounter = await prisma.encounter.findUnique({
+					where: { id: params.encounterId },
+					include: { monsters: { include: { characterSheet: true } } },
+				});
+				if (!encounter) {
+					set.status = 404;
+					return { success: false as const, error: "Rencontre introuvable" };
+				}
+
+				const totalCount = encounter.monsters.reduce(
+					(sum, m) => sum + m.quantity,
+					0,
+				);
+				const gridCols = Math.max(1, Math.ceil(Math.sqrt(totalCount)));
+
+				const tokensToCreate = [];
+				let tokenIndex = 0;
+				for (const monster of encounter.monsters) {
+					const monsterName = monster.characterSheet.name;
+					for (let i = 0; i < monster.quantity; i++) {
+						const label =
+							monster.quantity > 1 ? `${monsterName} ${i + 1}` : monsterName;
+						tokensToCreate.push({
+							id: randomUUID(),
+							sessionId: params.id,
+							characterSheetId: monster.characterSheetId,
+							label,
+							layer: "token" as const,
+							// Grille pour éviter que les monstres ne s'empilent tous au même endroit.
+							posX: tokenIndex % gridCols,
+							posY: Math.floor(tokenIndex / gridCols),
+							width: 1,
+							height: 1,
+							isVisible: true,
+							isLinked: false, // Les monstres déployés ont leurs propres PV indépendants
+						});
+						tokenIndex++;
+					}
+				}
+
+				if (tokensToCreate.length > 0) {
+					await prisma.sessionToken.createMany({ data: tokensToCreate });
+
+					// Fetch created tokens with includes to broadcast
+					const createdTokens = await prisma.sessionToken.findMany({
+						where: { id: { in: tokensToCreate.map((t) => t.id) } },
+						include: {
+							file: true,
+							characterSheet: {
+								include: {
+									values: {
+										where: {
+											property: { key: { in: ["hp", "pv", "hit_points"] } },
+										},
+										select: { value: true },
+									},
+								},
+							},
+						},
+					});
+
+					for (const tokenModel of createdTokens) {
+						const token = mapTokenDto(tokenModel);
+						await sessionRooms.broadcast(params.id, {
+							type: "TOKEN_ADDED",
+							token,
+						});
+					}
+				}
+
+				set.status = 200;
+				return { success: true as const, deployedCount: tokensToCreate.length };
+			} catch (err: any) {
+				console.error(
+					"[POST /sessions/:id/encounters/:encounterId/deploy] Error:",
+					err,
+				);
+				set.status = 500;
+				return { success: false as const, error: err.message };
+			}
+		},
+		{
+			params: t.Object({ id: t.String(), encounterId: t.String() }),
+			response: {
+				200: t.Object({ success: t.Literal(true), deployedCount: t.Number() }),
 				401: ErrorResponse,
 				403: ErrorResponse,
 				404: ErrorResponse,
 			},
-			detail: { tags: ["Sessions"], summary: "Créer un token (MJ)" },
+			detail: {
+				tags: ["Sessions"],
+				summary: "Déployer une rencontre sur le VTT",
+			},
 		},
 	)
 

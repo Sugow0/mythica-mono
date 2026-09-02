@@ -2,7 +2,13 @@ import { prisma } from "../lib/prisma";
 import { isGameMaster, resolveSessionAccess } from "./session-access";
 
 export type TokenCommand =
-	| { type: "TOKEN_MOVE"; tokenId: string; x: number; y: number; waypoints?: {x: number, y: number}[] }
+	| {
+			type: "TOKEN_MOVE";
+			tokenId: string;
+			x: number;
+			y: number;
+			waypoints?: { x: number; y: number }[];
+	  }
 	| { type: "TOKEN_REMOVE"; tokenId: string }
 	| {
 			type: "TOKEN_UPDATE";
@@ -23,7 +29,13 @@ export type TokenCommand =
 	  };
 
 export type TokenEvent =
-	| { type: "TOKEN_MOVED"; tokenId: string; x: number; y: number; waypoints?: {x: number, y: number}[] }
+	| {
+			type: "TOKEN_MOVED";
+			tokenId: string;
+			x: number;
+			y: number;
+			waypoints?: { x: number; y: number }[];
+	  }
 	| { type: "TOKEN_REMOVED"; tokenId: string }
 	| { type: "TOKEN_UPDATED"; tokenId: string; [key: string]: unknown };
 
@@ -45,12 +57,12 @@ export function parseTokenCommand(raw: unknown): TokenCommand | null {
 				typeof cmd.x === "number" &&
 				typeof cmd.y === "number"
 			) {
-				return { 
-					type: "TOKEN_MOVE", 
-					tokenId: cmd.tokenId, 
-					x: cmd.x, 
+				return {
+					type: "TOKEN_MOVE",
+					tokenId: cmd.tokenId,
+					x: cmd.x,
 					y: cmd.y,
-					waypoints: Array.isArray(cmd.waypoints) ? cmd.waypoints : undefined
+					waypoints: Array.isArray(cmd.waypoints) ? cmd.waypoints : undefined,
 				};
 			}
 			return null;
@@ -170,14 +182,23 @@ export async function handleTokenCommand(
 			const newHp = hp as number | undefined | null;
 			const newMaxHp = maxHp as number | undefined | null;
 
-			// Si le token est lié à une fiche et qu'on modifie les HP
+			// Toujours mettre à jour le token lui-même (source de vérité en session)
+			if (newHp !== undefined) updates.hp = newHp;
+			if (newMaxHp !== undefined) updates.maxHp = newMaxHp;
+
+			const updated = await prisma.sessionToken.update({
+				where: { id: command.tokenId },
+				data: updates as Record<string, unknown>,
+			});
+
+			// Propager les PV à la fiche de personnage liée (si elle existe)
+			// C'est le comportement attendu : modifier un token met à jour la fiche
 			if (
 				token.characterSheet &&
 				(newHp !== undefined || newMaxHp !== undefined)
 			) {
-				// Fetch property "hp" ID
-				const hpProp = await prisma.characterSheetProperty.findUnique({
-					where: { key: "hp" },
+				const hpProp = await prisma.characterSheetProperty.findFirst({
+					where: { key: { in: ["hp", "pv", "hit_points"] } },
 				});
 				if (hpProp) {
 					const sheetVal = await prisma.characterSheetValue.findUnique({
@@ -210,15 +231,7 @@ export async function handleTokenCommand(
 						update: { value: nextVal as any },
 					});
 				}
-			} else {
-				if (newHp !== undefined) updates.hp = newHp;
-				if (newMaxHp !== undefined) updates.maxHp = newMaxHp;
 			}
-
-			const updated = await prisma.sessionToken.update({
-				where: { id: command.tokenId },
-				data: updates as Record<string, unknown>,
-			});
 
 			return {
 				type: "TOKEN_UPDATED",
@@ -241,7 +254,7 @@ export async function getSessionTokens(sessionId: string) {
 			characterSheet: {
 				include: {
 					values: {
-						where: { property: { key: "hp" } },
+						where: { property: { key: { in: ["hp", "pv", "hit_points"] } } },
 						select: { value: true },
 					},
 				},
@@ -256,13 +269,22 @@ export function mapTokenDto(t: any) {
 	let hp = t.hp;
 	let maxHp = t.maxHp;
 
+	// Si le token est "Linked" (PJ), on lit les PV depuis la fiche qui fait autorité
+	// Si le token est "Unlinked" (monstre/PNJ déployé), on lit les PV du token lui-même.
+	// Dans les deux cas, si le token n'a pas encore de PV (null), on initialise depuis la fiche.
 	if (t.characterSheet) {
 		const hpValue = t.characterSheet.values?.[0]?.value as
 			| { current?: number; max?: number }
 			| undefined;
 		if (hpValue && typeof hpValue === "object") {
-			hp = hpValue.current ?? hp;
-			maxHp = hpValue.max ?? maxHp;
+			// Toujours initialiser depuis la fiche si le token n'a pas encore de PV
+			if (hp === null || hp === undefined) hp = hpValue.current ?? null;
+			if (maxHp === null || maxHp === undefined) maxHp = hpValue.max ?? null;
+			// Pour les tokens liés, la fiche prime toujours
+			if (t.isLinked) {
+				hp = hpValue.current ?? hp;
+				maxHp = hpValue.max ?? maxHp;
+			}
 		}
 	}
 

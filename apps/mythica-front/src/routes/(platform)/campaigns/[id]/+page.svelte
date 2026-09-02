@@ -34,6 +34,7 @@
 	import { Textarea } from "$lib/components/ui/textarea";
 	import { ApiError, campaignService } from "$lib/index.js";
 	import CampaignCharactersTab from "$lib/components/campaign/CampaignCharactersTab.svelte";
+	import CampaignEncountersTab from "$lib/components/campaign/CampaignEncountersTab.svelte";
 	import type { PageData } from "./$types";
 
 	let { data }: { data: PageData } = $props();
@@ -813,9 +814,17 @@
 
 				<!-- Onglets -->
 				<Tabs.Root value="sessions" class="w-full">
-					<Tabs.List class="grid w-full grid-cols-3 mb-6">
+					<Tabs.List
+						class="grid w-full mb-6"
+						style="grid-template-columns: repeat({isGm
+							? 4
+							: 3}, minmax(0, 1fr))"
+					>
 						<Tabs.Trigger value="sessions">Sessions</Tabs.Trigger>
 						<Tabs.Trigger value="characters">Personnages</Tabs.Trigger>
+						{#if isGm}
+							<Tabs.Trigger value="encounters">Rencontres</Tabs.Trigger>
+						{/if}
 						<Tabs.Trigger value="about">À propos</Tabs.Trigger>
 					</Tabs.List>
 
@@ -1029,6 +1038,18 @@
 							</Card.Root>
 						{/if}
 					</Tabs.Content>
+
+					{#if isGm}
+						<Tabs.Content value="encounters">
+							<CampaignEncountersTab
+								campaignId={campaign.id}
+								gameSystemId={campaign.gameSystemId}
+								activeSessionId={activeSessions.length > 0
+									? activeSessions[0].id
+									: null}
+							/>
+						</Tabs.Content>
+					{/if}
 
 					<Tabs.Content value="about" class="space-y-6">
 						<Card.Root>
