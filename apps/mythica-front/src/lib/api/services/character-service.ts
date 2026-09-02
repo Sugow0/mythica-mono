@@ -116,11 +116,20 @@ export class CharacterService extends GameplayApiClient {
 		return data;
 	}
 
-	/** Contenu d'une collection d'un système (race, classe, sort...). */
-	async getContent(gameSystemId: string, collectionKey: string) {
+	/** Contenu d'une collection d'un système (race, classe, sort...). Supporte ?q=, ?limit=, ?offset= */
+	async getContent(
+		gameSystemId: string,
+		collectionKey: string,
+		opts?: { q?: string; limit?: number; offset?: number }
+	) {
 		const { data, error } = await this.client.GET(
 			"/game-systems/{id}/content/{collectionKey}",
-			{ params: { path: { id: gameSystemId, collectionKey } } }
+			{
+				params: {
+					path: { id: gameSystemId, collectionKey },
+					query: opts as Record<string, unknown> | undefined,
+				},
+			}
 		);
 		if (error) throw error;
 		return data;

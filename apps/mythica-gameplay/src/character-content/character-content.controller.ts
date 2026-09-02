@@ -92,25 +92,42 @@ export const characterContentController = new Elysia({
 	/**
 	 * GET /game-systems/:id/content/:collectionKey - Contenu d'une collection.
 	 * Ex. collectionKey = "race", "classe", "background", "sort", "equipement".
+	 * Supporte ?q=<search>, ?limit=<n>, ?offset=<n> pour la recherche paginée.
 	 */
 	.get(
 		"/:id/content/:collectionKey",
-		async ({ set, currentUser, params }) => {
+		async ({ set, currentUser, params, query }) => {
 			if (!currentUser) {
 				set.status = 401;
 				return { success: false as const, error: "Non authentifié" };
 			}
 
-			const items = await prisma.systemContent.findMany({
-				where: {
-					gameSystemId: params.id,
-					collectionKey: params.collectionKey,
-				},
-				orderBy: { sortOrder: "asc" },
-			});
+			const limit = Math.min(query.limit ?? 100, 200);
+			const offset = query.offset ?? 0;
+
+			const where = {
+				gameSystemId: params.id,
+				collectionKey: params.collectionKey,
+				...(query.q
+					? { name: { contains: query.q, mode: "insensitive" as const } }
+					: {}),
+			};
+
+			const [items, total] = await Promise.all([
+				prisma.systemContent.findMany({
+					where,
+					orderBy: { sortOrder: "asc" },
+					take: limit,
+					skip: offset,
+				}),
+				prisma.systemContent.count({ where }),
+			]);
 
 			return {
 				success: true as const,
+				total,
+				limit,
+				offset,
 				items: items.map((c) => ({
 					id: c.id,
 					collectionKey: c.collectionKey,
@@ -125,16 +142,14 @@ export const characterContentController = new Elysia({
 		},
 		{
 			params: t.Object({ id: t.String(), collectionKey: t.String() }),
-			response: {
-				200: t.Object({
-					success: t.Literal(true),
-					items: t.Array(ContentItemSchema),
-				}),
-				401: ErrorResponse,
-			},
+			query: t.Object({
+				q: t.Optional(t.String()),
+				limit: t.Optional(t.Numeric()),
+				offset: t.Optional(t.Numeric()),
+			}),
 			detail: {
 				tags: ["CharacterContent"],
-				summary: "Contenu d'une collection d'un système",
+				summary: "Contenu d'une collection d'un système (avec recherche)",
 			},
 		},
 	);
