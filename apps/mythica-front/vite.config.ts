@@ -8,6 +8,24 @@ export default defineConfig({
 	define: {
 		"process.env": "import.meta.env",
 	},
+	// Le moteur de création est un package workspace distribué en TS brut :
+	// Vite doit le transpiler (SSR compris) plutôt que de l'externaliser.
+	ssr: {
+		noExternal: ["@mythica/character-engine"],
+	},
+	// Les bibliothèques de composants Svelte sont distribuées en `.svelte` brut :
+	// on les exclut du pré-bundle esbuild (qui ne sait pas charger `.svelte`) pour
+	// qu'elles passent par le plugin Svelte (sinon les tests browser échouent).
+	optimizeDeps: {
+		exclude: [
+			"bits-ui",
+			"svelte-sonner",
+			"vaul-svelte",
+			"mode-watcher",
+			"paneforge",
+			"@lucide/svelte",
+		],
+	},
 	plugins: [
 		tailwindcss(),
 		sveltekit(),
@@ -19,6 +37,13 @@ export default defineConfig({
 	],
 	test: {
 		expect: { requireAssertions: true },
+		// lcov : consommé par SonarCloud (apps/mythica-front/coverage/lcov.info).
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "lcov"],
+			reportsDirectory: "./coverage",
+			include: ["src/**"],
+		},
 		projects: [
 			{
 				extends: "./vite.config.ts",

@@ -1,0 +1,39 @@
+import { describe, expect, it } from "bun:test";
+import { OFFICIAL_GAME_SYSTEMS } from "../official-systems";
+
+describe("OFFICIAL_GAME_SYSTEMS", () => {
+	it("contient les systèmes officiels attendus", () => {
+		expect(OFFICIAL_GAME_SYSTEMS.map((s) => s.slug).sort()).toEqual([
+			"coc-7e",
+			"dnd5e",
+			"dnd5e-2014",
+			"dnd5e-2024",
+			"pf2e",
+		]);
+	});
+
+	it("a des slugs uniques (clé naturelle du seed)", () => {
+		const slugs = new Set(OFFICIAL_GAME_SYSTEMS.map((s) => s.slug));
+		expect(slugs.size).toBe(OFFICIAL_GAME_SYSTEMS.length);
+	});
+
+	it("ne référence que des parentSlug existants", () => {
+		const slugs = new Set(OFFICIAL_GAME_SYSTEMS.map((s) => s.slug));
+		for (const s of OFFICIAL_GAME_SYSTEMS) {
+			if (s.parentSlug !== null) expect(slugs.has(s.parentSlug)).toBe(true);
+		}
+	});
+
+	it("marque tous les systèmes comme officiels", () => {
+		expect(OFFICIAL_GAME_SYSTEMS.every((s) => s.isOfficial)).toBe(true);
+	});
+
+	it("fait hériter les éditions 2014 et 2024 du parent dnd5e", () => {
+		const v2014 = OFFICIAL_GAME_SYSTEMS.find((s) => s.slug === "dnd5e-2014");
+		const v2024 = OFFICIAL_GAME_SYSTEMS.find((s) => s.slug === "dnd5e-2024");
+		const parent = OFFICIAL_GAME_SYSTEMS.find((s) => s.slug === "dnd5e");
+		expect(parent?.parentSlug).toBeNull();
+		expect(v2014?.parentSlug).toBe("dnd5e");
+		expect(v2024?.parentSlug).toBe("dnd5e");
+	});
+});

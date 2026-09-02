@@ -2,10 +2,6 @@ import { logger as elysiaLogger } from "@bogeychan/elysia-logger";
 import cors from "@elysiajs/cors";
 import { swagger } from "@elysiajs/swagger";
 import { Elysia } from "elysia";
-import { campaignsController } from "./campaigns/campaigns.controller";
-import { charactersController } from "./characters/characters.controller";
-import { charactersInternalController } from "./characters/characters-internal.controller";
-import { gameSystemsController } from "./game-systems/game-systems.controller";
 import { healthController } from "./health.controller";
 import { identityController } from "./identity/identity.controller";
 import { logger } from "./logger";
@@ -49,19 +45,6 @@ const app = new Elysia()
 							"Authentification, inscription, OAuth, gestion du profil",
 					},
 					{
-						name: "Campaigns",
-						description:
-							"Gestion des campagnes, sessions, membres et invitations",
-					},
-					{
-						name: "GameSystems",
-						description: "Gestion des systèmes de jeu et de leurs versions",
-					},
-					{
-						name: "Characters",
-						description: "Gestion des fiches de personnage",
-					},
-					{
 						name: "Internal",
 						description: "Endpoints réservés aux services internes (MJ IA)",
 					},
@@ -70,10 +53,6 @@ const app = new Elysia()
 		}),
 	)
 	.use(identityController)
-	.use(campaignsController)
-	.use(gameSystemsController)
-	.use(charactersController)
-	.use(charactersInternalController)
 	.listen(port);
 const ws = new Elysia()
 	.ws("/ws", {

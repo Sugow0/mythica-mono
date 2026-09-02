@@ -1,7 +1,7 @@
 const TOTP_PERIOD = 30;
 const TOTP_DIGITS = 6;
 
-export { TOTP_PERIOD, TOTP_DIGITS };
+export { TOTP_DIGITS, TOTP_PERIOD };
 
 export function generateSecretBytes(): Uint8Array {
 	const bytes = new Uint8Array(20);

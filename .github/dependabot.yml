@@ -3,6 +3,7 @@ updates:
   # Dépendances JavaScript du workspace (Bun / npm)
   - package-ecosystem: "npm"
     directory: "/"
+    target-branch: "staging"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
@@ -11,10 +12,30 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: "development"
+    # Majors bloqués : ces montées cassent le toolchain et exigent une
+    # adaptation manuelle du code (à faire dans une PR dédiée, pas en auto).
+    ignore:
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@lucide/svelte"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "bits-ui"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-native-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
 
   # Actions GitHub épinglées en SHA (maintient les pins à jour)
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "staging"
     schedule:
       interval: "weekly"
     commit-message:
@@ -27,6 +48,7 @@ updates:
       - "/apps/mythica-gameplay"
       - "/apps/mythica-gateway"
       - "/apps/mythica-front"
+    target-branch: "staging"
     schedule:
       interval: "weekly"
     commit-message:

@@ -4,9 +4,9 @@ apps/*/bun.lock
 .svelte-kit/
 build/
 dist/
+coverage/
 .expo/
 .env
 .env.*
 !.env.example
 .DS_Store
-CLAUDE.md

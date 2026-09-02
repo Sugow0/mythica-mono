@@ -1,9 +1,9 @@
 <script lang="ts">
-	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import { Calendar as CalendarPrimitive } from "bits-ui";
+	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import {
-		type ButtonVariant,
 		buttonVariants,
+		type ButtonVariant,
 	} from "$lib/components/ui/button/index.js";
 	import { cn } from "$lib/utils.js";
 
@@ -19,7 +19,7 @@
 </script>
 
 {#snippet Fallback()}
-	<ChevronRightIcon class="size-4" />
+	<ChevronRightIcon class={cn("size-4", className)} />
 {/snippet}
 
 <CalendarPrimitive.NextButton
@@ -29,6 +29,11 @@
 		"size-(--cell-size) bg-transparent p-0 select-none disabled:opacity-50 rtl:rotate-180",
 		className
 	)}
-	children={children || Fallback}
 	{...restProps}
-/>
+>
+	{#if children}
+		{@render children?.()}
+	{:else}
+		{@render Fallback()}
+	{/if}
+</CalendarPrimitive.NextButton>

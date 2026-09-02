@@ -285,6 +285,169 @@ export class CampaignService extends GameplayApiClient {
 		return data;
 	}
 
+	// ==================== Sessions ====================
+
+	/** Détail d'une session par son id (membre de la campagne). */
+	async getSession(sessionId: string) {
+		const { data, error } = await this.client.GET("/sessions/{id}", {
+			params: { path: { id: sessionId } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Lancer une session depuis la salle d'attente (MJ/propriétaire). */
+	async launchSession(sessionId: string) {
+		const { data, error } = await this.client.POST("/sessions/{id}/launch", {
+			params: { path: { id: sessionId } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Déployer une rencontre sur le VTT d'une session (MJ). */
+	async deployEncounter(sessionId: string, encounterId: string) {
+		const { data, error } = await this.client.POST(
+			"/sessions/{id}/encounters/{encounterId}/deploy",
+			{
+				params: { path: { id: sessionId, encounterId } },
+			} as any
+		); // override type for openapi-ts generated typings which may not have it yet
+		if (error) throw error;
+		return data;
+	}
+
+	// ==================== Maps ====================
+
+	/** Lister les maps d'une campagne (MJ). */
+	async getMaps(campaignId: string) {
+		const { data, error } = await this.client.GET("/campaigns/{id}/maps/", {
+			params: { path: { id: campaignId } },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Créer une map (MJ). */
+	async createMap(
+		campaignId: string,
+		body: {
+			nom: string;
+			gridType?: "square" | "hex" | "free";
+			gridSize?: number;
+		}
+	) {
+		const { data, error } = await this.client.POST("/campaigns/{id}/maps/", {
+			params: { path: { id: campaignId } },
+			body,
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Modifier une map (MJ). */
+	async updateMap(
+		campaignId: string,
+		mapId: string,
+		body: {
+			nom?: string;
+			gridType?: "square" | "hex" | "free";
+			gridSize?: number;
+			gridOffsetX?: number;
+			gridOffsetY?: number;
+			widthPx?: number;
+			heightPx?: number;
+			gridColor?: string;
+			gridOpacity?: number;
+		}
+	) {
+		const { data, error } = await this.client.PATCH(
+			"/campaigns/{id}/maps/{mapId}",
+			{
+				params: { path: { id: campaignId, mapId } },
+				body,
+			}
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Supprimer une map (MJ). */
+	async deleteMap(campaignId: string, mapId: string) {
+		const { data, error } = await this.client.DELETE(
+			"/campaigns/{id}/maps/{mapId}",
+			{
+				params: { path: { id: campaignId, mapId } },
+			}
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Uploader une image pour une map (MJ). */
+	async uploadMapFile(campaignId: string, mapId: string, file: File) {
+		const { data, error } = await this.client.POST(
+			"/campaigns/{id}/maps/{mapId}/file",
+			{
+				params: { path: { id: campaignId, mapId } },
+				body: { file },
+				bodySerializer: (b) => {
+					const fd = new FormData();
+					fd.append("file", b.file);
+					return fd;
+				},
+			}
+		);
+		if (error) throw error;
+		return data;
+	}
+
+	/** Activer une map sur la session en cours (MJ). */
+	async activateMap(sessionId: string, mapId: string | null) {
+		const { data, error } = await this.client.PUT("/sessions/{id}/map", {
+			params: { path: { id: sessionId } },
+			body: { mapId },
+		});
+		if (error) throw error;
+		return data;
+	}
+
+	/** Créer un token dans une session (MJ). */
+	async createToken(
+		sessionId: string,
+		data: {
+			label?: string;
+			posX?: number;
+			posY?: number;
+			layer?: "background" | "object" | "token" | "gm";
+			characterSheetId?: string;
+			fileId?: string;
+		}
+	) {
+		const { data: result, error } = await this.client.POST(
+			"/sessions/{id}/tokens",
+			{
+				params: { path: { id: sessionId } },
+				body: { posX: data.posX ?? 0, posY: data.posY ?? 0, ...data },
+			}
+		);
+		if (error) throw error;
+		return result;
+	}
+
+	/** URL du flux SSE de présence d'une session (à consommer via EventSource). */
+	presenceStreamUrl(sessionId: string): string {
+		return `${this.baseUrl}/sessions/${sessionId}/presence/stream`;
+	}
+
+	/** URL du WebSocket temps réel d'une session (à consommer via WebSocket). */
+	sessionSocketUrl(sessionId: string): string {
+		const socketBase = (
+			import.meta.env.VITE_PUBLIC_SOCKET_API_URL ?? "ws://localhost:2150"
+		).replace(/\/+$/, "");
+		return `${socketBase}/gameplay/sessions/${sessionId}/ws`;
+	}
+
 	// ==================== Invitations ====================
 
 	/** Créer un lien d'invitation (MJ/propriétaire). Retourne le token. */

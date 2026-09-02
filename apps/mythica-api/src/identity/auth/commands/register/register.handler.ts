@@ -1,5 +1,6 @@
 import { lucia } from "../../../../lib/auth";
 import { sendVerificationEmail } from "../../../../lib/email";
+import { newId } from "../../../../lib/id";
 import { hashPassword } from "../../../../lib/password";
 import { prisma } from "../../../../lib/prisma";
 import { publishUserEvent } from "../../../../lib/user-events";
@@ -22,7 +23,7 @@ export async function registerHandler(
 	command: RegisterCommand,
 ): Promise<RegisterResult> {
 	const passwordHash = await hashPassword(command.password);
-	const userId = crypto.randomUUID();
+	const userId = newId();
 	const verificationToken = generateVerificationToken();
 	const expiresAt = new Date(
 		Date.now() + VERIFICATION_EXPIRY_HOURS * 60 * 60 * 1000,

@@ -38,6 +38,14 @@ enum CampaignStatus {
   @@map("campaign_status")
 }
 
+enum CharacterSheetVisibility {
+  private
+  campaign
+  public
+
+  @@map("character_sheet_visibility")
+}
+
 enum MemberRole {
   gm
   player
@@ -64,6 +72,15 @@ enum TokenLayer {
   @@map("token_layer")
 }
 
+enum WallType {
+  normal
+  invisible
+  door
+  window
+
+  @@map("wall_type")
+}
+
 enum FileDomain {
   map
   token
@@ -78,12 +95,77 @@ enum FileDomain {
   @@map("file_domain")
 }
 
+enum GridType {
+  square
+  hex
+  free
+
+  @@map("grid_type")
+}
+
 enum JoinRequestStatus {
   pending
   accepted
   declined
 
   @@map("join_request_status")
+}
+
+enum ContentImportJobStatus {
+  scanning
+  ready
+  applying
+  applied
+  failed
+
+  @@map("content_import_job_status")
+}
+
+enum ContentImportItemStatus {
+  pending
+  approved
+  rejected
+
+  @@map("content_import_item_status")
+}
+
+enum CampaignSheetStatus {
+  active
+  inactive
+  disabled
+
+  @@map("campaign_sheet_status")
+}
+
+enum CampaignPoolRequestStatus {
+  pending
+  confirmed
+  rejected
+
+  @@map("campaign_pool_request_status")
+}
+
+enum CampaignChangeRequestStatus {
+  pending
+  approved
+  rejected
+
+  @@map("campaign_change_request_status")
+}
+
+// Types d'étapes génériques du parcours de création (alignés sur character-engine).
+enum CreationStepKind {
+  selection
+  repeatableSelection
+  pointAllocation
+  hitPoints
+  abilityImprovement
+  proficiencyChoice
+  spellSelection
+  inventory
+  loreForm
+
+  @@map("creation_step_kind")
 }
 
 // ------------------------------------------------------------
@@ -99,7 +181,7 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
-  ownedCampaigns  Campaign[]       @relation("CampaignOwner")
+  ownedCampaigns  Campaign[]            @relation("CampaignOwner")
   campaignMembers CampaignMember[]
   characterSheets CharacterSheet[]
   files           File[]
@@ -134,6 +216,9 @@ model GameSystem {
   properties      GameSystemProperty[]
   campaigns       Campaign[]
   characterSheets CharacterSheet[]
+  content         SystemContent[]
+  creationSteps   GameSystemCreationStep[]
+  importJobs      ContentImportJob[]
 
   @@map("game_systems")
 }
@@ -206,19 +291,24 @@ model Campaign {
   isPublic     Boolean        @default(false)
   status       CampaignStatus @default(active)
   tags         String[]       @default([])
-  coverFileId  String?        @map("cover_file_id") @db.Uuid
-  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt    DateTime?      @map("deleted_at") @db.Timestamptz
+  coverFileId             String?        @map("cover_file_id") @db.Uuid
+  characterCreationLocked Boolean        @default(false) @map("character_creation_locked")
+  createdAt               DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt               DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt               DateTime?      @map("deleted_at") @db.Timestamptz
 
   // Relations
-  owner           User                     @relation("CampaignOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  gameSystem      GameSystem               @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
-  coverFile       File?                    @relation("CampaignCover", fields: [coverFileId], references: [id], onDelete: SetNull)
+  owner           User                              @relation("CampaignOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  gameSystem      GameSystem                        @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
+  coverFile       File?                             @relation("CampaignCover", fields: [coverFileId], references: [id], onDelete: SetNull)
   members         CampaignMember[]
   characterSheets CampaignCharacterSheet[]
+  poolSheets      CampaignPoolSheet[]
+  changeRequests  CampaignCharacterChangeRequest[]
+  encounters      Encounter[]
   sessions        Session[]
-  files           File[]                   @relation("CampaignFiles")
+  files           File[]                            @relation("CampaignFiles")
+  maps            Map[]
   invites         CampaignInvite[]
   messages        Message[]
   joinRequests    CampaignJoinRequest[]
@@ -237,13 +327,17 @@ model Message {
   campaignId String   @map("campaign_id") @db.Uuid
   userId     String   @map("user_id") @db.Uuid
   content    String   @db.Text
+  sessionId  String?  @map("session_id") @db.Uuid
+  kind       String?  @db.VarChar(50)
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relations
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session  Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([campaignId, createdAt], name: "idx_messages_campaign_created")
+  @@index([sessionId], name: "idx_messages_session")
   @@map("campaign_messages")
 }
 
@@ -318,23 +412,32 @@ model CampaignMember {
 // ------------------------------------------------------------
 
 model CharacterSheet {
-  id           String    @id @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  gameSystemId String    @map("game_system_id") @db.Uuid
-  name         String    @db.VarChar(255)
-  avatarFileId String?   @map("avatar_file_id") @db.Uuid
-  isActive     Boolean   @default(true) @map("is_active")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  id            String    @id @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  gameSystemId  String    @map("game_system_id") @db.Uuid
+  name          String    @db.VarChar(255)
+  avatarFileId  String?   @map("avatar_file_id") @db.Uuid
+  isActive      Boolean   @default(true) @map("is_active")
+  // Résultat du build : monnaie de départ et méthode de génération des caracs.
+  gold          Int?
+  abilityMethod String?   @map("ability_method") @db.VarChar(30)
+  // Visibilité de la fiche : privée (défaut), partagée campagne, ou publique.
+  visibility    CharacterSheetVisibility @default(private)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
 
   // Relations
-  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gameSystem GameSystem               @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
-  avatarFile File?                    @relation("CharacterSheetAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
+  user       User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameSystem GameSystem                @relation(fields: [gameSystemId], references: [id], onDelete: Restrict)
+  avatarFile File?                     @relation("CharacterSheetAvatar", fields: [avatarFileId], references: [id], onDelete: SetNull)
   values     CharacterSheetValue[]
+  selections CharacterSheetSelection[]
   campaigns  CampaignCharacterSheet[]
   tokens     SessionToken[]
+  poolSheet            CampaignPoolSheet?   @relation("PoolSheetCharacter")
+  poolRequestAssignment CampaignPoolRequest? @relation("PoolRequestAssignment")
+  encounterMonsters EncounterMonster[]
 
   @@index([userId], name: "idx_character_sheets_user")
   @@index([gameSystemId], name: "idx_character_sheets_system")
@@ -371,18 +474,88 @@ model CharacterSheetValue {
 // ------------------------------------------------------------
 
 model CampaignCharacterSheet {
+  id               String              @id @db.Uuid
+  campaignId       String              @map("campaign_id") @db.Uuid
+  characterSheetId String              @map("character_sheet_id") @db.Uuid
+  status           CampaignSheetStatus @default(inactive)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  campaign       Campaign                         @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  characterSheet CharacterSheet                   @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+  changeRequests CampaignCharacterChangeRequest[]
+
+  @@unique([campaignId, characterSheetId])
+  @@index([campaignId, status], name: "idx_campaign_sheets_status")
+  @@map("campaign_character_sheets")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN POOL SHEETS
+// Fiches pré-construites par le MJ, proposées aux joueurs.
+// Chaque entrée pointe vers un snapshot CharacterSheet appartenant au MJ.
+// ------------------------------------------------------------
+
+model CampaignPoolSheet {
   id               String   @id @db.Uuid
   campaignId       String   @map("campaign_id") @db.Uuid
-  characterSheetId String   @map("character_sheet_id") @db.Uuid
+  characterSheetId String   @unique @map("character_sheet_id") @db.Uuid
+  visibleToPlayers Boolean  @default(false) @map("visible_to_players")
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  // Relations
-  campaign       Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  characterSheet CharacterSheet @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+  campaign       Campaign              @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  characterSheet CharacterSheet        @relation("PoolSheetCharacter", fields: [characterSheetId], references: [id], onDelete: Cascade)
+  requests       CampaignPoolRequest[]
 
-  @@unique([campaignId, characterSheetId])
-  @@map("campaign_character_sheets")
+  @@index([campaignId], name: "idx_pool_sheets_campaign")
+  @@map("campaign_pool_sheets")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN POOL REQUESTS
+// Demande d'un joueur pour obtenir une fiche du pool MJ.
+// ------------------------------------------------------------
+
+model CampaignPoolRequest {
+  id                String                    @id @db.Uuid
+  poolSheetId       String                    @map("pool_sheet_id") @db.Uuid
+  requestedByUserId String                    @map("requested_by_user_id") @db.Uuid
+  status            CampaignPoolRequestStatus @default(pending)
+  assignedSheetId   String?                   @unique @map("assigned_sheet_id") @db.Uuid
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime                  @updatedAt @map("updated_at") @db.Timestamptz
+
+  poolSheet     CampaignPoolSheet @relation(fields: [poolSheetId], references: [id], onDelete: Cascade)
+  assignedSheet CharacterSheet?   @relation("PoolRequestAssignment", fields: [assignedSheetId], references: [id], onDelete: SetNull)
+
+  @@unique([poolSheetId, requestedByUserId])
+  @@index([poolSheetId, status], name: "idx_pool_requests_status")
+  @@map("campaign_pool_requests")
+}
+
+// ------------------------------------------------------------
+// CAMPAIGN CHARACTER CHANGE REQUESTS
+// Demande d'un joueur pour changer de personnage actif.
+// Requiert validation du MJ ; ancienne fiche → disabled à l'approbation.
+// ------------------------------------------------------------
+
+model CampaignCharacterChangeRequest {
+  id            String                      @id @db.Uuid
+  campaignId    String                      @map("campaign_id") @db.Uuid
+  playerId      String                      @map("player_id") @db.Uuid
+  targetSheetId String                      @map("target_sheet_id") @db.Uuid
+  status        CampaignChangeRequestStatus @default(pending)
+  createdAt     DateTime                    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime                    @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign    Campaign               @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  targetSheet CampaignCharacterSheet @relation(fields: [targetSheetId], references: [id], onDelete: Restrict)
+
+  @@unique([campaignId, playerId, targetSheetId])
+  @@index([campaignId, status], name: "idx_change_requests_campaign_status")
+  @@map("campaign_character_change_requests")
 }
 
 // ------------------------------------------------------------
@@ -400,12 +573,16 @@ model Session {
   endedAt     DateTime?     @map("ended_at") @db.Timestamptz
   mapState    Json          @default("{}") @map("map_state")
   combatState Json          @default("{}") @map("combat_state")
+  activeMapId String?       @map("active_map_id") @db.Uuid
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
-  campaign Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  tokens   SessionToken[]
+  campaign        Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  activeMap       Map?           @relation("SessionActiveMap", fields: [activeMapId], references: [id], onDelete: SetNull)
+  tokens          SessionToken[]
+  walls           SessionWall[]
+  sessionMessages Message[]
 
   @@index([campaignId], name: "idx_sessions_campaign")
   @@index([status], name: "idx_sessions_status")
@@ -429,7 +606,20 @@ model SessionToken {
   width            Int        @default(1)
   height           Int        @default(1)
   isVisible        Boolean    @default(true) @map("is_visible")
+  isLinked         Boolean    @default(false) @map("is_linked")
   layer            TokenLayer @default(token)
+  
+  // Tactical & Visual VTT Fields
+  elevation        Int        @default(0)
+  hp               Int?
+  maxHp            Int?       @map("max_hp")
+  conditions       Json       @default("[]")
+  auraRadius       Decimal?   @map("aura_radius") @db.Decimal
+  auraColor        String?    @map("aura_color") @db.VarChar(9)
+  visionRadius     Decimal?   @map("vision_radius") @db.Decimal
+  lightRadius      Decimal?   @map("light_radius") @db.Decimal
+  lightColor       String?    @map("light_color") @db.VarChar(9)
+
   createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -468,6 +658,28 @@ model SessionTokenOverride {
 }
 
 // ------------------------------------------------------------
+// SESSION WALL
+// Murs de la session pour la ligne de vue / brouillard dynamique
+// ------------------------------------------------------------
+
+model SessionWall {
+  id        String   @id @default(uuid()) @db.Uuid
+  sessionId String   @map("session_id") @db.Uuid
+  p1X       Decimal  @map("p1_x") @db.Decimal
+  p1Y       Decimal  @map("p1_y") @db.Decimal
+  p2X       Decimal  @map("p2_x") @db.Decimal
+  p2Y       Decimal  @map("p2_y") @db.Decimal
+  type      WallType @default(normal)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId], name: "idx_session_walls_session")
+  @@map("session_walls")
+}
+
+// ------------------------------------------------------------
 // FILE
 // Métadonnées légères pour RustFS.
 // URL reconstruite côté code, jamais stockée en DB.
@@ -494,9 +706,208 @@ model File {
   campaignCovers   Campaign[]       @relation("CampaignCover")
   characterAvatars CharacterSheet[] @relation("CharacterSheetAvatar")
   sessionTokens    SessionToken[]   @relation("TokenFile")
+  contentPortraits SystemContent[]  @relation("SystemContentPortrait")
+  maps             Map[]            @relation("MapFile")
 
   @@index([ownerId], name: "idx_files_owner")
   @@index([campaignId, domain], name: "idx_files_campaign_domain")
   @@index([deletedAt], name: "idx_files_deleted")
   @@map("files")
+}
+
+// ------------------------------------------------------------
+// MAP
+// Carte utilisée dans une session. L'image de fond est un File
+// (domain: map). La grille est configurable par type et taille.
+// ------------------------------------------------------------
+
+model Map {
+  id          String   @id @db.Uuid
+  campaignId  String   @map("campaign_id") @db.Uuid
+  nom         String   @db.VarChar(255)
+  fileId      String?  @map("file_id") @db.Uuid
+  gridType    GridType @default(square) @map("grid_type")
+  gridSize    Int      @default(100) @map("grid_size")
+  gridOffsetX Int      @default(0) @map("grid_offset_x")
+  gridOffsetY Int      @default(0) @map("grid_offset_y")
+  gridColor   String   @default("#ffffff33") @map("grid_color") @db.VarChar(9)
+  gridOpacity Decimal  @default(0.3) @map("grid_opacity") @db.Decimal
+  widthPx     Int      @default(2000) @map("width_px")
+  heightPx    Int      @default(2000) @map("height_px")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  file     File?     @relation("MapFile", fields: [fileId], references: [id], onDelete: SetNull)
+  sessions Session[] @relation("SessionActiveMap")
+
+  @@index([campaignId], name: "idx_maps_campaign")
+  @@map("maps")
+}
+
+// ------------------------------------------------------------
+// SYSTEM CONTENT
+// Contenu d'un système, regroupé par collection générique
+// (collectionKey : "race", "classe", "background", "sort", "type"...).
+// `data` (JSONB) porte les champs propres à la collection ; il est validé à
+// l'écriture (seed) contre un schéma par collection — jamais saisi par
+// l'utilisateur. Ajouter une collection ne demande aucune migration.
+// ------------------------------------------------------------
+
+model SystemContent {
+  id             String   @id @db.Uuid
+  gameSystemId   String   @map("game_system_id") @db.Uuid
+  collectionKey  String   @map("collection_key") @db.VarChar(50)
+  slug           String   @db.VarChar(100)
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  data           Json     @default("{}")
+  sortOrder      Int      @default(0) @map("sort_order")
+  portraitFileId String?  @map("portrait_file_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  gameSystem   GameSystem                @relation(fields: [gameSystemId], references: [id], onDelete: Cascade)
+  portraitFile File?                     @relation("SystemContentPortrait", fields: [portraitFileId], references: [id], onDelete: SetNull)
+  selections   CharacterSheetSelection[]
+
+  @@unique([gameSystemId, collectionKey, slug])
+  @@index([gameSystemId, collectionKey], name: "idx_system_content_collection")
+  @@map("system_content")
+}
+
+// ------------------------------------------------------------
+// GAME SYSTEM CREATION STEP
+// Parcours de création data-driven : étapes ordonnées + config (JSONB) propre
+// au `kind`. Le front est un rendu générique piloté par ces données.
+// ------------------------------------------------------------
+
+model GameSystemCreationStep {
+  id           String           @id @db.Uuid
+  gameSystemId String           @map("game_system_id") @db.Uuid
+  stepKey      String           @map("step_key") @db.VarChar(100)
+  order        Int              @map("step_order")
+  kind         CreationStepKind
+  config       Json             @default("{}")
+  condition    String?          @db.VarChar(100)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  gameSystem GameSystem @relation(fields: [gameSystemId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSystemId, stepKey])
+  @@index([gameSystemId, order], name: "idx_creation_steps_order")
+  @@map("game_system_creation_steps")
+}
+
+// ------------------------------------------------------------
+// ENCOUNTER
+// ------------------------------------------------------------
+
+model Encounter {
+  id         String   @id @db.Uuid
+  campaignId String   @map("campaign_id") @db.Uuid
+  nom        String   @db.VarChar(255)
+  difficulty String?  @db.VarChar(50)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  campaign   Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  monsters   EncounterMonster[]
+
+  @@index([campaignId], name: "idx_encounters_campaign")
+  @@map("encounters")
+}
+
+model EncounterMonster {
+  id               String   @id @db.Uuid
+  encounterId      String   @map("encounter_id") @db.Uuid
+  characterSheetId String   @map("character_sheet_id") @db.Uuid
+  quantity         Int      @default(1)
+  
+  encounter      Encounter      @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  characterSheet CharacterSheet @relation(fields: [characterSheetId], references: [id], onDelete: Restrict)
+
+  @@index([encounterId], name: "idx_encounter_monsters_encounter")
+  @@map("encounter_monsters")
+}
+
+
+// ------------------------------------------------------------
+// CHARACTER SHEET SELECTION
+// Résultat « build » d'une fiche : éléments de contenu choisis. Références et
+// scalaires stables = colonnes typées (intégrité forte) ; `extra` (JSONB) ne
+// porte que l'accessoire variable. Gère le multiclassage (plusieurs lignes
+// collectionKey="classe" avec `level`/`isPrimary`) et les sous-sélections
+// (sous-classe via `parentSelectionId`).
+// ------------------------------------------------------------
+
+model CharacterSheetSelection {
+  id                String   @id @db.Uuid
+  characterSheetId  String   @map("character_sheet_id") @db.Uuid
+  collectionKey     String   @map("collection_key") @db.VarChar(50)
+  contentId         String   @map("content_id") @db.Uuid
+  level             Int?
+  isPrimary         Boolean? @map("is_primary")
+  parentSelectionId String?  @map("parent_selection_id") @db.Uuid
+  qty               Int?
+  extra             Json?
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations — contentId en Restrict : impossible de pointer un contenu supprimé.
+  characterSheet  CharacterSheet            @relation(fields: [characterSheetId], references: [id], onDelete: Cascade)
+  content         SystemContent             @relation(fields: [contentId], references: [id], onDelete: Restrict)
+  parentSelection CharacterSheetSelection?  @relation("SelectionParent", fields: [parentSelectionId], references: [id], onDelete: Cascade)
+  childSelections CharacterSheetSelection[] @relation("SelectionParent")
+
+  @@index([characterSheetId], name: "idx_sheet_selections_sheet")
+  @@index([characterSheetId, collectionKey], name: "idx_sheet_selections_collection")
+  @@map("character_sheet_selections")
+}
+
+// ------------------------------------------------------------
+// CONTENT IMPORT
+// Workflow de révision : scan aidedd → staging → approbation → prod.
+// ------------------------------------------------------------
+
+model ContentImportJob {
+  id            String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  gameSystemId  String                 @map("game_system_id") @db.Uuid
+  collection    String                 @db.VarChar(50)
+  status        ContentImportJobStatus @default(scanning)
+  totalFound    Int                    @default(0) @map("total_found")
+  totalFetched  Int                    @default(0) @map("total_fetched")
+  totalNew      Int                    @default(0) @map("total_new")
+  totalUpdated  Int                    @default(0) @map("total_updated")
+  errorMessage  String?                @map("error_message") @db.Text
+  createdAt     DateTime               @default(now()) @map("created_at") @db.Timestamptz
+  completedAt   DateTime?              @map("completed_at") @db.Timestamptz
+  appliedAt     DateTime?              @map("applied_at") @db.Timestamptz
+
+  gameSystem GameSystem          @relation(fields: [gameSystemId], references: [id], onDelete: Cascade)
+  items      ContentImportItem[]
+
+  @@index([gameSystemId], name: "idx_import_jobs_game_system")
+  @@map("content_import_jobs")
+}
+
+model ContentImportItem {
+  id            String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId         String                  @map("job_id") @db.Uuid
+  slug          String                  @db.VarChar(150)
+  name          String?                 @db.VarChar(255)
+  description   String?                 @db.Text
+  isNew         Boolean                 @default(true) @map("is_new")
+  existingId    String?                 @map("existing_id") @db.Uuid
+  status        ContentImportItemStatus @default(pending)
+  reviewedAt    DateTime?               @map("reviewed_at") @db.Timestamptz
+
+  job ContentImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, slug])
+  @@index([jobId, status], name: "idx_import_items_job_status")
+  @@map("content_import_items")
 }

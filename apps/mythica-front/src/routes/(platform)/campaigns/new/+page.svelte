@@ -5,8 +5,8 @@
 	import LockIcon from "@lucide/svelte/icons/lock";
 	import SwordsIcon from "@lucide/svelte/icons/swords";
 	import XIcon from "@lucide/svelte/icons/x";
-	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
+	import GameSystemSelector from "$lib/components/game-system-selector.svelte";
 	import { Button } from "$lib/components/ui/button";
 	import * as Card from "$lib/components/ui/card";
 	import {
@@ -18,14 +18,9 @@
 	} from "$lib/components/ui/field/index.js";
 	import TagInput from "$lib/components/tag-input.svelte";
 	import { Input } from "$lib/components/ui/input";
-	import * as Select from "$lib/components/ui/select";
 	import { Textarea } from "$lib/components/ui/textarea";
-	import { ApiError, campaignService, gameSystemService } from "$lib/index.js";
+	import { ApiError, campaignService } from "$lib/index.js";
 	const id = $props.id();
-
-	type GameSystem = NonNullable<
-		Awaited<ReturnType<typeof gameSystemService.getGameSystems>>
-	>["items"][number];
 
 	// Couverture
 	const ALLOWED_COVER_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -46,31 +41,15 @@
 	let error = $state<string | null>(null);
 	let nameError = $state<string | null>(null);
 	let gameSystemError = $state<string | null>(null);
-	let gameSystems = $state<GameSystem[]>([]);
-	let isLoadingGameSystems = $state(true);
 
 	// Derived
 	const nameLength = $derived(name.length);
 	const descriptionLength = $derived(description.length);
-	const selectedGameSystemName = $derived(
-		gameSystems.find((gs) => gs.id === gameSystemId)?.nom ?? ""
-	);
 	const isValid = $derived(
 		name.trim().length >= 3 &&
 			name.trim().length <= 100 &&
 			gameSystemId.length > 0
 	);
-
-	onMount(async () => {
-		try {
-			const response = await gameSystemService.getGameSystems({ limit: 100 });
-			gameSystems = response?.items ?? [];
-		} catch {
-			error = "Impossible de charger les systemes de jeu.";
-		} finally {
-			isLoadingGameSystems = false;
-		}
-	});
 
 	function onCoverChange(event: Event) {
 		const input = event.target as HTMLInputElement;
@@ -328,29 +307,12 @@
 					<!-- Game System -->
 					<Field>
 						<FieldLabel for="game-system-{id}">Systeme de jeu</FieldLabel>
-						<Select.Root type="single" bind:value={gameSystemId}>
-							<Select.Trigger
-								id="game-system-{id}"
-								class="w-full"
-								disabled={isLoading || isLoadingGameSystems}
-								aria-invalid={!!gameSystemError}
-							>
-								{#if isLoadingGameSystems}
-									Chargement des systemes de jeu...
-								{:else if selectedGameSystemName}
-									{selectedGameSystemName}
-								{:else}
-									Selectionnez un systeme de jeu
-								{/if}
-							</Select.Trigger>
-							<Select.Content>
-								{#each gameSystems as gameSystem (gameSystem.id)}
-									<Select.Item value={gameSystem.id} label={gameSystem.nom}>
-										{gameSystem.nom}
-									</Select.Item>
-								{/each}
-							</Select.Content>
-						</Select.Root>
+						<GameSystemSelector
+							id="game-system-{id}"
+							bind:value={gameSystemId}
+							disabled={isLoading}
+							invalid={!!gameSystemError}
+						/>
 						{#if gameSystemError}
 							<FieldError>{gameSystemError}</FieldError>
 						{:else}
