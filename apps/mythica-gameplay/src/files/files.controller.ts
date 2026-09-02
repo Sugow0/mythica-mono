@@ -58,11 +58,12 @@ export const filesController = new Elysia({ prefix: "/files" }).get(
 			set.status = 500;
 			return { success: false, error: "Erreur lors du téléchargement" };
 		}
-		
-		set.headers["content-type"] = response.headers.get("content-type") || "application/octet-stream";
+
+		set.headers["content-type"] =
+			response.headers.get("content-type") || "application/octet-stream";
 		// Pour la mise en cache
 		set.headers["cache-control"] = "public, max-age=31536000";
-		
+
 		return response.blob();
 	},
 	{
