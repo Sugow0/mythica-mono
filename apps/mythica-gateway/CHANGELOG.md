@@ -1,5 +1,17 @@
 # @mythica/gateway
 
+## 1.2.0
+
+### Minor Changes
+
+- dbd1412: [WS] Serveur WebSocket des sessions : handler /sessions/:id/ws authentifié (cookie validé par le gateway, identité propagée, accès réservé aux membres)
+
+  _Généré automatiquement le 2026-06-15T09:54:19.000Z_
+
+- 5f7e2c3: [FEAT-28] [WS] Setup serveur WebSocket ElysiaJS (plugin @elysiajs/ws)
+
+  _Généré automatiquement le 2026-06-15T10:00:37.839Z_
+
 ## 1.1.0
 
 ### Minor Changes
