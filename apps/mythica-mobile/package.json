@@ -39,9 +39,9 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.0",
-    "typescript": "~6.0.3",
-    "eslint": "^9.25.0",
-    "eslint-config-expo": "~56.0.4"
+    "typescript": "~7.0.2",
+    "eslint": "^10.9.1",
+    "eslint-config-expo": "~57.0.2"
   },
   "private": true
 }
